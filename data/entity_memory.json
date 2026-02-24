@@ -1,0 +1,675 @@
+{
+  "Mahima Variety Store": {
+    "category": "Shopping",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.358617",
+    "count": 1
+  },
+  "Swarnim Shekhar": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.364892",
+    "count": 1
+  },
+  "Nike": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.368792",
+    "count": 1
+  },
+  "Kaa Offset Printing": {
+    "category": "Utilities",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:47:19.094498",
+    "count": 2
+  },
+  "Ishan Ghosh": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.375106",
+    "count": 1
+  },
+  "Mr Shreyansh Verma": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.378125",
+    "count": 1
+  },
+  "Swiggy": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.381345",
+    "count": 1
+  },
+  "Satya Aman": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.384761",
+    "count": 1
+  },
+  "Omm Samal": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.388191",
+    "count": 1
+  },
+  "Google Play": {
+    "category": "Shopping",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.391669",
+    "count": 1
+  },
+  "Prasanna Mohapatra": {
+    "category": "Food & Dining",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:53:59.495675",
+    "count": 2
+  },
+  "Saptarshi Roy": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.398096",
+    "count": 1
+  },
+  "Akula Biswal": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.401457",
+    "count": 1
+  },
+  "Raja Kumar Yadav": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.404321",
+    "count": 1
+  },
+  "Dikshyant Kumar Rout": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.407281",
+    "count": 1
+  },
+  "Vi": {
+    "category": "Utilities",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.410815",
+    "count": 1
+  },
+  "Reliance": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.414237",
+    "count": 1
+  },
+  "GREEN TRENDS": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.417554",
+    "count": 1
+  },
+  "Panda Resorts Privat": {
+    "category": "Food & Dining",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:51:49.085143",
+    "count": 2
+  },
+  "Burgerking": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.424924",
+    "count": 1
+  },
+  "Abhinashpanda": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.430868",
+    "count": 1
+  },
+  "Mr Jitendra Kumar Sa": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.435351",
+    "count": 1
+  },
+  "Spotify": {
+    "category": "Entertainment",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.439768",
+    "count": 1
+  },
+  "Kiit Guest House": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.445090",
+    "count": 1
+  },
+  "Devyani": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.448891",
+    "count": 1
+  },
+  "Mr Suryakanta Bali": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.453901",
+    "count": 1
+  },
+  "Dcc+St 011125 011125": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.459894",
+    "count": 1
+  },
+  "John James": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.463318",
+    "count": 1
+  },
+  "Kiitconnect": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.467777",
+    "count": 1
+  },
+  "Bidyadhar Setha": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.471179",
+    "count": 1
+  },
+  "Raj Kumar Debnath": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.474608",
+    "count": 1
+  },
+  "Airtel": {
+    "category": "Utilities",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.477631",
+    "count": 1
+  },
+  "Frozen Dessert": {
+    "category": "Food & Dining",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:51:19.268068",
+    "count": 2
+  },
+  "Siva Prasad Rana": {
+    "category": "Food & Dining",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:48:46.500977",
+    "count": 2
+  },
+  "Birendra Patra": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.487670",
+    "count": 1
+  },
+  "Biraja Prasad Das": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.491645",
+    "count": 1
+  },
+  "Zomato": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.495109",
+    "count": 1
+  },
+  "Balram Sahani": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.498773",
+    "count": 1
+  },
+  "Kims New": {
+    "category": "Healthcare",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:46:51.589829",
+    "count": 2
+  },
+  "Bhubaneshwar 132": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.511380",
+    "count": 1
+  },
+  "M S Trishna Filling": {
+    "category": "Transport",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.519056",
+    "count": 1
+  },
+  "Tuni Behera": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.525287",
+    "count": 1
+  },
+  "KIIT KAFE 9 A": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.530913",
+    "count": 1
+  },
+  "Amiya Kumar Sahoo": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.539060",
+    "count": 1
+  },
+  "Mr Sadhu Charan Na": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.544645",
+    "count": 1
+  },
+  "Amazon": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.549180",
+    "count": 1
+  },
+  "Ishan Mondal": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.560205",
+    "count": 1
+  },
+  "Blinkit": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.564189",
+    "count": 1
+  },
+  "Instaalertchg": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.571174",
+    "count": 1
+  },
+  "Kfc": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.578406",
+    "count": 1
+  },
+  "Bonfire Bakery K": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.584043",
+    "count": 1
+  },
+  "Ppsl": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.589671",
+    "count": 1
+  },
+  "Rout Fruits": {
+    "category": "Food & Dining",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:50:52.504222",
+    "count": 2
+  },
+  "Anjani Kumar": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.599527",
+    "count": 1
+  },
+  "Mrs Pravati Das": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.605101",
+    "count": 1
+  },
+  "Renu Naik": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.609942",
+    "count": 1
+  },
+  "Apollo Pharmacy": {
+    "category": "Healthcare",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-02-24T02:46:14.958675",
+    "count": 2
+  },
+  "Iswar Nayak": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.620717",
+    "count": 1
+  },
+  "Maa Barunei Betel Sh": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.626184",
+    "count": 1
+  },
+  "Mrs Rina Naik": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.633065",
+    "count": 1
+  },
+  "Pinkun Swain": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.638875",
+    "count": 1
+  },
+  "Sunil Kumar Naik": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.643086",
+    "count": 1
+  },
+  "Ind*Restaurant B": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.647237",
+    "count": 1
+  },
+  "Kishor Kumar Dalai": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.651087",
+    "count": 1
+  },
+  "Upendra Nayak": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.656043",
+    "count": 1
+  },
+  "Tribeni Snacks": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.660254",
+    "count": 1
+  },
+  "Raju Bisoi": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.663547",
+    "count": 1
+  },
+  "Rohit Kumar Kanhara": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.667680",
+    "count": 1
+  },
+  "Bata": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.672350",
+    "count": 1
+  },
+  "Omm Shanti Drug Hous": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.677784",
+    "count": 1
+  },
+  "Basanta Kumar Mantha": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.682024",
+    "count": 1
+  },
+  "Kasinath Roy": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.687535",
+    "count": 1
+  },
+  "Agarwal Super Market": {
+    "category": "Shopping",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.693050",
+    "count": 1
+  },
+  "Tivoli Enterprises": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.696700",
+    "count": 1
+  },
+  "Baikani Gopal Yadav": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.701065",
+    "count": 1
+  },
+  "Tholkatta Venkatesh": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.705427",
+    "count": 1
+  },
+  "Sai Balaji Cool Poin": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.710273",
+    "count": 1
+  },
+  "Netflix": {
+    "category": "Entertainment",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.714381",
+    "count": 1
+  },
+  "Dominos": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.717691",
+    "count": 1
+  },
+  "Bits 02": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.721677",
+    "count": 1
+  },
+  "Amul": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.726933",
+    "count": 1
+  },
+  "Tata 1Mg Healthcare": {
+    "category": "Healthcare",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.731968",
+    "count": 1
+  },
+  "Kims Hospitals Fb G": {
+    "category": "Healthcare",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.736893",
+    "count": 1
+  },
+  "Karachi Bakery Khar": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.742161",
+    "count": 1
+  },
+  "Satya Narayan Dash": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.745790",
+    "count": 1
+  },
+  "Yara Cafe": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.754106",
+    "count": 1
+  },
+  "Biswajit Jali": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.758947",
+    "count": 1
+  },
+  "Mr Ashok Kumar Basti": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.764678",
+    "count": 1
+  },
+  "Bbnow": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.768859",
+    "count": 1
+  },
+  "Hotstar": {
+    "category": "Entertainment",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.776141",
+    "count": 1
+  },
+  "Diptimayee Arakha": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.781934",
+    "count": 1
+  },
+  "Swagat Kumar Patel": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.789156",
+    "count": 1
+  },
+  "Mr Prasanna Mohapat": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.794123",
+    "count": 1
+  },
+  "Jiomart": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.805220",
+    "count": 1
+  },
+  "Rupanita Das": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.810132",
+    "count": 1
+  },
+  "Shreshth Chatterjee": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.816903",
+    "count": 1
+  },
+  "Dillip Kumar Malik": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.823111",
+    "count": 1
+  },
+  "Ekart": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.831840",
+    "count": 1
+  },
+  "Kiit Hospitality Pvt": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.839329",
+    "count": 1
+  },
+  "Instamart": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T20:52:11.845097",
+    "count": 1
+  },
+  "Mr Swagat Kumar Pate": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "last_seen": "2026-02-23T20:52:11.857123",
+    "count": 1
+  },
+  "Uttam Nayak": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "last_seen": "2026-02-23T20:52:11.866580",
+    "count": 1
+  },
+  "Apple": {
+    "category": "Entertainment",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T22:31:19.953386",
+    "count": 1
+  },
+  "Burger King": {
+    "category": "Food & Dining",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T22:31:19.960946",
+    "count": 1
+  },
+  "Jio": {
+    "category": "Utilities",
+    "entity_type": "platform",
+    "last_seen": "2026-02-23T22:31:19.997916",
+    "count": 1
+  },
+  "KAFE 3 KIIT HOSPITAL": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-02-24T02:58:50.333311",
+    "count": 1
+  },
+  "Raghunath Sahoo": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-02-24T02:58:50.338461",
+    "count": 1
+  },
+  "Sipak Bhoi": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-02-24T02:58:50.345357",
+    "count": 1
+  },
+  "Jitendra Samantaray": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-02-24T02:58:50.350918",
+    "count": 1
+  },
+  "Kanhu Charan Patra": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-02-24T02:58:50.357368",
+    "count": 1
+  }
+}

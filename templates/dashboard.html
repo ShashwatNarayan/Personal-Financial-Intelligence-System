@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Financial Intelligence System</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            /* LeetCode-inspired Clean Theme */
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #262626;
+            --bg-card: #2d2d2d;
+            --bg-hover: #3a3a3a;
+
+            --text-primary: #ffffff;
+            --text-secondary: #a3a3a3;
+            --text-muted: #737373;
+
+            --accent-green: #00b8a3;
+            --accent-yellow: #ffc01e;
+            --accent-orange: #ff9966;
+            --accent-red: #ef4743;
+
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: var(--bg-hover);
+            color: var(--accent-green);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+
+        /* Tab content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            font-size: 20px;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .metric-card:hover {
+            border-color: var(--accent-green);
+            transform: translateY(-2px);
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: var(--text-primary);
+            font-size: 28px;
+            font-weight: 700;
+            margin: 8px 0;
+        }
+
+        .metric-value.positive {
+            color: var(--accent-green);
+        }
+
+        .metric-value.negative {
+            color: var(--accent-red);
+        }
+
+        .metric-sublabel {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody td {
+            padding: 14px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-fixed {
+            background: rgba(0, 184, 163, 0.15);
+            color: var(--accent-green);
+        }
+
+        .badge-variable {
+            background: rgba(255, 192, 30, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        /* Anomaly Item */
+        .anomaly-item {
+            background: rgba(255, 153, 102, 0.1);
+            border-left: 3px solid var(--accent-orange);
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .anomaly-header {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .anomaly-amount {
+            color: var(--accent-orange);
+            font-size: 18px;
+            font-weight: 700;
+            margin: 6px 0;
+        }
+
+        .anomaly-explanation {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Action Item */
+        .action-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+
+        .action-priority {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .action-priority.p1 {
+            background: rgba(239, 71, 67, 0.2);
+            color: var(--accent-red);
+        }
+
+        .action-priority.p2 {
+            background: rgba(255, 192, 30, 0.2);
+            color: var(--accent-yellow);
+        }
+
+        .action-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 8px 0;
+        }
+
+        .action-impact {
+            color: var(--accent-green);
+            font-weight: 600;
+            margin: 8px 0;
+        }
+
+        .action-timeline {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Upload Section */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 60px 40px;
+            text-align: center;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-green);
+            background: var(--bg-hover);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            color: var(--text-primary);
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtext {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Button */
+        .btn {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #009688;
+            transform: translateY(-1px);
+        }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(0, 184, 163, 0.1);
+            border: 1px solid rgba(0, 184, 163, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-box h3 {
+            color: var(--accent-green);
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .info-box p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Status Message */
+        .status-message {
+            padding: 14px 18px;
+            border-radius: 6px;
+            margin-top: 16px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: rgba(0, 184, 163, 0.15);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .status-message.error {
+            background: rgba(239, 71, 67, 0.15);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .status-message.info {
+            background: rgba(255, 192, 30, 0.15);
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+
+        /* Loading */
+        .loading-spinner {
+            border: 3px solid var(--bg-secondary);
+            border-top: 3px solid var(--accent-green);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        /* ========================================
+           TRANSACTION DRILL-DOWN MODAL
+           ======================================== */
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-category-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(0, 184, 163, 0.15);
+            color: var(--accent-green);
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 28px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .modal-summary {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .modal-summary-item {
+            flex: 1;
+        }
+
+        .modal-summary-label {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .modal-summary-value {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .transaction-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 18px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .transaction-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-green);
+            transform: translateX(4px);
+        }
+
+        .transaction-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .transaction-merchant {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .transaction-amount {
+            color: var(--accent-orange);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .transaction-amount.reimbursed {
+            color: var(--accent-green);
+            text-decoration: line-through;
+        }
+
+        .transaction-details {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .transaction-date {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .transaction-confidence {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .confidence-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .confidence-badge.high {
+            background: rgba(0, 184, 163, 0.15);
+            color: var(--accent-green);
+        }
+
+        .confidence-badge.medium {
+            background: rgba(255, 192, 30, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        .confidence-badge.low {
+            background: rgba(239, 71, 67, 0.15);
+            color: var(--accent-red);
+        }
+
+        .reimbursement-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: rgba(0, 184, 163, 0.15);
+            color: var(--accent-green);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .no-transactions {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .category-table tbody tr {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-table tbody tr:hover {
+            background: var(--bg-hover);
+            transform: translateX(4px);
+        }
+
+        .clickable-hint {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .clickable-hint::before {
+            content: " ";
+            font-size: 14px;
+        }
+
+        /* ========================================
+   COLLAPSIBLE SECTIONS
+   ======================================== */
+
+        .collapsible-section {
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 0;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .collapsible-header:hover {
+            background: var(--bg-hover);
+        }
+
+        .collapsible-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .collapsible-icon {
+            font-size: 20px;
+        }
+
+        .toggle-icon {
+            color: var(--text-secondary);
+            font-size: 18px;
+            transition: transform 0.3s;
+        }
+
+        .collapsible-section.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-section.expanded .collapsible-content {
+            max-height: 2000px;
+            transition: max-height 0.5s ease-in;
+        }
+
+        .collapsible-body {
+            padding: 0 24px 24px 24px;
+        }
+
+        .expand-hint {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body>
+<!-- Header -->
+<div class="header">
+    <div class="header-content">
+        <div class="logo">
+            <span class="logo-icon"> </span>
+            <span class="logo-text">Financial Intelligence</span>
+        </div>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="nav-tab" onclick="switchTab('upload')">Upload Data</button>
+            <button class="nav-tab" onclick="switchTab('analysis')">Analysis</button>
+            <button class="nav-tab" onclick="switchTab('guide')">Guide</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+        <div id="noDataState" class="info-box">
+            <h3> No Data Loaded</h3>
+            <p>Upload your bank statement or load sample data to see financial insights.</p>
+            <button class="btn" style="margin-top: 15px;" onclick="switchTab('upload')">Upload Data</button>
+        </div>
+
+        <div id="dashboardContent" class="hidden">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">📊</span>
+                    <h2>Executive Summary</h2>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Monthly Spend</div>
+                        <div class="metric-value" id="totalSpend">₹0</div>
+                        <div class="metric-sublabel" id="totalTransactions">0 transactions</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Fixed Expenses</div>
+                        <div class="metric-value" id="fixedExpenses">₹0</div>
+                        <div class="metric-sublabel" id="fixedCategories">0 categories</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Variable Expenses</div>
+                        <div class="metric-value" id="variableExpenses">₹0</div>
+                        <div class="metric-sublabel" id="variableCategories">0 categories</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Month-over-Month</div>
+                        <div class="metric-value" id="momDrift">N/A</div>
+                        <div class="metric-sublabel" id="momTrend">No data</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon"> </span>
+                    <h2>Spending Analytics</h2>
+                </div>
+                <div class="chart-container">
+                    <div id="pieChart" style="width: 100%; height: 400px;"></div>
+                </div>
+
+                <div class="table-container">
+                    <table class="category-table">
+                        <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Type</th>
+                            <th>Monthly Avg</th>
+                            <th>% of Budget</th>
+                        </tr>
+                        </thead>
+                        <tbody id="categoryTableBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center;">Loading...</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="collapsible-section" id="anomaliesSection">
+                <div class="collapsible-header" onclick="toggleSection('anomaliesSection')">
+                    <h2>
+                        <span class="collapsible-icon">⚠</span>
+                        Detected Anomalies
+                    </h2>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="expand-hint">Click to expand</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                </div>
+                <div class="collapsible-content">
+                    <div class="collapsible-body">
+                        <div id="anomalyList">
+                            <p style="color: var(--text-muted);">No anomalies detected</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible-section" id="actionsSection">
+                <div class="collapsible-header" onclick="toggleSection('actionsSection')">
+                    <h2>
+                        <span class="collapsible-icon">✓</span>
+                        Recommended Actions
+                    </h2>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="expand-hint">Click to expand</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                </div>
+                <div class="collapsible-content">
+                    <div class="collapsible-body">
+                        <div id="actionItemsList">
+                            <p style="color: var(--text-muted);">No action items</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- closes dashboardContent -->
+    </div> <!-- closes dashboard tab -->
+
+    <!-- Upload Tab -->
+    <div id="upload" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon"> </span>
+                <h2>Upload Transaction Data</h2>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                <strong>Supported formats:</strong><br>
+                • CSV format: date, merchant, amount, category<br>
+                • Excel format: HDFC bank statements (.xlsx, .xls)
+            </p>
+
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon"></div>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-subtext">CSV or Excel files (max 10MB)</div>
+            </div>
+            <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+
+            <button class="btn" style="margin-top: 20px;" onclick="loadSampleData()">Load Sample Data</button>
+
+            <div id="uploadStatus" class="status-message"></div>
+        </div>
+    </div>
+
+    <!-- Analysis Tab -->
+    <div id="analysis" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon"> </span>
+                <h2>System Architecture</h2>
+            </div>
+            <div style="color: var(--text-secondary); line-height: 1.8;">
+                <p><strong style="color: var(--text-primary);">Layer 1: Data Ingestion</strong><br>
+                    Processes HDFC Excel statements, extracts transactions, validates data quality</p>
+
+                <p style="margin-top: 16px;"><strong style="color: var(--text-primary);">Layer 2: Analytics</strong><br>
+                    Categorizes transactions, calculates burn rates, identifies spending patterns</p>
+
+                <p style="margin-top: 16px;"><strong style="color: var(--text-primary);">Layer 3: ML Models</strong><br>
+                    Anomaly detection using statistical methods, cash flow forecasting</p>
+
+                <p style="margin-top: 16px;"><strong style="color: var(--text-primary);">Layer 4: Insights</strong><br>
+                    Generates actionable recommendations with quantified savings targets</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guide Tab -->
+    <div id="guide" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon"> </span>
+                <h2>How to Use</h2>
+            </div>
+            <div style="color: var(--text-secondary); line-height: 1.8;">
+                <p><strong style="color: var(--text-primary);">1. Upload Data</strong><br>
+                    Download your HDFC bank statement as Excel or prepare a CSV file</p>
+
+                <p style="margin-top: 16px;"><strong style="color: var(--text-primary);">2. Review Insights</strong><br>
+                    System automatically categorizes transactions and identifies patterns</p>
+
+                <p style="margin-top: 16px;"><strong style="color: var(--text-primary);">3. Take Action</strong><br>
+                    Follow the quantified recommendations to optimize your spending</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentData = null;
+    let allTransactions = [];
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+
+        document.getElementById(tabName).classList.add('active');
+
+        const clickedTab = Array.from(document.querySelectorAll('.nav-tab')).find(tab =>
+            tab.getAttribute('onclick').includes(tabName)
+        );
+        if (clickedTab) clickedTab.classList.add('active');
+    }
+
+    function loadSampleData() {
+        showStatus('Loading sample data...', 'info');
+
+        fetch('/api/load-sample-data', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showStatus(' Sample data loaded!', 'success');
+                    updateDashboard(data.data);
+                    setTimeout(() => switchTab('dashboard'), 1500);
+                } else {
+                    showStatus(' Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => showStatus(' Error: ' + error, 'error'));
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const fileName = file.name.toLowerCase();
+        const fileExtension = fileName.split('.').pop();
+
+        let endpoint = '/api/upload-csv';
+        let fileType = 'CSV';
+
+        if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+            endpoint = '/api/upload-excel';
+            fileType = 'Excel';
+        } else if (fileExtension !== 'csv') {
+            showStatus(' Unsupported file type', 'error');
+            return;
+        }
+
+        showStatus(`Uploading ${fileType} file...`, 'info');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch(endpoint, {method: 'POST', body: formData})
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showStatus(' ' + data.message, 'success');
+                    updateDashboard(data.data);
+                    setTimeout(() => switchTab('dashboard'), 2000);
+                } else {
+                    showStatus(' Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => showStatus(' Upload failed: ' + error, 'error'));
+    });
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('uploadStatus');
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = message;
+        statusDiv.className = 'status-message ' + type;
+    }
+
+    function updateDashboard(data) {
+        document.getElementById('noDataState').classList.add('hidden');
+        document.getElementById('dashboardContent').classList.remove('hidden');
+
+        if (data.metrics) {
+            document.getElementById('totalSpend').textContent = data.metrics.total_monthly_spend.value;
+            document.getElementById('totalTransactions').textContent = data.metrics.total_monthly_spend.sublabel;
+            document.getElementById('fixedExpenses').textContent = data.metrics.fixed_expenses.value;
+            document.getElementById('fixedCategories').textContent = data.metrics.fixed_expenses.sublabel;
+            document.getElementById('variableExpenses').textContent = data.metrics.variable_expenses.value;
+            document.getElementById('variableCategories').textContent = data.metrics.variable_expenses.sublabel;
+            document.getElementById('momDrift').textContent = data.metrics.mom_drift.value;
+            document.getElementById('momTrend').textContent = data.metrics.mom_drift.sublabel;
+        }
+
+        if (data.category_breakdown) {
+            const tbody = document.getElementById('categoryTableBody');
+            tbody.innerHTML = '';
+
+            data.category_breakdown.forEach(cat => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                        <td><strong>${cat.category}</strong></td>
+                        <td><span class="badge ${cat.type === 'Fixed' ? 'badge-fixed' : 'badge-variable'}">${cat.type}</span></td>
+                        <td>${cat.monthly_avg}</td>
+                        <td>${cat.percentage}</td>
+                    `;
+            });
+
+            const labels = data.category_breakdown.map(c => c.category);
+            const values = data.category_breakdown.map(c => parseFloat(c.monthly_avg.replace(/[₹,]/g, '')));
+
+            const pieData = [{
+                values: values,
+                labels: labels,
+                type: 'pie',
+                marker: {
+                    colors: ['#00b8a3', '#ffc01e', '#ff9966', '#ef4743', '#4a90e2', '#9b59b6', '#2ecc71', '#e74c3c']
+                },
+                textfont: {color: '#ffffff'}
+            }];
+
+            const pieLayout = {
+                margin: {l: 0, r: 0, t: 0, b: 0},
+                showlegend: true,
+                paper_bgcolor: '#2d2d2d',
+                plot_bgcolor: '#2d2d2d',
+                font: {color: '#ffffff'},
+                legend: {font: {color: '#a3a3a3'}}
+            };
+
+            Plotly.newPlot('pieChart', pieData, pieLayout, {responsive: true});
+        }
+
+        if (data.anomalies && data.anomalies.length > 0) {
+            const anomalyList = document.getElementById('anomalyList');
+            anomalyList.innerHTML = '';
+
+            data.anomalies.forEach(anom => {
+                const div = document.createElement('div');
+                div.className = 'anomaly-item';
+                div.innerHTML = `
+                        <div class="anomaly-header">${anom.date}: ${anom.merchant}</div>
+                        <div class="anomaly-amount">${anom.amount}</div>
+                        <div class="anomaly-explanation">Z-score: ${anom.z_score} - ${anom.explanation}</div>
+                    `;
+                anomalyList.appendChild(div);
+            });
+        }
+
+        if (data.action_items && data.action_items.length > 0) {
+            const actionsList = document.getElementById('actionItemsList');
+            actionsList.innerHTML = '';
+
+            data.action_items.forEach(action => {
+                const div = document.createElement('div');
+                div.className = 'action-item';
+                div.innerHTML = `
+                        <span class="action-priority ${action.priority_class}">${action.priority}</span>
+                        <div class="action-title">${action.action}</div>
+                        <div class="action-impact">${action.impact}</div>
+                        <div class="action-timeline">Timeline: ${action.timeline}</div>
+                    `;
+                actionsList.appendChild(div);
+            });
+        }
+
+        // Enable drill-down
+        setTimeout(() => {
+            fetchTransactions();
+            makeCategoryTableClickable();
+            makePieChartClickable();
+
+            const tableContainer = document.querySelector('.table-container');
+            if (tableContainer && !document.querySelector('.clickable-hint')) {
+                const hint = document.createElement('div');
+                hint.className = 'clickable-hint';
+                hint.textContent = 'Click any category to view detailed transactions';
+                tableContainer.appendChild(hint);
+            }
+        }, 500);
+    }
+
+    // ========== MODAL FUNCTIONS ==========
+
+    function showCategoryTransactions(categoryName) {
+        if (!allTransactions || allTransactions.length === 0) {
+            console.log('No transactions loaded yet');
+            return;
+        }
+
+        const categoryTxns = allTransactions.filter(txn => txn.category === categoryName);
+
+        if (categoryTxns.length === 0) {
+            alert(`No transactions found for ${categoryName}`);
+            return;
+        }
+
+        const totalAmount = categoryTxns.reduce((sum, txn) => sum + txn.amount, 0);
+        const avgAmount = totalAmount / categoryTxns.length;
+        const netAmount = categoryTxns.reduce((sum, txn) => sum + (txn.net_amount || txn.amount), 0);
+
+        const modalHTML = `
+                <div class="modal-overlay active" id="transactionModal" onclick="closeModalOnOverlay(event)">
+                    <div class="modal-content" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <div class="modal-title">
+                                <span>${categoryName}</span>
+                                <span class="modal-category-badge">${categoryTxns.length} transactions</span>
+                            </div>
+                            <button class="modal-close" onclick="closeTransactionModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="modal-summary">
+                                <div class="modal-summary-item">
+                                    <div class="modal-summary-label">Total Spent</div>
+                                    <div class="modal-summary-value">₹${totalAmount.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
+                                </div>
+                                <div class="modal-summary-item">
+                                    <div class="modal-summary-label">Average</div>
+                                    <div class="modal-summary-value">₹${avgAmount.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
+                                </div>
+                                <div class="modal-summary-item">
+                                    <div class="modal-summary-label">Net (After Reimb.)</div>
+                                    <div class="modal-summary-value">₹${netAmount.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
+                                </div>
+                            </div>
+                            <div class="transaction-list">
+                                ${categoryTxns.map(txn => renderTransaction(txn)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        const existingModal = document.getElementById('transactionModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Update the renderTransaction function to include edit button
+
+    function renderTransaction(txn) {
+        const date = new Date(txn.date);
+        const dateStr = date.toLocaleDateString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric'
+        });
+
+        const entityIcon = txn.entity_type === 'person' ? '👤' :
+            txn.entity_type === 'platform' ? '🏢' :
+                txn.entity_type === 'merchant' ? '🏪' : '';
+
+        return `
+        <div class="transaction-item" data-txn-id="${txn.txn_id}">
+            <div class="transaction-header">
+                <div class="transaction-merchant">${entityIcon} ${txn.merchant || 'Unknown'}</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="transaction-amount">₹${txn.amount.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
+                    <button class="edit-btn" onclick="editTransaction('${txn.txn_id}', '${txn.category}', '${txn.merchant}')">⋮</button>
+                </div>
+            </div>
+            <div class="transaction-details">
+                <span class="transaction-date">📅 ${dateStr}</span>
+                <span style="color: var(--text-muted); font-size: 13px;">
+                    ${txn.description ? txn.description.substring(0, 40) : ''}
+                </span>
+            </div>
+        </div>
+    `;
+    }
+
+    // Edit transaction function
+    function editTransaction(txnId, currentCategory, merchantName) {
+        const categories = [
+            'Food & Dining',
+            'Shopping',
+            'Transport',
+            'Utilities',
+            'Entertainment',
+            'Healthcare',
+            'Transfer / P2P',
+            'Rent',
+            'Education',
+            'ATM / Cash',
+            'Other'
+        ];
+
+        // Build dropdown options
+        const options = categories.map(cat =>
+            `<option value="${cat}" ${cat === currentCategory ? 'selected' : ''}>${cat}</option>`
+        ).join('');
+
+        // Create inline edit UI
+        const txnElement = document.querySelector(`[data-txn-id="${txnId}"]`);
+        if (!txnElement) return;
+
+        const editHTML = `
+        <div class="edit-container">
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                <select id="edit-category-${txnId}" class="category-dropdown">
+                    ${options}
+                </select>
+                <button onclick="saveCorrection('${txnId}')" class="save-btn">Save</button>
+                <button onclick="cancelEdit('${txnId}')" class="cancel-btn">✕</button>
+            </div>
+        </div>
+    `;
+
+        // Append edit UI
+        txnElement.innerHTML += editHTML;
+    }
+
+    // Save correction
+    async function saveCorrection(txnId) {
+        const dropdown = document.getElementById(`edit-category-${txnId}`);
+        const newCategory = dropdown.value;
+
+        try {
+            const response = await fetch('/api/transactions/correct', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    txn_id: txnId,
+                    new_category: newCategory
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                // Show success message
+                showNotification(`✅ Updated! ${result.updated_count} transaction(s) recategorized.`);
+
+                // Reload dashboard after 1 second
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showNotification('❌ Error: ' + result.message);
+            }
+        } catch (error) {
+            showNotification('❌ Failed to save correction');
+            console.error(error);
+        }
+    }
+
+    // Cancel edit
+    function cancelEdit(txnId) {
+        const editContainer = document.querySelector(`[data-txn-id="${txnId}"] .edit-container`);
+        if (editContainer) {
+            editContainer.remove();
+        }
+    }
+
+    // Show notification
+    function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = message;
+        notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #2d2d2d;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #00b8a3;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+`;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+</script>
+
+<style>
+    .edit-btn {
+        background: transparent;
+        border: none;
+        color: #a3a3a3;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .edit-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #00b8a3;
+    }
+
+    .category-dropdown {
+        background: #2d2d2d;
+        color: #ffffff;
+        border: 1px solid #404040;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        flex: 1;
+    }
+
+    .save-btn, .cancel-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+
+    .save-btn {
+        background: #00b8a3;
+        color: white;
+    }
+
+    .save-btn:hover {
+        opacity: 0.8;
+    }
+
+    .cancel-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #a3a3a3;
+    }
+
+    .cancel-btn:hover {
+        background: #404040;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+</style>
+
+<script>
+    function closeTransactionModal() {
+        const modal = document.getElementById('transactionModal');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => modal.remove(), 200);
+        }
+        document.body.style.overflow = 'auto';
+    }
+
+    function closeModalOnOverlay(event) {
+        if (event.target.id === 'transactionModal') {
+            closeTransactionModal();
+        }
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeTransactionModal();
+        }
+    });
+
+    function makeCategoryTableClickable() {
+        const tableBody = document.getElementById('categoryTableBody');
+        if (!tableBody) return;
+
+        const rows = tableBody.getElementsByTagName('tr');
+        for (let row of rows) {
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', function () {
+                const categoryCell = this.getElementsByTagName('td')[0];
+                if (categoryCell) {
+                    const categoryName = categoryCell.querySelector('strong')?.textContent ||
+                        categoryCell.textContent.trim();
+                    showCategoryTransactions(categoryName);
+                }
+            });
+        }
+    }
+
+    function makePieChartClickable() {
+        const pieChart = document.getElementById('pieChart');
+        if (!pieChart) return;
+
+        pieChart.on('plotly_click', function (data) {
+            const point = data.points[0];
+            const categoryName = point.label;
+            showCategoryTransactions(categoryName);
+        });
+    }
+
+    function fetchTransactions() {
+        fetch('/api/transactions/classified')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    allTransactions = data.transactions;
+                    console.log(`Loaded ${allTransactions.length} transactions for drill-down`);
+                }
+            })
+            .catch(error => {
+                console.log('Transactions not yet available:', error);
+            });
+    }
+
+    window.addEventListener('load', function () {
+        fetchTransactions();
+
+        fetch('/api/dashboard-data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success' && data.data) {
+                    updateDashboard(data.data);
+                }
+            })
+            .catch(error => console.log('No existing data'));
+
+        setTimeout(() => {
+            makeCategoryTableClickable();
+            makePieChartClickable();
+        }, 1000);
+    });
+    // ========================================
+    // COLLAPSIBLE SECTIONS
+    // ========================================
+
+    function toggleSection(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.classList.toggle('expanded');
+
+// Save state to localStorage
+            const isExpanded = section.classList.contains('expanded');
+            localStorage.setItem(`section_${sectionId}`, isExpanded);
+        }
+    }
+
+    // Auto-expand sections based on saved state
+    function restoreSectionStates() {
+        const sections = document.querySelectorAll('.collapsible-section');
+        sections.forEach(section => {
+            const sectionId = section.id;
+            const savedState = localStorage.getItem(`section_${sectionId}`);
+            if (savedState === 'true') {
+                section.classList.add('expanded');
+            }
+        });
+    }
+
+    // Call on page load
+    window.addEventListener('load', restoreSectionStates);
+</script>
+</body>
+
+</html>
