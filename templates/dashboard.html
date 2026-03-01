@@ -896,6 +896,26 @@
                 </div>
             </div>
 
+            <div class="collapsible-section" id="trendsSection">
+                <div class="collapsible-header" onclick="toggleSection('trendsSection')">
+                    <h2>
+                        <span class="collapsible-icon">📈</span>
+                        Spending Trends
+                    </h2>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="expand-hint">Click to expand</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                </div>
+                <div class="collapsible-content">
+                    <div class="collapsible-body">
+                        <div id="trendsContent">
+                            <p style="color: var(--text-muted);">Loading trends...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="collapsible-section" id="anomaliesSection">
                 <div class="collapsible-header" onclick="toggleSection('anomaliesSection')">
                     <h2>
@@ -1086,6 +1106,125 @@
         statusDiv.className = 'status-message ' + type;
     }
 
+    function loadTemporalInsights() {
+        fetch('/api/insights/temporal')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    renderTemporalInsights(data.insights);
+                }
+            })
+            .catch(error => {
+                console.log('Temporal insights not available:', error);
+            });
+    }
+
+    function renderTemporalInsights(insights) {
+        const container = document.getElementById('trendsContent');
+        if (!container || !insights) return;
+
+        let html = '';
+
+        if (insights.data_quality && insights.data_quality.warning) {
+            html += `
+            <div style="background: rgba(255, 192, 30, 0.15); border: 1px solid var(--accent-yellow);
+                        border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+                <strong style="color: var(--accent-yellow);">⚠ ${insights.data_quality.warning}</strong>
+            </div>
+        `;
+        }
+
+        if (insights.fastest_growing) {
+            const fg = insights.fastest_growing;
+            html += `
+            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">
+                    FASTEST GROWING CATEGORY
+                </div>
+                <div style="color: var(--accent-green); font-size: 24px; font-weight: 700; margin-bottom: 8px;">
+                    ${fg.category} +${fg.change_percent.toFixed(0)}%
+                </div>
+                <div style="color: var(--text-secondary); font-size: 14px;">
+                    ₹${fg.previous_spend.toLocaleString('en-IN', {maximumFractionDigits: 0})} →
+                    ₹${fg.current_spend.toLocaleString('en-IN', {maximumFractionDigits: 0})}
+                </div>
+            </div>
+        `;
+        }
+
+        if (insights.acceleration_flags && insights.acceleration_flags.length > 0) {
+            html += `
+            <div style="margin-bottom: 20px;">
+                <div style="color: var(--text-primary); font-size: 16px; font-weight: 600; margin-bottom: 12px;">
+                    ⚡ Accelerating Spending
+                </div>
+        `;
+
+            insights.acceleration_flags.forEach(flag => {
+                html += `
+                <div style="background: rgba(255, 153, 102, 0.1); border-left: 3px solid var(--accent-orange);
+                            padding: 12px 16px; border-radius: 6px; margin-bottom: 8px;">
+                    <div style="color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">
+                        ${flag.category}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 13px;">
+                        ${flag.explanation}
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">
+                        Current: ₹${flag.current_spend.toLocaleString('en-IN', {maximumFractionDigits: 0})} |
+                        Avg: ₹${flag.trailing_avg.toLocaleString('en-IN', {maximumFractionDigits: 0})}
+                    </div>
+                </div>
+            `;
+            });
+
+            html += `</div>`;
+        }
+
+        if (insights.mom_changes && insights.mom_changes.length > 0) {
+            html += `
+            <div>
+                <div style="color: var(--text-primary); font-size: 16px; font-weight: 600; margin-bottom: 12px;">
+                    📊 Month-over-Month Changes
+                </div>
+        `;
+
+            const topChanges = insights.mom_changes.slice(0, 5);
+
+            topChanges.forEach(change => {
+                const isIncrease = change.change_amount > 0;
+                const color = isIncrease ? 'var(--accent-orange)' : 'var(--accent-green)';
+                const arrow = isIncrease ? '↑' : '↓';
+
+                html += `
+                <div style="display: flex; justify-content: space-between; align-items: center;
+                            padding: 12px 0; border-bottom: 1px solid var(--border);">
+                    <div>
+                        <div style="color: var(--text-primary); font-weight: 600;">
+                            ${change.category}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 13px;">
+                            ${change.previous_month} → ${change.current_month}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: ${color}; font-size: 18px; font-weight: 700;">
+                            ${arrow} ${Math.abs(change.change_percent).toFixed(0)}%
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 12px;">
+                            ${isIncrease ? '+' : ''}₹${change.change_amount.toLocaleString('en-IN', {maximumFractionDigits: 0})}
+                        </div>
+                    </div>
+                </div>
+            `;
+            });
+
+            html += `</div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
     function updateDashboard(data) {
         document.getElementById('noDataState').classList.add('hidden');
         document.getElementById('dashboardContent').classList.remove('hidden');
@@ -1187,6 +1326,11 @@
                 tableContainer.appendChild(hint);
             }
         }, 500);
+
+        // Load temporal insights
+        setTimeout(() => {
+            loadTemporalInsights();
+        }, 1000);
     }
 
     // ========== MODAL FUNCTIONS ==========

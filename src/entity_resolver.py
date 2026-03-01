@@ -26,7 +26,8 @@ class EntityResolver:
             'DOMINOS', 'KFC', 'MCDONALDS', 'SUBWAY', 'BURGERKING', 'BURGER KING',
             'BLINKIT', 'DUNZO', 'ZEPTO', 'INSTAMART', 'BBNOW', 'BIGBASKET',
             'EKART', 'DELHIVERY', 'BLUEDART',
-            'NIKE', 'BATA', 'ADIDAS', 'PUMA', 'AMUL'
+            'NIKE', 'BATA', 'ADIDAS', 'PUMA', 'AMUL',
+            'GROWW', 'ZERODHA', 'UPSTOX', 'ANGELONE', 'KITE'  # Investment platforms
         }
 
         # Human name indicators
@@ -39,8 +40,56 @@ class EntityResolver:
         Returns: (entity_name, entity_type)
         entity_type: 'platform', 'person', 'merchant', 'unknown'
         """
-        # Check for known platforms first (but NOT payment apps)
+        # Check for known platforms first (but NOT payment apps in UPI context)
         text_upper = f"{description} {merchant}".upper()
+
+        # Extract from UPI pattern FIRST (before platform check)
+        upi_match = self.upi_pattern.search(description)
+        if upi_match:
+            name = upi_match.group(1).strip()
+
+            # If UPI shows payment app, extract the REAL merchant from rest of description
+            if name.upper() in self.payment_apps:
+                # Look for merchant name after payment app in description
+                parts = description.upper().split('-')
+                for i, part in enumerate(parts):
+                    if part in self.payment_apps and i + 1 < len(parts):
+                        # Next part is the actual merchant
+                        actual_merchant = parts[i + 1].strip()
+
+                        # Check if it's a known platform (substring match)
+                        for platform in self.platforms:
+                            if platform in actual_merchant:
+                                return platform.title(), 'platform'
+
+                        # Check if human name
+                        if self.is_human_name(actual_merchant):
+                            return self.normalize_name(actual_merchant), 'person'
+
+                        # Check local merchant keywords
+                        for keyword in ['RESTAURANT', 'CAFE', 'FOOD', 'DHABA', 'HOTEL', 'FRUITS', 'LAUNDRY']:
+                            if keyword in actual_merchant:
+                                return self.normalize_name(actual_merchant), 'merchant'
+
+                        return self.normalize_name(actual_merchant), 'merchant'
+
+                # If can't extract, return Unknown (will trigger fallback)
+                return 'Unknown', 'unknown'
+
+            # Check if it's a platform (substring match for "SWIGGY LIMITED" → "SWIGGY")
+            name_upper = name.upper()
+            for platform in self.platforms:
+                if platform in name_upper:
+                    return platform.title(), 'platform'
+
+            # Check if it's a human name
+            if self.is_human_name(name):
+                return self.normalize_name(name), 'person'
+
+            # Otherwise it's a merchant
+            return self.normalize_name(name), 'merchant'
+
+        # Check for known platforms in full text (substring match)
         for platform in self.platforms:
             if platform in text_upper:
                 return platform.title(), 'platform'
@@ -52,44 +101,19 @@ class EntityResolver:
             'SUPERMARKET': 'merchant', 'SALON': 'merchant', 'TRENDS': 'merchant',
             'MARKET': 'merchant', 'STORE': 'merchant', 'SHOP': 'merchant',
             'HOSPITAL': 'merchant', 'CLINIC': 'merchant', 'ICE CREAM': 'merchant',
-            'BAKERY': 'merchant', 'HOSPITALITY': 'merchant'
+            'BAKERY': 'merchant', 'HOSPITALITY': 'merchant', 'RESTAURANT': 'merchant',
+            'FRUITS': 'merchant', 'LAUNDRY': 'merchant', 'RETAIL': 'merchant',
+            'PIZZA': 'merchant', 'FOOD': 'merchant'
         }
 
         for keyword, etype in local_keywords.items():
             if keyword in text_upper:
-                # Extract merchant name from description
-                if 'UPI-' in description:
-                    match = self.upi_pattern.search(description)
-                    if match:
-                        name = match.group(1).strip()
-                        # Skip if it's just a payment app
-                        if name.upper() not in self.payment_apps:
-                            return self.normalize_name(name), etype
-                return merchant if merchant != 'Unknown' else 'Local Merchant', etype
-
-        # Extract from UPI pattern
-        upi_match = self.upi_pattern.search(description)
-        if upi_match:
-            name = upi_match.group(1).strip()
-
-            # Skip if it's a payment app (get actual merchant instead)
-            if name.upper() in self.payment_apps:
-                return 'Unknown', 'unknown'  # Will trigger fallback to keyword
-
-            # Check if it's a platform
-            if name.upper() in self.platforms:
-                return name.title(), 'platform'
-
-            # Check if it's a human name (STRICT: must be 2-3 words, all title case)
-            if self.is_human_name(name):
-                return self.normalize_name(name), 'person'
-
-            # Otherwise it's a merchant
-            return self.normalize_name(name), 'merchant'
+                if merchant and merchant != 'Unknown':
+                    return self.normalize_name(merchant), etype
+                return 'Local Merchant', etype
 
         # POS transactions - extract merchant name
         if 'POS' in description.upper():
-            # Extract merchant after POS number
             pos_parts = description.split()
             for i, part in enumerate(pos_parts):
                 if 'POS' in part.upper() and i + 2 < len(pos_parts):
@@ -164,6 +188,7 @@ class EntityResolver:
             shopping_platforms = {'Amazon', 'Flipkart', 'Myntra', 'Ajio', 'Blinkit', 'Dunzo', 'Zepto', 'Ekart', 'Nike', 'Bata', 'Adidas', 'Puma', 'Jiomart'}
             entertainment_platforms = {'Netflix', 'Spotify', 'Prime', 'Hotstar', 'Apple'}
             utilities_platforms = {'Airtel', 'Jio', 'Vodafone', 'Vi'}
+            investment_platforms = {'Groww', 'Zerodha', 'Upstox', 'Angelone', 'Kite'}
 
             # Special case: PPSL/Reliance without "Jiomart" context → Shopping
             if entity_name in ['Reliance', 'Ppsl'] and entity_type == 'platform':
@@ -179,6 +204,8 @@ class EntityResolver:
                 return 'Entertainment'
             elif entity_name in utilities_platforms:
                 return 'Utilities'
+            elif entity_name in investment_platforms:
+                return 'Investment'
         elif entity_type == 'merchant':
             # Local merchant keywords
             name_lower = entity_name.lower()

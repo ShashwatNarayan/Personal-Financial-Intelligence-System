@@ -1,4 +1,4 @@
-"""
+﻿"""
 Personal Financial Intelligence System - SIMPLE STABLE VERSION
 Core features only: Upload → Parse → Categorize → Display → Drill-down
 """
@@ -95,7 +95,22 @@ def upload_excel():
             f"Med={stats['medium_confidence_count']}, "
             f"Low={stats['low_confidence_count']}"
         )
+        # Detect reimbursements
+        print("🔄 Detecting reimbursements...")
+        from src.reimbursement_detector import ReimbursementDetector
 
+        detector = ReimbursementDetector(df_expenses, window_days=14)
+        reimbursement_report = detector.generate_full_report()
+
+        # Update current_data with reimbursement flags
+        current_data = detector.df
+        df_expenses = current_data
+
+        print(f"   ✅ Reimbursement detection complete:")
+        print(f"      Total reimbursed: ₹{reimbursement_report['summary']['total_reimbursed']:,.0f}")
+        print(f"      Reimbursed transactions: {reimbursement_report['reimbursements']['reimbursed_transactions']}")
+        print(f"      Full: {reimbursement_report['reimbursements']['full_reimbursements']}, "
+              f"Partial: {reimbursement_report['reimbursements']['partial_reimbursements']}")
         # STEP 4: Store in global state
         current_data = df_expenses
         print(f"   ✅ Stored {len(current_data)} transactions in memory")
@@ -110,7 +125,7 @@ def upload_excel():
         months = days / 30.44
 
         # Total spend
-        total_spent = df_expenses['amount'].sum()
+        total_spent = current_data['net_amount'].sum()
         avg_monthly = total_spent / months if months > 0 else total_spent
 
         # Category breakdown
@@ -122,7 +137,7 @@ def upload_excel():
         variable_total = category_spend[~category_spend.index.isin(fixed_categories)].sum()
 
         print(f"   💰 Total: ₹{total_spent:,.0f} over {months:.1f} months")
-        print(f"   📅 Average monthly: ₹{avg_monthly:,.0f}")
+        print(f"   🗓 Average monthly: ₹{avg_monthly:,.0f}")
 
         # Clean up
         if os.path.exists(temp_path):
@@ -206,13 +221,16 @@ def get_transactions():
                 'merchant': str(row.get('entity_name', row.get('merchant', 'Unknown'))),
                 'description': str(row.get('description', ''))[:60],
                 'amount': float(row['amount']),
+                'net_amount': float(row.get('net_amount', row['amount'])),
                 'category': str(row['category']),
                 'entity_type': str(row.get('entity_type', 'unknown')),
                 'confidence_level': str(row.get('confidence_level', 'medium')),  # ← ADD THIS
                 'transaction_type': 'debit',
                 'confidence': 1.0,
-                'is_reimbursement': False,
-                'net_amount': float(row['amount']),
+                'is_reimbursement': bool(row.get('is_reimbursed', False)),
+                'is_reimbursed': bool(row.get('is_reimbursed', False)),
+                'reimbursed_amount': float(row.get('reimbursed_amount', 0)),
+                'is_reimbursement_credit': bool(row.get('is_reimbursement_credit', False)),
                 'needs_review': False,
             })
 
@@ -259,10 +277,20 @@ def get_needs_review():
             transactions.append({
                 'txn_id': str(idx),
                 'date': str(row['date'])[:10],
-                'merchant': str(row.get('entity_name', 'Unknown')),
+                'merchant': str(row.get('entity_name', row.get('merchant', 'Unknown'))),
+                'description': str(row.get('description', ''))[:60],
                 'amount': float(row['amount']),
+                'net_amount': float(row.get('net_amount', row['amount'])),
                 'category': str(row['category']),
-                'confidence_level': 'low'
+                'entity_type': str(row.get('entity_type', 'unknown')),
+                'confidence_level': str(row.get('confidence_level', 'medium')),  # ← ADD THIS
+                'transaction_type': 'debit',
+                'confidence': 1.0,
+                'is_reimbursement': bool(row.get('is_reimbursed', False)),
+                'is_reimbursed': bool(row.get('is_reimbursed', False)),
+                'reimbursed_amount': float(row.get('reimbursed_amount', 0)),
+                'is_reimbursement_credit': bool(row.get('is_reimbursement_credit', False)),
+                'needs_review': False,
             })
 
         print(f"Found {len(transactions)} low-confidence transactions")
@@ -354,6 +382,80 @@ def correct_transaction():
         }), 500
 
 
+# ========================================
+# ADD TO flask_app.py - After /api/transactions/correct endpoint
+# ========================================
+
+@app.route('/api/insights/temporal', methods=['GET'])
+def get_temporal_insights():
+    """Get time-aware spending insights (MoM, trends, acceleration)"""
+    global current_data
+
+    if current_data is None or len(current_data) == 0:
+        return jsonify({
+            'status': 'error',
+            'message': 'No data available. Upload a statement first.'
+        }), 400
+
+    try:
+        from src.temporal_insights import TemporalInsights
+
+        # Create insights analyzer
+        analyzer = TemporalInsights(current_data)
+
+        # Generate full report
+        report = analyzer.generate_full_report()
+
+        print(f"\n📈 Temporal Insights Generated:")
+        print(f"   Months available: {report['data_quality']['months_available']}")
+        print(f"   MoM changes: {len(report['mom_changes'])} categories")
+        print(f"   Fastest growing: {report['fastest_growing']['category'] if report['fastest_growing'] else 'None'}")
+        print(f"   Acceleration flags: {len(report['acceleration_flags'])} categories")
+
+        return jsonify({
+            'status': 'success',
+            'insights': report
+        })
+
+    except Exception as e:
+        print(f"❌ Temporal insights error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        return jsonify({
+            'status': 'error',
+            'message': f'Error generating insights: {str(e)}'
+        }), 500
+
+@app.route('/api/reimbursements/report', methods=['GET'])
+def get_reimbursement_report():
+    """Get detailed reimbursement analysis"""
+    global current_data
+
+    if current_data is None or len(current_data) == 0:
+        return jsonify({'status': 'error', 'message': 'No data'}), 400
+
+    try:
+        from src.reimbursement_detector import ReimbursementDetector
+
+        detector = ReimbursementDetector(current_data, window_days=14)
+        report = detector.generate_full_report()
+
+        print(f"📊 Reimbursement report generated:")
+        print(f"   Gross: ₹{report['summary']['gross_spend']:,.0f}")
+        print(f"   Net: ₹{report['summary']['net_spend']:,.0f}")
+        print(f"   Reimbursed: ₹{report['summary']['total_reimbursed']:,.0f}")
+
+        return jsonify({
+            'status': 'success',
+            'report': report
+        })
+
+    except Exception as e:
+        print(f"❌ Reimbursement error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 # ===== ERROR HANDLERS =====
 
 @app.errorhandler(404)
@@ -384,7 +486,7 @@ if __name__ == '__main__':
     print("\n🚫 Removed complex features:")
     print("  ❌ Entity store / memory")
     print("  ❌ Confidence scoring")
-    print("  ❌ Reimbursement detection")
+    print("  ✅ Reimbursement detection")
     print("  ❌ Human-in-the-loop feedback")
     print("\n💡 Add these back incrementally once this works!\n")
     print("=" * 60)
@@ -402,3 +504,4 @@ if __name__ == '__main__':
         port=5000,
         use_reloader=True
     )
+
