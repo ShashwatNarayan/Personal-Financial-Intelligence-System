@@ -1287,10 +1287,10 @@
                 const div = document.createElement('div');
                 div.className = 'anomaly-item';
                 div.innerHTML = `
-                        <div class="anomaly-header">${anom.date}: ${anom.merchant}</div>
+                        <div class="anomaly-header">${anom.category}</div>
                         <div class="anomaly-amount">${anom.amount}</div>
-                        <div class="anomaly-explanation">Z-score: ${anom.z_score} - ${anom.explanation}</div>
-                    `;
+                        <div class="anomaly-explanation">${anom.explanation}</div>
+                `;
                 anomalyList.appendChild(div);
             });
         }

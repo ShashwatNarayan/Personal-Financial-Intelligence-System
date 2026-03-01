@@ -111,6 +111,19 @@ def upload_excel():
         print(f"      Reimbursed transactions: {reimbursement_report['reimbursements']['reimbursed_transactions']}")
         print(f"      Full: {reimbursement_report['reimbursements']['full_reimbursements']}, "
               f"Partial: {reimbursement_report['reimbursements']['partial_reimbursements']}")
+
+        # Detect anomalies
+        print("🔍 Detecting spending anomalies...")
+        from src.anomaly_detector import AnomalyDetector
+
+        anomaly_detector = AnomalyDetector(current_data, threshold=2.0, min_months=3)
+        anomaly_report = anomaly_detector.generate_report()
+
+        if anomaly_report['summary']['total_anomalies'] > 0:
+            print(f"   ⚠️  {anomaly_report['summary']['total_anomalies']} anomalies detected")
+        else:
+            print("   ✅ No significant anomalies")
+
         # STEP 4: Store in global state
         current_data = df_expenses
         print(f"   ✅ Stored {len(current_data)} transactions in memory")
@@ -179,7 +192,15 @@ def upload_excel():
                     }
                     for cat, amount in category_spend.items()
                 ],
-                'anomalies': [],  # Simplified: no anomaly detection
+                'anomalies': [
+                    {
+                        'category': anom['category'],
+                        'amount': f"₹{anom['current_spend']:,.0f}",
+                        'z_score': f"{anom['z_score']:.1f}",
+                        'explanation': anom['explanation']
+                    }
+                    for anom in anomaly_report['anomalies'][:5]  # Top 5
+                ] if anomaly_report['summary']['total_anomalies'] > 0 else [],
                 'action_items': []  # Simplified: no action items
             }
         })
@@ -453,6 +474,36 @@ def get_reimbursement_report():
 
     except Exception as e:
         print(f"❌ Reimbursement error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/anomalies/report', methods=['GET'])
+def get_anomaly_report():
+    """Get detected spending anomalies"""
+    global current_data
+
+    if current_data is None or len(current_data) == 0:
+        return jsonify({'status': 'error', 'message': 'No data'}), 400
+
+    try:
+        from src.anomaly_detector import AnomalyDetector
+
+        detector = AnomalyDetector(current_data, threshold=2.0, min_months=3)
+        report = detector.generate_report()
+
+        print(f"📊 Anomaly report generated:")
+        print(f"   Total: {report['summary']['total_anomalies']}")
+        print(f"   Critical: {report['summary'].get('critical', 0)}")
+        print(f"   High: {report['summary'].get('high', 0)}")
+
+        return jsonify({
+            'status': 'success',
+            'report': report
+        })
+
+    except Exception as e:
+        print(f"❌ Anomaly detection error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
