@@ -936,6 +936,26 @@
                 </div>
             </div>
 
+            <div class="collapsible-section" id="subscriptionsSection">
+                <div class="collapsible-header" onclick="toggleSection('subscriptionsSection')">
+                    <h2>
+                        <span class="collapsible-icon">🔁</span>
+                        Recurring Subscriptions
+                    </h2>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="expand-hint">Click to expand</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                </div>
+                <div class="collapsible-content">
+                    <div class="collapsible-body">
+                        <div id="subscriptionsList">
+                            <p style="color: var(--text-muted);">Loading subscriptions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="collapsible-section" id="actionsSection">
                 <div class="collapsible-header" onclick="toggleSection('actionsSection')">
                     <h2>
@@ -1331,6 +1351,104 @@
         setTimeout(() => {
             loadTemporalInsights();
         }, 1000);
+
+        // Load subscriptions
+        setTimeout(() => {
+            loadSubscriptions();
+        }, 1500);
+    }
+
+    function loadSubscriptions() {
+        fetch('/api/subscriptions/audit')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    renderSubscriptions(data.report);
+                }
+            })
+            .catch(error => {
+                console.log('Subscriptions not available:', error);
+                document.getElementById('subscriptionsList').innerHTML =
+                    '<p style="color: var(--text-muted);">No subscriptions detected</p>';
+            });
+    }
+
+    function renderSubscriptions(report) {
+        const container = document.getElementById('subscriptionsList');
+
+        if (!report.subscriptions || report.subscriptions.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted);">No recurring subscriptions detected</p>';
+            return;
+        }
+
+        let html = `
+        <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div>
+                    <div style="color: var(--text-muted); font-size: 12px;">TOTAL SUBSCRIPTIONS</div>
+                    <div style="color: var(--text-primary); font-size: 24px; font-weight: 700;">
+                        ${report.summary.total_subscriptions}
+                    </div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 12px;">EST. MONTHLY COST</div>
+                    <div style="color: var(--accent-orange); font-size: 24px; font-weight: 700;">
+                        ₹${report.summary.total_monthly_cost.toLocaleString('en-IN', {maximumFractionDigits: 0})}
+                    </div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 12px;">COST INCREASES</div>
+                    <div style="color: var(--accent-red); font-size: 24px; font-weight: 700;">
+                        ${report.summary.increasing_cost || 0}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+        report.subscriptions.forEach(sub => {
+            const flagColor = sub.flags.includes('cost_increase') ? 'var(--accent-red)' :
+                sub.flags.includes('long_running') ? 'var(--accent-yellow)' : 'var(--accent-green)';
+
+            html += `
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border);
+                        border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                    <div>
+                        <div style="color: var(--text-primary); font-weight: 600; font-size: 16px;">
+                            ${sub.entity}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                            ${sub.category} • ${sub.frequency}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: ${flagColor}; font-size: 20px; font-weight: 700;">
+                            ₹${sub.avg_amount.toLocaleString('en-IN', {maximumFractionDigits: 0})}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 12px;">
+                            ${sub.occurrences} charges
+                        </div>
+                    </div>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
+                    ${sub.explanation}
+                </div>
+                ${sub.flags.length > 0 ? `
+                    <div style="margin-top: 8px; display: flex; gap: 8px;">
+                        ${sub.flags.map(flag => `
+                            <span style="background: rgba(239, 71, 67, 0.15); color: var(--accent-red);
+                                         padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                ${flag.replace('_', ' ').toUpperCase()}
+                            </span>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        });
+
+        container.innerHTML = html;
     }
 
     // ========== MODAL FUNCTIONS ==========

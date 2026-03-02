@@ -1,5 +1,4 @@
 ﻿"""
-Personal Financial Intelligence System - SIMPLE STABLE VERSION
 Core features only: Upload → Parse → Categorize → Display → Drill-down
 """
 
@@ -9,42 +8,35 @@ import os
 
 from src.bank_statement_parser import HDFCStatementParser, BankStatementValidator
 from src.categorization import SmartCategorizer
-
 app = Flask(__name__, template_folder='templates')
 CORS(app)
-
 # Global state
 current_data = None
 
-
-# ===== ROUTES =====
+#Routes
 
 @app.route('/')
 def landing():
-    """Serve the landing page"""
+    """landing page"""
     return render_template('landing.html')
 
 @app.route('/dashboard')
 def dashboard():
-    """Serve the dashboard"""
+    """dashboard"""
     return render_template('dashboard.html')
-
-
 @app.route('/upload')
 def upload_page():
-    """Redirect to upload tab in dashboard"""
+    """Redirecting to upload tab in dashboard"""
     return render_template('dashboard.html')
-
 
 @app.route('/api/upload-excel', methods=['POST'])
 def upload_excel():
     """
-    Handle HDFC Excel statement upload - SIMPLIFIED VERSION
+    Handling HDFC Excel upload
     """
     global current_data
 
     try:
-        # Validate file upload
         if 'file' not in request.files:
             return jsonify({'status': 'error', 'message': 'No file provided'}), 400
 
@@ -58,10 +50,10 @@ def upload_excel():
         # Save file temporarily
         temp_path = 'temp_upload.xlsx'
         file.save(temp_path)
-        print(f"\n📊 Uploaded: {file.filename}")
+        print(f"\n  Uploaded: {file.filename}")
 
         # STEP 1: Parse HDFC statement
-        print("🔄 Step 1: Parsing Excel...")
+        print("Step 1: Parsing Excel...")
         parser = HDFCStatementParser()
         df = parser.parse(temp_path)
 
@@ -74,12 +66,12 @@ def upload_excel():
             }), 400
 
         # STEP 2: Filter to expenses only
-        print("🔄 Step 2: Filtering to debit transactions...")
+        print("Step 2: Filtering to debit transactions...")
         df_expenses = df[df['transaction_type'] == 'debit'].copy()
         print(f"   Found {len(df_expenses)} expense transactions")
 
-        # STEP 3: Simple categorization (keyword-based)
-        print("🔄 Step 3: Categorizing transactions...")
+        # STEP 3: categorization (keyword-based)
+        print("Step 3: Categorizing transactions...")
         categorizer = SmartCategorizer()
         df_expenses = categorizer.categorize_dataframe(df_expenses)
         # Store entity information
@@ -87,8 +79,7 @@ def upload_excel():
         print(f"   - Platforms: {len(df_expenses[df_expenses['entity_type'] == 'platform'])}")
         print(f"   - Persons: {len(df_expenses[df_expenses['entity_type'] == 'person'])}")
         print(f"   - Merchants: {len(df_expenses[df_expenses['entity_type'] == 'merchant'])}")
-
-        # Show confidence stats
+        # Showes confidence stats
         stats = categorizer.get_category_stats(df_expenses)
         print(
             f"   Confidence: High={stats['high_confidence_count']}, "
@@ -96,7 +87,7 @@ def upload_excel():
             f"Low={stats['low_confidence_count']}"
         )
         # Detect reimbursements
-        print("🔄 Detecting reimbursements...")
+        print("Detecting reimbursements...")
         from src.reimbursement_detector import ReimbursementDetector
 
         detector = ReimbursementDetector(df_expenses, window_days=14)
@@ -106,14 +97,14 @@ def upload_excel():
         current_data = detector.df
         df_expenses = current_data
 
-        print(f"   ✅ Reimbursement detection complete:")
+        print(f"      Reimbursement detection complete:")
         print(f"      Total reimbursed: ₹{reimbursement_report['summary']['total_reimbursed']:,.0f}")
         print(f"      Reimbursed transactions: {reimbursement_report['reimbursements']['reimbursed_transactions']}")
         print(f"      Full: {reimbursement_report['reimbursements']['full_reimbursements']}, "
               f"Partial: {reimbursement_report['reimbursements']['partial_reimbursements']}")
 
         # Detect anomalies
-        print("🔍 Detecting spending anomalies...")
+        print("  Detecting spending anomalies...")
         from src.anomaly_detector import AnomalyDetector
 
         anomaly_detector = AnomalyDetector(current_data, threshold=2.0, min_months=3)
@@ -122,14 +113,29 @@ def upload_excel():
         if anomaly_report['summary']['total_anomalies'] > 0:
             print(f"   ⚠️  {anomaly_report['summary']['total_anomalies']} anomalies detected")
         else:
-            print("   ✅ No significant anomalies")
+            print("    No significant anomalies")
+
+        # Audit subscriptions
+        print("   Auditing recurring subscriptions...")
+        from src.subscription_auditor import SubscriptionAuditor
+
+        sub_auditor = SubscriptionAuditor(current_data, min_occurrences=3)
+        sub_report = sub_auditor.generate_report()
+
+        if sub_report['summary']['total_subscriptions'] > 0:
+            print(f"      {sub_report['summary']['total_subscriptions']} subscriptions detected")
+            print(f"      Est. monthly cost: ₹{sub_report['summary']['total_monthly_cost']:,.0f}")
+            if sub_report['summary']['increasing_cost'] > 0:
+                print(f"      ⚠️  {sub_report['summary']['increasing_cost']} with cost increases")
+        else:
+            print("    No recurring subscriptions detected")
 
         # STEP 4: Store in global state
         current_data = df_expenses
-        print(f"   ✅ Stored {len(current_data)} transactions in memory")
+        print(f"    Stored {len(current_data)} transactions in memory")
 
         # STEP 5: Calculate summary statistics
-        print("🔄 Step 4: Calculating statistics...")
+        print(" Step 4: Calculating statistics...")
 
         # Date range
         min_date = df_expenses['date'].min()
@@ -141,6 +147,32 @@ def upload_excel():
         total_spent = current_data['net_amount'].sum()
         avg_monthly = total_spent / months if months > 0 else total_spent
 
+        # Calculate mom drift
+        if len(df_expenses) > 0 and months >= 2:
+            # Get current and previous month spending
+            df_expenses['year_month'] = df_expenses['date'].dt.to_period('M')
+            monthly_totals = df_expenses.groupby('year_month')['net_amount'].sum().sort_index()
+
+            if len(monthly_totals) >= 2:
+                current_month_spend = monthly_totals.iloc[-1]
+                prev_month_spend = monthly_totals.iloc[-2]
+
+                mom_change = current_month_spend - prev_month_spend
+                mom_pct = (mom_change / prev_month_spend * 100) if prev_month_spend > 0 else 0
+
+                if mom_pct > 0:
+                    mom_drift_value = f"+{mom_pct:.1f}%"
+                    mom_trend = f"₹{mom_change:,.0f} higher than last month"
+                else:
+                    mom_drift_value = f"{mom_pct:.1f}%"
+                    mom_trend = f"₹{abs(mom_change):,.0f} lower than last month"
+            else:
+                mom_drift_value = "N/A"
+                mom_trend = "Need 2+ months"
+        else:
+            mom_drift_value = "N/A"
+            mom_trend = "No data"
+
         # Category breakdown
         category_spend = df_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
 
@@ -149,8 +181,8 @@ def upload_excel():
         fixed_total = category_spend[category_spend.index.isin(fixed_categories)].sum()
         variable_total = category_spend[~category_spend.index.isin(fixed_categories)].sum()
 
-        print(f"   💰 Total: ₹{total_spent:,.0f} over {months:.1f} months")
-        print(f"   🗓 Average monthly: ₹{avg_monthly:,.0f}")
+        print(f"     Total: ₹{total_spent:,.0f} over {months:.1f} months")
+        print(f"     Average monthly: ₹{avg_monthly:,.0f}")
 
         # Clean up
         if os.path.exists(temp_path):
@@ -178,9 +210,9 @@ def upload_excel():
                         'sublabel': f"{len(category_spend) - len([c for c in fixed_categories if c in category_spend])} categories"
                     },
                     'mom_drift': {
-                        'value': 'N/A',
+                        'value': mom_drift_value,
                         'label': 'Month-over-Month',
-                        'sublabel': f'{months:.1f} months of data'
+                        'sublabel': mom_trend
                     }
                 },
                 'category_breakdown': [
@@ -206,7 +238,7 @@ def upload_excel():
         })
 
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
+        print(f" Error: {str(e)}")
         import traceback
         traceback.print_exc()
 
@@ -255,7 +287,7 @@ def get_transactions():
                 'needs_review': False,
             })
 
-        print(f"📤 Returning {len(transactions)} transactions for drill-down")
+        print(f" Returning {len(transactions)} transactions for drill-down")
 
         return jsonify({
             'status': 'success',
@@ -264,7 +296,7 @@ def get_transactions():
         })
 
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
+        print(f" Error: {str(e)}")
         import traceback
         traceback.print_exc()
 
@@ -373,7 +405,7 @@ def correct_transaction():
         days = (max_date - min_date).days + 1
         months = days / 30.44
 
-        print(f"✅ User correction: {entity_name} → {new_category}")
+        print(f"   User correction: {entity_name} → {new_category}")
         print(f"   Updated {matching_mask.sum()} transactions")
 
         return jsonify({
@@ -393,7 +425,7 @@ def correct_transaction():
         })
 
     except Exception as e:
-        print(f"❌ Correction error: {str(e)}")
+        print(f" Correction error: {str(e)}")
         import traceback
         traceback.print_exc()
 
@@ -401,11 +433,6 @@ def correct_transaction():
             'status': 'error',
             'message': f'Error: {str(e)}'
         }), 500
-
-
-# ========================================
-# ADD TO flask_app.py - After /api/transactions/correct endpoint
-# ========================================
 
 @app.route('/api/insights/temporal', methods=['GET'])
 def get_temporal_insights():
@@ -427,7 +454,7 @@ def get_temporal_insights():
         # Generate full report
         report = analyzer.generate_full_report()
 
-        print(f"\n📈 Temporal Insights Generated:")
+        print(f"\n Temporal Insights Generated:")
         print(f"   Months available: {report['data_quality']['months_available']}")
         print(f"   MoM changes: {len(report['mom_changes'])} categories")
         print(f"   Fastest growing: {report['fastest_growing']['category'] if report['fastest_growing'] else 'None'}")
@@ -439,7 +466,7 @@ def get_temporal_insights():
         })
 
     except Exception as e:
-        print(f"❌ Temporal insights error: {str(e)}")
+        print(f" Temporal insights error: {str(e)}")
         import traceback
         traceback.print_exc()
 
@@ -462,7 +489,7 @@ def get_reimbursement_report():
         detector = ReimbursementDetector(current_data, window_days=14)
         report = detector.generate_full_report()
 
-        print(f"📊 Reimbursement report generated:")
+        print(f"   Reimbursement report generated:")
         print(f"   Gross: ₹{report['summary']['gross_spend']:,.0f}")
         print(f"   Net: ₹{report['summary']['net_spend']:,.0f}")
         print(f"   Reimbursed: ₹{report['summary']['total_reimbursed']:,.0f}")
@@ -473,7 +500,7 @@ def get_reimbursement_report():
         })
 
     except Exception as e:
-        print(f"❌ Reimbursement error: {str(e)}")
+        print(f"  Reimbursement error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -492,7 +519,7 @@ def get_anomaly_report():
         detector = AnomalyDetector(current_data, threshold=2.0, min_months=3)
         report = detector.generate_report()
 
-        print(f"📊 Anomaly report generated:")
+        print(f"   Anomaly report generated:")
         print(f"   Total: {report['summary']['total_anomalies']}")
         print(f"   Critical: {report['summary'].get('critical', 0)}")
         print(f"   High: {report['summary'].get('high', 0)}")
@@ -503,7 +530,36 @@ def get_anomaly_report():
         })
 
     except Exception as e:
-        print(f"❌ Anomaly detection error: {str(e)}")
+        print(f"  Anomaly detection error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/subscriptions/audit', methods=['GET'])
+def get_subscription_audit():
+    """Get subscription audit report"""
+    global current_data
+
+    if current_data is None or len(current_data) == 0:
+        return jsonify({'status': 'error', 'message': 'No data'}), 400
+
+    try:
+        from src.subscription_auditor import SubscriptionAuditor
+
+        auditor = SubscriptionAuditor(current_data, min_occurrences=3)
+        report = auditor.generate_report()
+
+        print(f"   Subscription audit:")
+        print(f"   Total: {report['summary']['total_subscriptions']}")
+        print(f"   Monthly: ₹{report['summary']['total_monthly_cost']:,.0f}")
+
+        return jsonify({
+            'status': 'success',
+            'report': report
+        })
+
+    except Exception as e:
+        print(f"  Subscription audit error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -518,37 +574,20 @@ def not_found(e):
 def server_error(e):
     return jsonify({'status': 'error', 'message': 'Server error'}), 500
 
-
-# ===== MAIN =====
-
 if __name__ == '__main__':
-    print("=" * 60)
-    print("💰 Personal Financial Intelligence System - SIMPLE VERSION")
-    print("=" * 60)
-    print("🚀 Starting Flask server...")
-    print("📊 Dashboard: http://localhost:5000")
-    print("=" * 60)
-    print("\n✨ Features in this version:")
-    print("  ✅ Upload HDFC Excel statements")
-    print("  ✅ Automatic categorization (keyword-based)")
-    print("  ✅ Monthly spending averages")
-    print("  ✅ Fixed vs Variable expenses")
-    print("  ✅ Interactive category drill-down")
-    print("\n🚫 Removed complex features:")
-    print("  ❌ Entity store / memory")
-    print("  ❌ Confidence scoring")
-    print("  ✅ Reimbursement detection")
-    print("  ❌ Human-in-the-loop feedback")
-    print("\n💡 Add these back incrementally once this works!\n")
-    print("=" * 60)
+    """print("=" * 60)"""
+    print(" Personal Financial Intelligence System - SIMPLE VERSION")
+    """print("=" * 60)"""
+    print(" Starting Flask server...")
+    print(" Dashboard: http://localhost:5000")
+    """print("=" * 60)"""
 
     # Create folders
     for folder in ['templates', 'data']:
         if not os.path.exists(folder):
             os.makedirs(folder)
-            print(f"✅ Created {folder}/ folder")
+            print(f"  Created {folder}/ folder")
 
-    # Run Flask
     app.run(
         debug=True,
         host='localhost',

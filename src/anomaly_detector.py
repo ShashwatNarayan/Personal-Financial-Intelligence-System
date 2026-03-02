@@ -1,6 +1,5 @@
 """
-Anomaly Detection Module
-Detects monthly spending anomalies per category using z-score method
+detects monthly spending anomalies per category using z-score method
 """
 
 import pandas as pd
@@ -13,9 +12,9 @@ class AnomalyDetector:
     def __init__(self, df, threshold=2.0, min_months=3):
         """
         Args:
-            df: Transaction DataFrame with date, category, net_amount
-            threshold: Z-score threshold (default 2.0 = ~95% confidence)
-            min_months: Minimum months of history required (default 3)
+            df: Transaction Dataframe with date, category, net_amount
+            threshold: Z-score threshold
+            min_months: minimum 3 months of history required
         """
         self.df = df.copy()
         self.threshold = threshold
