@@ -27,7 +27,7 @@ class EntityResolver:
             'BLINKIT', 'DUNZO', 'ZEPTO', 'INSTAMART', 'BBNOW', 'BIGBASKET',
             'EKART', 'DELHIVERY', 'BLUEDART',
             'NIKE', 'BATA', 'ADIDAS', 'PUMA', 'AMUL',
-            'GROWW', 'ZERODHA', 'UPSTOX', 'ANGELONE', 'KITE'  # Investment platforms
+            'GROWW', 'ZERODHA', 'UPSTOX', 'ANGELONE', 'KITE'
         }
 
         # Human name indicators
@@ -76,7 +76,7 @@ class EntityResolver:
                 # If can't extract, return Unknown (will trigger fallback)
                 return 'Unknown', 'unknown'
 
-            # Check if it's a platform (substring match for "SWIGGY LIMITED" → "SWIGGY")
+            # Check if it's a platform (substring part is here)
             name_upper = name.upper()
             for platform in self.platforms:
                 if platform in name_upper:

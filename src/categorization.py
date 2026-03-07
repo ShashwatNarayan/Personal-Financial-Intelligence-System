@@ -1,7 +1,3 @@
-"""
-Smart Categorizer with Entity Memory
-"""
-
 from src.entity_resolver import EntityResolver
 from src.entity_memory import EntityMemory
 

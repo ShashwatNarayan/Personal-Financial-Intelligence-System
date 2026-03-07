@@ -75,7 +75,7 @@ class HDFCStatementParser:
                     header=None,
                     dtype=str  # Read everything as string first
                 )
-                print(f"✅ Loaded Excel file: {len(self.raw_df)} rows (engine: {engine})")
+                print(f"   Loaded Excel file: {len(self.raw_df)} rows (engine: {engine})")
                 return self.raw_df
             except Exception as e:
                 last_error = e
@@ -85,7 +85,7 @@ class HDFCStatementParser:
         # If both engines fail, try reading as CSV (sometimes banks export as CSV with .xls extension)
         try:
             self.raw_df = pd.read_csv(filepath, header=None, dtype=str)
-            print(f"✅ Loaded as CSV: {len(self.raw_df)} rows")
+            print(f"  Loaded as CSV: {len(self.raw_df)} rows")
             return self.raw_df
         except:
             pass
@@ -127,7 +127,7 @@ class HDFCStatementParser:
             has_balance = 'BALANCE' in row_text
 
             if has_date and (has_narration or has_amount or has_balance):
-                print(f"✅ Found header row at index {idx}")
+                print(f"  Found header row at index {idx}")
                 print(f"   Columns: {[v for v in row_values if v.strip() and v != 'nan'][:6]}")
                 return idx
 
@@ -139,7 +139,7 @@ class HDFCStatementParser:
 
     def parse(self, filepath):
         """Main parsing pipeline"""
-        print("\n🏦 Starting HDFC Statement Parsing...")
+        print("\n  Starting HDFC Statement Parsing...")
 
         # Step 1: Load Excel
         raw_df = self.load_excel(filepath)
@@ -148,8 +148,8 @@ class HDFCStatementParser:
         try:
             header_idx = self.find_header_row(raw_df)
         except ValueError as e:
-            print(f"\n❌ {str(e)}")
-            print("\n📋 First 25 rows of your file:")
+            print(f"\n   {str(e)}")
+            print("\n   First 25 rows of your file:")
             for i in range(min(25, len(raw_df))):
                 vals = [str(v) for v in raw_df.iloc[i].values if str(v).strip() and str(v) != 'nan']
                 if vals:
@@ -171,7 +171,7 @@ class HDFCStatementParser:
         df = df[~df.apply(is_separator_row, axis=1)]
         df = df.reset_index(drop=True)
 
-        print(f"✅ Extracted {len(df)} data rows")
+        print(f"  Extracted {len(df)} data rows")
         print(f"   Raw columns: {[str(c)[:25] for c in list(df.columns)[:6]]}")
 
         # Step 4: Rename columns
@@ -202,7 +202,7 @@ class HDFCStatementParser:
         df = df.sort_values('date').reset_index(drop=True)
         self.parsed_df = df
 
-        print(f"\n✅ Parsing Complete!")
+        print(f"\n  Parsing Complete!")
         print(f"   Total transactions: {len(df)}")
         if len(df) > 0:
             print(f"   Date range: {df['date'].min().date()} to {df['date'].max().date()}")
@@ -235,7 +235,7 @@ class HDFCStatementParser:
             # Validate: must have at minimum date + description
             if 'date' in column_mapping.values() and 'description' in column_mapping.values():
                 df = df.rename(columns=column_mapping)
-                print(f"✅ Columns mapped: {list(column_mapping.items())[:5]}")
+                print(f"  Columns mapped: {list(column_mapping.items())[:5]}")
                 return df
 
         # Last resort: try positional mapping
@@ -259,7 +259,7 @@ class HDFCStatementParser:
 
         if 'date' in positional_map.values() and 'description' in positional_map.values():
             df = df.rename(columns=positional_map)
-            print(f"✅ Positional mapping applied: {list(positional_map.items())[:5]}")
+            print(f"  Positional mapping applied: {list(positional_map.items())[:5]}")
             return df
 
         raise ValueError(
@@ -305,7 +305,7 @@ class HDFCStatementParser:
 
         invalid = df['date'].isna().sum()
         valid = df['date'].notna().sum()
-        print(f"✅ Dates parsed: {valid} valid, {invalid} invalid")
+        print(f"  Dates parsed: {valid} valid, {invalid} invalid")
 
         return df
 
@@ -441,7 +441,7 @@ class BankStatementValidator:
             self.warnings.append(f"Found {dupes.sum()} potential duplicate transactions")
 
         if self.errors:
-            print("\n❌ VALIDATION FAILED:")
+            print("\n  VALIDATION FAILED:")
             for e in self.errors:
                 print(f"   ERROR: {e}")
             return False
@@ -451,7 +451,7 @@ class BankStatementValidator:
             for w in self.warnings:
                 print(f"   WARNING: {w}")
 
-        print("✅ Validation passed!")
+        print("  Validation passed!")
         return True
 
 
@@ -464,11 +464,11 @@ def test_parser(filepath):
     is_valid = validator.validate(df)
 
     if is_valid:
-        print("\n📊 Sample Data (first 5 rows):")
+        print("\n  Sample Data (first 5 rows):")
         print(df[['date', 'merchant', 'amount', 'transaction_type']].head())
-        print(f"\n💰 Debits:  ₹{df[df['transaction_type']=='debit']['amount'].sum():,.2f}")
+        print(f"\n  Debits:  ₹{df[df['transaction_type']=='debit']['amount'].sum():,.2f}")
         print(f"   Credits: ₹{df[df['transaction_type']=='credit']['amount'].sum():,.2f}")
-        print(f"\n🏪 Top Merchants:")
+        print(f"\n  Top Merchants:")
         print(df['merchant'].value_counts().head(8))
 
     return df
