@@ -55,10 +55,11 @@
     "count": 1
   },
   "Google Play": {
-    "category": "Shopping",
-    "entity_type": "merchant",
-    "last_seen": "2026-02-23T20:52:11.391669",
-    "count": 1
+    "category": "Utilities",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-03-09T00:15:25.753104",
+    "count": 2
   },
   "Prasanna Mohapatra": {
     "category": "Food & Dining",
@@ -2205,6 +2206,20 @@
     "entity_type": "merchant",
     "source": "auto",
     "last_seen": "2026-03-01T00:46:42.988621",
+    "count": 1
+  },
+  "District Dining": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-08T18:23:17.812617",
+    "count": 1
+  },
+  "Google": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "source": "auto",
+    "last_seen": "2026-03-09T00:25:17.667986",
     "count": 1
   }
 }

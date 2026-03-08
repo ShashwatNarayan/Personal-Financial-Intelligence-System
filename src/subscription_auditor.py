@@ -22,9 +22,9 @@ class SubscriptionAuditor:
         self.min_occurrences = min_occurrences
         self.amount_tolerance = amount_tolerance
 
-        # Subscription-heavy categories
+        # Subscription-heavy categories (expanded to include Shopping for app stores)
         self.subscription_categories = [
-            'Entertainment', 'Utilities', 'Services',
+            'Entertainment', 'Utilities', 'Services', 'Shopping',
             'Healthcare', 'Education', 'Other'
         ]
 
@@ -65,18 +65,57 @@ class SubscriptionAuditor:
             if len(entity_txns) < self.min_occurrences:
                 continue
 
-            # Check if recurring pattern exists
-            result = self._analyze_entity(entity, entity_txns)
+            # Check if multiple subscription tiers exist (e.g., Google Play ₹89 + ₹130)
+            # Group by similar amounts
+            amount_groups = self._group_by_similar_amounts(entity_txns)
 
-            if result:
-                subscriptions.append(result)
+            # Analyze each amount group separately
+            for amount_key, group_txns in amount_groups.items():
+                if len(group_txns) < self.min_occurrences:
+                    continue
+
+                result = self._analyze_entity(entity, group_txns, amount_tier=amount_key)
+
+                if result:
+                    subscriptions.append(result)
 
         # Sort by total cost (highest first)
         subscriptions.sort(key=lambda x: x['total_cost'], reverse=True)
 
         return subscriptions
 
-    def _analyze_entity(self, entity, txns):
+    def _group_by_similar_amounts(self, txns):
+        """
+        Group transactions by similar amounts (for multi-tier subscriptions)
+        Returns: Dict of {amount_key: DataFrame}
+        """
+        from collections import defaultdict
+
+        amount_groups = defaultdict(list)
+
+        for idx, txn in txns.iterrows():
+            amount = txn['amount']
+
+            # Find existing group with similar amount
+            matched = False
+            for existing_amt in amount_groups.keys():
+                if abs(amount - existing_amt) / existing_amt <= self.amount_tolerance:
+                    amount_groups[existing_amt].append(idx)
+                    matched = True
+                    break
+
+            # Create new group
+            if not matched:
+                amount_groups[amount].append(idx)
+
+        # Convert to DataFrames
+        result = {}
+        for amt, indices in amount_groups.items():
+            result[amt] = txns.loc[indices]
+
+        return result
+
+    def _analyze_entity(self, entity, txns, amount_tier=None):
         """Analyze single entity for subscription pattern"""
         amounts = txns['amount'].tolist()
         dates = txns['date'].tolist()
@@ -97,7 +136,7 @@ class SubscriptionAuditor:
         # Calculate intervals between transactions
         intervals = []
         for i in range(1, len(dates)):
-            delta = (dates[i] - dates[i - 1]).days
+            delta = (dates[i] - dates[i-1]).days
             intervals.append(delta)
 
         if not intervals:
@@ -105,23 +144,36 @@ class SubscriptionAuditor:
 
         avg_interval = sum(intervals) / len(intervals)
 
-        # Classify frequency
-        if 25 <= avg_interval <= 35:
+        # Classify frequency (RELAXED for intermittent subscriptions)
+        if 20 <= avg_interval <= 70:  # Changed from 25-35 to catch monthly + skipped months
             frequency = 'monthly'
             expected_interval = 30
-        elif 85 <= avg_interval <= 95:
+            max_variance = 15  # Allow more variance for intermittent
+        elif 80 <= avg_interval <= 120:  # Relaxed quarterly
             frequency = 'quarterly'
             expected_interval = 90
-        elif 350 <= avg_interval <= 380:
+            max_variance = 20
+        elif 340 <= avg_interval <= 400:  # Relaxed yearly
             frequency = 'yearly'
             expected_interval = 365
+            max_variance = 30
         else:
             return None  # Not a clear subscription pattern
 
-        # Check interval consistency
+        # Check interval consistency (relaxed)
         interval_variance = sum(abs(i - expected_interval) for i in intervals) / len(intervals)
-        if interval_variance > 7:  # More than 7 days variance on average
-            return None
+
+        # Detect if intermittent (some intervals are multiples of expected)
+        is_intermittent = any(
+            abs(i - expected_interval * 2) < max_variance or  # Skipped 1 month
+            abs(i - expected_interval * 3) < max_variance     # Skipped 2 months
+            for i in intervals
+        )
+
+        # If not consistently regular, check if it's intermittent subscription
+        if interval_variance > max_variance:
+            if not is_intermittent:
+                return None  # Too inconsistent
 
         # Detect cost trend
         cost_trend = self._detect_cost_trend(amounts)
@@ -143,9 +195,16 @@ class SubscriptionAuditor:
             flags.append('long_running')
         if frequency == 'monthly' and mean_amount > 500:
             flags.append('high_cost')
+        if is_intermittent:
+            flags.append('irregular_pattern')  # New flag
+
+        # Create entity display name (with tier if multiple)
+        entity_display = entity
+        if amount_tier is not None:
+            entity_display = f"{entity} (₹{int(mean_amount)} tier)"
 
         return {
-            'entity': entity,
+            'entity': entity_display,
             'category': category,
             'frequency': frequency,
             'occurrences': len(txns),
@@ -157,8 +216,9 @@ class SubscriptionAuditor:
             'last_seen': last_date.strftime('%Y-%m-%d'),
             'cost_trend': cost_trend,
             'flags': flags,
+            'is_intermittent': is_intermittent,
             'explanation': self._generate_explanation(
-                entity, frequency, mean_amount, months_active, cost_trend, flags
+                entity_display, frequency, mean_amount, months_active, cost_trend, flags, is_intermittent
             )
         }
 
@@ -181,14 +241,17 @@ class SubscriptionAuditor:
         else:
             return 'stable'
 
-    def _generate_explanation(self, entity, frequency, amount, months, trend, flags):
+    def _generate_explanation(self, entity, frequency, amount, months, trend, flags, is_intermittent=False):
         """Generate human-readable explanation"""
         explanation = f"{entity}: {frequency.title()} subscription at ₹{amount:.0f}"
 
+        if is_intermittent:
+            explanation += " (irregular - active some months only)"
+
         if 'cost_increase' in flags:
-            explanation += " (cost increasing over time)"
+            explanation += ". Cost increasing over time"
         elif trend == 'decreasing':
-            explanation += " (cost decreasing)"
+            explanation += ". Cost decreasing"
 
         if 'long_running' in flags:
             explanation += f". Active for {months:.0f} months - review if still needed"
