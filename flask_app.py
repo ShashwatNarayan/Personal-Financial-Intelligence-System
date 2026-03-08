@@ -477,7 +477,7 @@ def get_temporal_insights():
 
 @app.route('/api/reimbursements/report', methods=['GET'])
 def get_reimbursement_report():
-    """Get detailed reimbursement analysis"""
+    """Get the detailed reimbursement analysis"""
     global current_data
 
     if current_data is None or len(current_data) == 0:

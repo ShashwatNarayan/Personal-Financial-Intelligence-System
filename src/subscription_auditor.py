@@ -1,6 +1,6 @@
 """
 Subscription Auditor Module
-Detects recurring subscription-like transactions
+Detects recurring subscription-like  transactions
 """
 
 import pandas as pd

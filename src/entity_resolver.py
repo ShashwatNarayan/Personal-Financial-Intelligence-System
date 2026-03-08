@@ -175,7 +175,7 @@ class EntityResolver:
         return self.normalize_name(merchant)
 
     def get_entity_id(self, entity_name):
-        """Generate unique ID for entity"""
+        """Generate the unique ID for entity"""
         return hashlib.md5(entity_name.encode()).hexdigest()[:12]
 
     def categorize_by_entity(self, entity_name, entity_type):
