@@ -2221,5 +2221,12 @@
     "source": "auto",
     "last_seen": "2026-03-09T00:25:17.667986",
     "count": 1
+  },
+  "Play": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:00:36.535569",
+    "count": 1
   }
 }

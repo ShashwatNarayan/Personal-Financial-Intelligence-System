@@ -7,6 +7,7 @@ from flask_cors import CORS
 import os
 
 from src.bank_statement_parser import HDFCStatementParser, BankStatementValidator
+from src.bank_detector import detect_bank, get_parser
 from src.categorization import SmartCategorizer
 app = Flask(__name__, template_folder='templates')
 CORS(app)
@@ -52,13 +53,16 @@ def upload_excel():
         file.save(temp_path)
         print(f"\n  Uploaded: {file.filename}")
 
-        # STEP 1: Parse HDFC statement
-        print("Step 1: Parsing Excel...")
-        parser = HDFCStatementParser()
+        # STEP 1: Detect bank and parse statement
+        print("Step 1: Detecting bank and parsing Excel...")
+        from src.bank_detector import detect_bank, get_parser
+
+        bank = detect_bank(temp_path)
+        print(f"   Bank detected: {bank.upper()}")
+
+        parser, validator = get_parser(bank)
         df = parser.parse(temp_path)
 
-        # Validate
-        validator = BankStatementValidator()
         if not validator.validate(df):
             return jsonify({
                 'status': 'error',
