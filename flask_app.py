@@ -18,23 +18,19 @@ current_data = None
 
 @app.route('/')
 def landing():
-    """landing page"""
     return render_template('landing.html')
 
 @app.route('/dashboard')
 def dashboard():
-    """dashboard"""
     return render_template('dashboard.html')
+
 @app.route('/upload')
 def upload_page():
-    """Redirecting to upload tab in dashboard"""
     return render_template('dashboard.html')
 
 @app.route('/api/upload-excel', methods=['POST'])
 def upload_excel():
-    """
-    Handling HDFC Excel upload
-    """
+
     global current_data
 
     try:
@@ -53,7 +49,7 @@ def upload_excel():
         file.save(temp_path)
         print(f"\n  Uploaded: {file.filename}")
 
-        # STEP 1: Detect bank and parse statement
+        # S-1: Detect bank and parse statement
         print("Step 1: Detecting bank and parsing Excel...")
         from src.bank_detector import detect_bank, get_parser
 
@@ -69,12 +65,12 @@ def upload_excel():
                 'message': 'Validation failed: ' + ', '.join(validator.errors)
             }), 400
 
-        # STEP 2: Filter to expenses only
+        # S-2: Filter to expenses only
         print("Step 2: Filtering to debit transactions...")
         df_expenses = df[df['transaction_type'] == 'debit'].copy()
         print(f"   Found {len(df_expenses)} expense transactions")
 
-        # STEP 3: categorization (keyword-based)
+        # S-3: categorization on basis keyword
         print("Step 3: Categorizing transactions...")
         categorizer = SmartCategorizer()
         df_expenses = categorizer.categorize_dataframe(df_expenses)
@@ -83,21 +79,21 @@ def upload_excel():
         print(f"   - Platforms: {len(df_expenses[df_expenses['entity_type'] == 'platform'])}")
         print(f"   - Persons: {len(df_expenses[df_expenses['entity_type'] == 'person'])}")
         print(f"   - Merchants: {len(df_expenses[df_expenses['entity_type'] == 'merchant'])}")
-        # Showes confidence stats
+        # shows confidence stats
         stats = categorizer.get_category_stats(df_expenses)
         print(
             f"   Confidence: High={stats['high_confidence_count']}, "
             f"Med={stats['medium_confidence_count']}, "
             f"Low={stats['low_confidence_count']}"
         )
-        # Detect reimbursements
+        # detects reimbursements
         print("Detecting reimbursements...")
         from src.reimbursement_detector import ReimbursementDetector
 
         detector = ReimbursementDetector(df_expenses, window_days=14)
         reimbursement_report = detector.generate_full_report()
 
-        # Update current_data with reimbursement flags
+        # updating current_data with reimbursement flags
         current_data = detector.df
         df_expenses = current_data
 
@@ -107,7 +103,7 @@ def upload_excel():
         print(f"      Full: {reimbursement_report['reimbursements']['full_reimbursements']}, "
               f"Partial: {reimbursement_report['reimbursements']['partial_reimbursements']}")
 
-        # Detect anomalies
+        # detects anomalies
         print("  Detecting spending anomalies...")
         from src.anomaly_detector import AnomalyDetector
 
@@ -119,7 +115,7 @@ def upload_excel():
         else:
             print("    No significant anomalies")
 
-        # Audit subscriptions
+        # auditing subscriptions
         print("   Auditing recurring subscriptions...")
         from src.subscription_auditor import SubscriptionAuditor
 
@@ -134,14 +130,14 @@ def upload_excel():
         else:
             print("    No recurring subscriptions detected")
 
-        # STEP 4: Store in global state
+        # S-4: Store in global state
         current_data = df_expenses
         print(f"    Stored {len(current_data)} transactions in memory")
 
-        # STEP 5: Calculate summary statistics
+        # S-5: Calculate summary statistics
         print(" Step 4: Calculating statistics...")
 
-        # Date range
+        # date range
         min_date = df_expenses['date'].min()
         max_date = df_expenses['date'].max()
         days = (max_date - min_date).days + 1
