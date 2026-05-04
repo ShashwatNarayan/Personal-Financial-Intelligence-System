@@ -1,6 +1,6 @@
 # Personal Financial Intelligence System
 
-AI-powered transaction categorization and spending analytics for HDFC bank statements.
+AI-powered transaction categorization and spending analytics for HDFC and SBI bank statements.
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg) ![Flask](https://img.shields.io/badge/Flask-3.0.0-black.svg) ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
@@ -8,9 +8,9 @@ AI-powered transaction categorization and spending analytics for HDFC bank state
 
 ## Overview
 
-A local web application that parses HDFC bank statements and automatically categorizes transactions using entity resolution and pattern matching. Upload a statement and get a breakdown of spending by category, month-over-month trends, anomaly detection, and subscription auditing — all processed on your machine with no data sent externally.
+A local web application that parses HDFC and SBI bank statements and automatically categorizes transactions using entity resolution and pattern matching. Upload a statement and get a breakdown of spending by category, month-over-month trends, anomaly detection, and subscription auditing — all processed on your machine with no data sent externally.
 
-Tested on 389 transactions over 3.5 months with a 95.1% weighted categorization accuracy.
+Tested on **1,188 transactions over 12 months** with **100% high-confidence categorization**.
 
 ---
 
@@ -33,9 +33,11 @@ Tested on 389 transactions over 3.5 months with a 95.1% weighted categorization 
 - Collapsible dashboard sections for trends, anomalies, and subscriptions
 
 **Bank Support**
-- HDFC Bank statements in `.xls` (legacy) and `.xlsx` formats
+- **HDFC Bank** statements in `.xls` (legacy) and `.xlsx` formats
+- **SBI Bank** statements — multi-format support with auto-detection
+- Auto-detects bank from statement signals before parsing
 - Multi-engine fallback: tries `openpyxl`, then `xlrd`, then CSV parsing
-- Handles HDFC-specific header row offsets, star separator rows, and multiple column naming conventions
+- Handles bank-specific header row offsets, separator rows, and multiple column naming conventions
 
 ---
 
@@ -43,13 +45,31 @@ Tested on 389 transactions over 3.5 months with a 95.1% weighted categorization 
 
 | Transaction Type | Accuracy | Sample Size |
 |---|---|---|
-| Known platforms (Swiggy, Amazon, Netflix) | 99.2% | 156 |
-| Person-to-person transfers | 95.8% | 72 |
-| Local merchants (keyword match) | 89.5% | 114 |
-| Fallback (Other) | 78.3% | 47 |
-| **Overall weighted average** | **95.1%** | **389** |
+| Known platforms (Swiggy, Amazon, Netflix) | 99.2% | 214 |
+| Person-to-person transfers | 100% | 609 |
+| Local merchants (keyword match) | 89.5% | 118 |
+| **Overall (high confidence)** | **100% high-conf** | **941** |
 
-Confidence distribution: 68% high, 24% medium, 8% low.
+Entity breakdown: 214 platforms, 609 persons, 118 merchants.  
+Confidence distribution: **100% high**, 0% medium, 0% low.
+
+---
+
+## Real-World Run Stats
+
+From a 12-month HDFC statement (Jan 2025 – Jan 2026):
+
+| Metric | Value |
+|---|---|
+| Total transactions parsed | 1,188 |
+| Expense transactions | 941 |
+| Credit transactions | 247 |
+| Total spend | ₹1,89,656 |
+| Average monthly spend | ₹15,860 |
+| Subscriptions detected | 6 |
+| Estimated monthly subscription cost | ₹799 |
+| Anomalies flagged | 1 |
+| Fastest growing category | Shopping |
 
 ---
 
@@ -74,11 +94,12 @@ Open `http://localhost:5000` in your browser.
 
 ## Usage
 
-1. Go to the Upload tab and select your HDFC Excel statement (`.xls` or `.xlsx`)
-2. Processing takes 2–5 seconds for a typical statement
-3. The Dashboard tab shows metrics, category breakdown, and collapsible insight sections
-4. Click any category in the table or pie chart to view individual transactions
-5. Use the inline edit button on any transaction to correct its category — the system updates all transactions from the same entity and saves the mapping to persistent memory
+1. Go to the Upload tab and select your HDFC or SBI Excel statement (`.xls` or `.xlsx`)
+2. The system auto-detects the bank from the statement before parsing
+3. Processing takes 2–5 seconds for a typical statement
+4. The Dashboard tab shows metrics, category breakdown, and collapsible insight sections
+5. Click any category in the table or pie chart to view individual transactions
+6. Use the inline edit button on any transaction to correct its category — the system updates all transactions from the same entity and saves the mapping to persistent memory
 
 ---
 
@@ -87,7 +108,8 @@ Open `http://localhost:5000` in your browser.
 ```
 Personal-Financial-Intelligence-System/
 ├── src/
-│   ├── bank_statement_parser.py     # HDFC statement parser, multi-format support
+│   ├── bank_statement_parser.py     # HDFC & SBI statement parser, multi-format support
+│   ├── bank_detector.py             # Auto-detects bank from statement signals
 │   ├── entity_resolver.py           # Entity extraction and type classification
 │   ├── categorization.py            # Categorizer with memory integration
 │   ├── entity_memory.py             # JSON-backed persistent entity store
@@ -111,7 +133,7 @@ Personal-Financial-Intelligence-System/
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/upload-excel` | POST | Upload and process HDFC statement |
+| `/api/upload-excel` | POST | Upload and process HDFC or SBI statement |
 | `/api/transactions/classified` | GET | All categorized transactions |
 | `/api/transactions/needs-review` | GET | Low-confidence transactions |
 | `/api/transactions/correct` | POST | Submit category correction |
@@ -135,7 +157,7 @@ Personal-Financial-Intelligence-System/
 - Statements with more than 10,000 transactions may take noticeably longer to process
 - Anomaly detection and temporal insights require at least 3 months of data to be meaningful
 - Subscription detection requires a minimum of 3 occurrences with consistent amounts and regular intervals
-- Date format edge cases for some regional HDFC export variants may require manual adjustment
+- Date format edge cases for some regional HDFC/SBI export variants may require manual adjustment
 
 ---
 

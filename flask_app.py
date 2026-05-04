@@ -137,7 +137,7 @@ def upload_excel():
         # S-5: Calculate summary statistics
         print(" Step 4: Calculating statistics...")
 
-        # date range
+        # dcate range
         min_date = df_expenses['date'].min()
         max_date = df_expenses['date'].max()
         days = (max_date - min_date).days + 1
