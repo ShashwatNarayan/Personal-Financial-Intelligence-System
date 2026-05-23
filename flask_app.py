@@ -44,7 +44,7 @@ def upload_excel():
         if not file.filename.lower().endswith(('.xlsx', '.xls')):
             return jsonify({'status': 'error', 'message': 'Please upload an Excel file'}), 400
 
-        # Save file temporarily
+        # save file temporarily
         temp_path = 'temp_upload.xlsx'
         file.save(temp_path)
         print(f"\n  Uploaded: {file.filename}")
@@ -143,11 +143,11 @@ def upload_excel():
         days = (max_date - min_date).days + 1
         months = days / 30.44
 
-        # Total spend
+        # total spend
         total_spent = current_data['net_amount'].sum()
         avg_monthly = total_spent / months if months > 0 else total_spent
 
-        # Calculate mom drift
+        # calculate mom drift
         if len(df_expenses) > 0 and months >= 2:
             # Get current and previous month spending
             df_expenses['year_month'] = df_expenses['date'].dt.to_period('M')
@@ -173,7 +173,7 @@ def upload_excel():
             mom_drift_value = "N/A"
             mom_trend = "No data"
 
-        # Category breakdown
+        # category breakdown
         category_spend = df_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
 
         # Fixed vs Variable (simple heuristic)
@@ -184,11 +184,11 @@ def upload_excel():
         print(f"     Total: ₹{total_spent:,.0f} over {months:.1f} months")
         print(f"     Average monthly: ₹{avg_monthly:,.0f}")
 
-        # Clean up
+        # clean up
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        # STEP 6: Return formatted response
+        # S-6: Return formatted response
         return jsonify({
             'status': 'success',
             'message': f'Processed {len(df_expenses)} transactions over {months:.1f} months',
@@ -563,7 +563,7 @@ def get_subscription_audit():
         import traceback
         traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
-# ===== ERROR HANDLERS =====
+#error handling
 
 @app.errorhandler(404)
 def not_found(e):
