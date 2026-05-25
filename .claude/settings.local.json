@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp C:/Personal-Financial-Intelligence-System/src/*.py C:/Personal-Financial-Intelligence-System/app/analytics/)",
+      "Bash(cp C:/Personal-Financial-Intelligence-System/templates/*.html C:/Personal-Financial-Intelligence-System/app/templates/)"
+    ]
+  }
+}

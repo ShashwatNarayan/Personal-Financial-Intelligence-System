@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Intelligence System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: #262626;
+            border-bottom: 1px solid #404040;
+            padding: 20px 40px;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-links a {
+            color: #a3a3a3;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #00b8a3;
+        }
+
+        /* Hero Section */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 40px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: #a3a3a3;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #00b8a3;
+            color: white;
+            padding: 16px 40px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .cta-button:hover {
+            background: #009688;
+            transform: translateY(-2px);
+        }
+
+        /* Features Grid */
+        .features {
+            max-width: 1200px;
+            margin: 80px auto;
+            padding: 0 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: #00b8a3;
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 184, 163, 0.15);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #00b8a3;
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: #ffffff;
+        }
+
+        .feature-card p {
+            color: #a3a3a3;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: #262626;
+            border-top: 1px solid #404040;
+            border-bottom: 1px solid #404040;
+            padding: 60px 40px;
+            margin-top: 80px;
+        }
+
+        .stats-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h4 {
+            font-size: 42px;
+            color: #00b8a3;
+            margin-bottom: 8px;
+        }
+
+        .stat-item p {
+            color: #a3a3a3;
+            font-size: 14px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: #737373;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">Financial Intelligence</div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#about">About</a>
+                <a href="/dashboard">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Understand Your Spending<br>in 5 Seconds</h1>
+        <p>Upload your bank statement and get instant insights with AI-powered categorization. No manual work required.</p>
+        <a href="/upload" class="cta-button">Get Started</a>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features" id="features">
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Automatic Categorization</h3>
+            <p>85-92% accuracy with smart keyword matching. Food, transport, shopping - all organized automatically.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3>Interactive Drill-Down</h3>
+            <p>Click any category to see detailed transactions. Verify categorization and find specific expenses instantly.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">💰</div>
+            <h3>Monthly Insights</h3>
+            <p>See average monthly spending, fixed vs variable expenses, and spending trends over time.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>Privacy First</h3>
+            <p>All processing happens locally. Your financial data never leaves your device.</p>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h4>85-92%</h4>
+                <p>Categorization Accuracy</p>
+            </div>
+            <div class="stat-item">
+                <h4>5 sec</h4>
+                <p>Processing Time</p>
+            </div>
+            <div class="stat-item">
+                <h4>10+</h4>
+                <p>Categories Detected</p>
+            </div>
+            <div class="stat-item">
+                <h4>100%</h4>
+                <p>Privacy Protected</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>&copy; 2026 Financial Intelligence System. Built for smarter spending decisions.</p>
+    </div>
+</body>
+</html>

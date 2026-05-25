@@ -1047,11 +1047,11 @@
     "count": 1
   },
   "Green Trends": {
-    "category": "Other",
-    "entity_type": "merchant",
-    "source": "auto",
-    "last_seen": "2026-02-25T02:05:44.779716",
-    "count": 1
+    "category": "Utilities",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-03-18T22:30:49.494199",
+    "count": 2
   },
   "Sonu Kumar Chandrapr": {
     "category": "Transfer / P2P",
@@ -2227,6 +2227,279 @@
     "entity_type": "platform",
     "source": "auto",
     "last_seen": "2026-03-18T21:00:36.535569",
+    "count": 1
+  },
+  "Rent Payment": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.582473",
+    "count": 1
+  },
+  "Big Bazaar": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.588581",
+    "count": 1
+  },
+  "Flipkart": {
+    "category": "Shopping",
+    "entity_type": "platform",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.594136",
+    "count": 1
+  },
+  "Electricity Bill": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.600176",
+    "count": 1
+  },
+  "Restaurant": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.606663",
+    "count": 1
+  },
+  "Water Bill": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.611822",
+    "count": 1
+  },
+  "Year-End Shopping": {
+    "category": "Shopping",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-18T21:12:02.618419",
+    "count": 1
+  },
+  "Kafe 3 Kiit Hospital": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:37:09.963178",
+    "count": 1
+  },
+  "Mr Dasari Salmon Raj": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.400292",
+    "count": 1
+  },
+  "Mogulla Sai Raj Redd": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.415784",
+    "count": 1
+  },
+  "Uidai": {
+    "category": "Utilities",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.430806",
+    "count": 1
+  },
+  "Mohammad Rahimunnisa": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.448632",
+    "count": 1
+  },
+  "Agarwal Jewellers": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.464382",
+    "count": 1
+  },
+  "G Srinivas": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.480959",
+    "count": 1
+  },
+  "Kiran Kar": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.500037",
+    "count": 1
+  },
+  "228671 14Mar26 22:32:25 Vadodara Pvr Inox": {
+    "category": "Entertainment",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.526109",
+    "count": 1
+  },
+  "Pos": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.547698",
+    "count": 1
+  },
+  "Dhrutishree Solution": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.565563",
+    "count": 1
+  },
+  "Pravat Kumar Swain": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.583238",
+    "count": 1
+  },
+  "P Rinku Patra": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.600593",
+    "count": 1
+  },
+  "Mr K Gopal Reddy": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.618255",
+    "count": 1
+  },
+  "Mr Chitta Ranjan Na": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.635754",
+    "count": 1
+  },
+  "Elle Fashions And Li": {
+    "category": "Shopping",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.655877",
+    "count": 1
+  },
+  "S Omkar": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:40:20.676613",
+    "count": 1
+  },
+  "Cinnabon": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:50:03.788547",
+    "count": 1
+  },
+  "Samsung": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:50:03.797167",
+    "count": 1
+  },
+  "Sachikant Behera": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:50:03.805248",
+    "count": 1
+  },
+  "Kk Airport B2C": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-03-26T01:50:03.815070",
+    "count": 1
+  },
+  "Kiit Kafetaria Campu": {
+    "category": "Food & Dining",
+    "entity_type": "person",
+    "source": "user",
+    "last_seen": "2026-04-16T09:39:49.399782",
+    "count": 2
+  },
+  "Perfumenetwork": {
+    "category": "Utilities",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.319491",
+    "count": 1
+  },
+  "Bijaylaxmi Sahoo": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.328380",
+    "count": 1
+  },
+  "Blue Dart Express Lt": {
+    "category": "Utilities",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.338042",
+    "count": 1
+  },
+  "Trinatha Das": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.347436",
+    "count": 1
+  },
+  "217984 06Apr26 22:04:41 Bangalore Rsp*Blink Commerce Pvt": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.357555",
+    "count": 1
+  },
+  "Suryansh Panda": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.370888",
+    "count": 1
+  },
+  "623180 08Apr26 22:23:11 Bangalore Rsp*Blink Commerce Pvt": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.382045",
+    "count": 1
+  },
+  "Abdul Aziz": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.395344",
+    "count": 1
+  },
+  "Kamal Lochan Parida": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.408296",
+    "count": 1
+  },
+  "Mr Racha Konda Laksh": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-04-16T09:35:57.436635",
     "count": 1
   }
 }
