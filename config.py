@@ -1,9 +1,13 @@
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
-    DATABASE_URL = os.environ.get('DATABASE_URL', '')
-    SQLALCHEMY_DATABASE_URI = DATABASE_URL or 'sqlite:///app.db'
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-change-this')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
