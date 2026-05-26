@@ -1,6 +1,7 @@
 import os
 
 from flask import jsonify, request
+from flask_login import login_required
 
 from app.api import api_bp
 from app.analytics.bank_statement_parser import HDFCStatementParser, BankStatementValidator
@@ -12,6 +13,7 @@ current_data = None
 
 
 @api_bp.route('/upload-excel', methods=['POST'])
+@login_required
 def upload_excel():
 
     global current_data
@@ -235,6 +237,7 @@ def upload_excel():
 
 
 @api_bp.route('/transactions/classified', methods=['GET'])
+@login_required
 def get_transactions():
     """
     Return all transactions for drill-down modal
@@ -290,6 +293,7 @@ def get_transactions():
 
 
 @api_bp.route('/transactions/needs-review', methods=['GET'])
+@login_required
 def get_needs_review():
     """Get transactions that need user review (low confidence)"""
     global current_data
@@ -342,6 +346,7 @@ def get_needs_review():
 
 
 @api_bp.route('/transactions/correct', methods=['POST'])
+@login_required
 def correct_transaction():
     """Handle user correction of transaction category"""
     global current_data
@@ -419,6 +424,7 @@ def correct_transaction():
 
 
 @api_bp.route('/insights/temporal', methods=['GET'])
+@login_required
 def get_temporal_insights():
     """Get time-aware spending insights (MoM, trends, acceleration)"""
     global current_data
@@ -461,6 +467,7 @@ def get_temporal_insights():
 
 
 @api_bp.route('/reimbursements/report', methods=['GET'])
+@login_required
 def get_reimbursement_report():
     """Get the detailed reimbursement analysis"""
     global current_data
@@ -492,6 +499,7 @@ def get_reimbursement_report():
 
 
 @api_bp.route('/anomalies/report', methods=['GET'])
+@login_required
 def get_anomaly_report():
     """Get detected spending anomalies"""
     global current_data
@@ -523,6 +531,7 @@ def get_anomaly_report():
 
 
 @api_bp.route('/subscriptions/audit', methods=['GET'])
+@login_required
 def get_subscription_audit():
     """Get subscription audit report"""
     global current_data
