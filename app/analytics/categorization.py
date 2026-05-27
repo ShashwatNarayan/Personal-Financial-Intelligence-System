@@ -1,15 +1,18 @@
-from src.entity_resolver import EntityResolver
-from src.entity_memory import EntityMemory
+from app.analytics.entity_resolver import EntityResolver
+from app.analytics.entity_memory import EntityMemory
 
 
 class SmartCategorizer:
-    """Enhanced categorizer with persistent memory"""
+    """Enhanced categorizer with persistent memory and per-user DB corrections."""
 
-    def __init__(self):
+    def __init__(self, user_id=None):
         self.entity_resolver = EntityResolver()
         self.memory = EntityMemory()
+        self.user_id = user_id
+        self._db_cache = {}
+        if user_id is not None:
+            self._load_db_cache(user_id)
 
-        # Existing keyword rules
         self.category_keywords = {
             'Food & Dining': [
                 'swiggy', 'zomato', 'dominos', 'pizza', 'restaurant',
@@ -44,9 +47,26 @@ class SmartCategorizer:
             'ATM / Cash': ['atm', 'cash withdrawal', 'cdm'],
         }
 
+    def _load_db_cache(self, user_id):
+        """Pre-load all entity memories for this user — one query, avoids N+1 in categorize_dataframe."""
+        from app.models import EntityMemory as DbEntityMemory
+        rows = DbEntityMemory.query.filter_by(user_id=user_id).all()
+        self._db_cache = {r.entity_name: (r.category, r.confidence) for r in rows}
+
+    def get_db_category(self, entity_name, user_id):
+        """
+        Check DB entity_memory for this user+entity first.
+        Returns (category, confidence) or (None, None) if not found.
+        Uses cache loaded at init to avoid N+1 queries.
+        """
+        result = self._db_cache.get(entity_name)
+        if result:
+            return result  # (category, confidence)
+        return None, None
+
     def categorize_transaction(self, merchant, description):
         """
-        Categorize with memory priority + confidence level
+        Categorize with DB memory priority + confidence level.
 
         Returns: (category, entity_name, entity_type, confidence_level)
         confidence_level: 'high', 'medium', 'low'
@@ -54,42 +74,41 @@ class SmartCategorizer:
         # Step 1: Entity resolution
         entity_name, entity_type = self.entity_resolver.resolve(description, merchant)
 
-        # Step 2: Check memory FIRST
+        # Step 2: Check user's DB entity memory first (user-confirmed corrections)
+        if self.user_id is not None:
+            db_category, db_confidence = self.get_db_category(entity_name, self.user_id)
+            if db_category is not None and db_confidence >= 0.9:
+                return db_category, entity_name, entity_type, 'high'
+
+        # Step 3: Check shared JSON memory (heuristic cache)
         stored = self.memory.get(entity_name)
         if stored:
-            # High confidence: User-confirmed or previously learned
             confidence = 'high' if stored.get('source') == 'user' else 'high'
             return stored['category'], entity_name, entity_type, confidence
 
-        # Step 3: Entity-based category (platform/person detection)
+        # Step 4: Entity-based category (platform/person detection)
         entity_category = self.entity_resolver.categorize_by_entity(entity_name, entity_type)
         if entity_category:
-            # High: Known platform (Swiggy, Netflix)
-            # Medium: Inferred from entity type (person→P2P, merchant→shopping)
             if entity_type == 'platform':
                 confidence = 'high'
             else:
                 confidence = 'medium'
-
-            # Store in memory for next time
             self.memory.store(entity_name, entity_category, entity_type)
             return entity_category, entity_name, entity_type, confidence
 
-        # Step 4: Keyword matching (fallback)
+        # Step 5: Keyword matching (fallback)
         text = f"{merchant} {description}".lower()
-
         for category, keywords in self.category_keywords.items():
             if any(keyword in text for keyword in keywords):
-                # Medium: Keyword match (heuristic inference)
                 self.memory.store(entity_name, category, entity_type)
                 return category, entity_name, entity_type, 'medium'
 
-        # Default: Other (low confidence - fallback guess)
+        # Default: Other (low confidence)
         self.memory.store(entity_name, 'Other', entity_type)
         return 'Other', entity_name, entity_type, 'low'
 
     def categorize_dataframe(self, df):
-        """Categorize all transactions in DataFrame with confidence levels"""
+        """Categorize all transactions in DataFrame with confidence levels."""
         categories = []
         entity_names = []
         entity_types = []
@@ -114,13 +133,12 @@ class SmartCategorizer:
         return df
 
     def get_category_stats(self, df):
-        """Get categorization statistics including confidence breakdown"""
+        """Get categorization statistics including confidence breakdown."""
         total = len(df)
         categorized = len(df[df['category'] != 'Other'])
 
         stats = self.memory.get_stats()
 
-        # Confidence distribution
         confidence_counts = df['confidence_level'].value_counts().to_dict()
 
         return {
