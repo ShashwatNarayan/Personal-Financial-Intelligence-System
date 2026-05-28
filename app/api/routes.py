@@ -1,3 +1,4 @@
+import hashlib
 import os
 import pandas as pd
 from datetime import datetime
@@ -11,6 +12,15 @@ from app.api import api_bp
 from app.analytics.bank_detector import detect_bank, get_parser
 from app.analytics.categorization import SmartCategorizer
 from app.models import Correction, EntityMemory, Transaction, UploadLog
+
+
+def compute_fingerprint(user_id, date, description, amount):
+    """Stable MD5 hash of (user_id, date, description, amount) for dedup."""
+    date_str = str(date)[:10] if date is not None else ''
+    desc_str = str(description or '').lower().strip()
+    amt_str = f"{float(amount or 0):.2f}"
+    key = f"{user_id}|{date_str}|{desc_str}|{amt_str}"
+    return hashlib.md5(key.encode('utf-8')).hexdigest()
 
 
 def get_user_transactions_df(user_id, months=None):
@@ -64,6 +74,25 @@ def upload_excel():
         temp_path = 'temp_upload.xlsx'
         file.save(temp_path)
         print(f"\n  Uploaded: {file.filename}")
+
+        # S-0: Duplicate file check (fast path — exact re-upload)
+        with open(temp_path, 'rb') as fh:
+            file_hash = hashlib.sha256(fh.read()).hexdigest()
+
+        existing_upload = UploadLog.query.filter_by(
+            user_id=current_user.id,
+            file_hash=file_hash,
+        ).first()
+        if existing_upload:
+            os.remove(temp_path)
+            return jsonify({
+                'status': 'error',
+                'message': (
+                    f'This exact file was already uploaded on '
+                    f'{existing_upload.uploaded_at.strftime("%d %b %Y")}. '
+                    f'No changes made.'
+                ),
+            }), 409
 
         # S-1: Detect bank and parse statement
         print("Step 1: Detecting bank and parsing Excel...")
@@ -133,21 +162,45 @@ def upload_excel():
         else:
             print("    No recurring subscriptions detected")
 
-        # S-4: Persist to database
+        # S-4: Persist to database (with row-level deduplication)
         print("Step 4: Saving to database...")
+
+        # Pre-load all fingerprints already stored for this user (one query)
+        existing_fps = set(
+            fp for (fp,) in db.session.query(Transaction.fingerprint)
+            .filter(Transaction.user_id == current_user.id)
+            .filter(Transaction.fingerprint.isnot(None))
+            .all()
+        )
+
         upload = UploadLog(
             user_id=current_user.id,
             filename=secure_filename(file.filename),
             bank_detected=bank,
-            row_count=len(df_expenses),
+            row_count=0,       # updated below once we know how many are new
+            file_hash=file_hash,
         )
         db.session.add(upload)
-        db.session.flush()  # get upload.id before committing
+        db.session.flush()  # get upload.id before inserting rows
 
+        new_count = 0
+        skipped_count = 0
         for _, row in df_expenses.iterrows():
+            fp = compute_fingerprint(
+                current_user.id,
+                row['date'],
+                row.get('description', ''),
+                row.get('amount', 0),
+            )
+            if fp in existing_fps:
+                skipped_count += 1
+                continue
+            existing_fps.add(fp)  # guard against intra-batch duplicates
+
             txn = Transaction(
                 user_id=current_user.id,
                 upload_id=upload.id,
+                fingerprint=fp,
                 txn_date=row['date'],
                 description=str(row.get('description', '')),
                 entity_name=str(row.get('entity_name', row.get('merchant', ''))),
@@ -159,8 +212,23 @@ def upload_excel():
                 is_reimbursed=bool(row.get('is_reimbursed', False)),
             )
             db.session.add(txn)
+            new_count += 1
+
+        upload.row_count = new_count
         db.session.commit()
-        print(f"    Saved {len(df_expenses)} transactions (upload_id={upload.id})")
+        print(f"    Saved {new_count} new transactions, skipped {skipped_count} duplicates (upload_id={upload.id})")
+
+        if new_count == 0:
+            return jsonify({
+                'status': 'info',
+                'message': (
+                    f'All {skipped_count} transactions in this file already exist in your history. '
+                    f'Nothing new was added.'
+                ),
+                'upload_id': upload.id,
+                'new_count': 0,
+                'skipped_count': skipped_count,
+            }), 200
 
         # S-5: Calculate summary statistics from in-memory df
         print(" Step 5: Calculating statistics...")
@@ -207,10 +275,13 @@ def upload_excel():
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+        skip_note = f' ({skipped_count} duplicates skipped)' if skipped_count else ''
         return jsonify({
             'status': 'success',
-            'message': f'Processed {len(df_expenses)} transactions over {months:.1f} months',
+            'message': f'Added {new_count} new transactions over {months:.1f} months{skip_note}',
             'upload_id': upload.id,
+            'new_count': new_count,
+            'skipped_count': skipped_count,
             'data': {
                 'metrics': {
                     'total_monthly_spend': {

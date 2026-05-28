@@ -2501,5 +2501,124 @@
     "source": "auto",
     "last_seen": "2026-04-16T09:35:57.436635",
     "count": 1
+  },
+  "Karuturi Sita Ratnam": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.182172",
+    "count": 1
+  },
+  "079359 15Apr26 20:19:36 Gurgaon Pay*Www Dineout Co In": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.187137",
+    "count": 1
+  },
+  "Hotel Sri Krishna Ud": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.192257",
+    "count": 1
+  },
+  "Mr Mohammed Saber": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.199162",
+    "count": 1
+  },
+  "Go Grab": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.207643",
+    "count": 1
+  },
+  "Anantha Laxmi": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.215313",
+    "count": 1
+  },
+  "Pavan Enterprises": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.223376",
+    "count": 1
+  },
+  "Bits 01": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.229213",
+    "count": 1
+  },
+  "S P Filling Stationp": {
+    "category": "Transport",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.239193",
+    "count": 1
+  },
+  "Campus Kitchen Priva": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.247445",
+    "count": 1
+  },
+  "B Anantaiah": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.256032",
+    "count": 1
+  },
+  "Lavkush Kumar": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.261743",
+    "count": 1
+  },
+  "Hungerhalt Foodfill": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.268943",
+    "count": 1
+  },
+  "Skpl Bits": {
+    "category": "Transfer / P2P",
+    "entity_type": "person",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.274059",
+    "count": 1
+  },
+  "Cafe Coffee Day Bits": {
+    "category": "Food & Dining",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.278433",
+    "count": 1
+  },
+  "Autopay": {
+    "category": "Shopping",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.286254",
+    "count": 1
+  },
+  "Mr Mogulla Sai Raj": {
+    "category": "Other",
+    "entity_type": "merchant",
+    "source": "auto",
+    "last_seen": "2026-05-28T13:34:11.290948",
+    "count": 1
   }
 }

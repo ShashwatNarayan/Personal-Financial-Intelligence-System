@@ -1,15 +1,17 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day"])
+csrf = CSRFProtect()
 
 
 def create_app(config_object='config.Config'):
@@ -21,6 +23,7 @@ def create_app(config_object='config.Config'):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     limiter.init_app(app)
+    csrf.init_app(app)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'warning'
@@ -36,17 +39,12 @@ def create_app(config_object='config.Config'):
     from app.auth import auth_bp
     app.register_blueprint(auth_bp)
 
-    @app.route('/')
-    def landing():
-        return render_template('landing.html')
+    from app.main import main_bp
+    app.register_blueprint(main_bp)
 
-    @app.route('/dashboard')
-    def dashboard():
-        return render_template('dashboard.html')
-
-    @app.route('/upload')
-    def upload_page():
-        return render_template('dashboard.html')
+    from app.cli import deduplicate_cmd, clear_data_cmd
+    app.cli.add_command(deduplicate_cmd)
+    app.cli.add_command(clear_data_cmd)
 
     @app.errorhandler(404)
     def not_found(e):

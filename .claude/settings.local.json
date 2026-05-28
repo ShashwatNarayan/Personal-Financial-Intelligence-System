@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(cp C:/Personal-Financial-Intelligence-System/src/*.py C:/Personal-Financial-Intelligence-System/app/analytics/)",
-      "Bash(cp C:/Personal-Financial-Intelligence-System/templates/*.html C:/Personal-Financial-Intelligence-System/app/templates/)"
+      "Bash(cp C:/Personal-Financial-Intelligence-System/templates/*.html C:/Personal-Financial-Intelligence-System/app/templates/)",
+      "Bash(python -c \"from app import create_app; app = create_app\\(\\); print\\('App created OK'\\); print\\('Routes:', [str\\(r\\) for r in app.url_map.iter_rules\\(\\) if r.endpoint.startswith\\('main.'\\)]\\)\")",
+      "Bash(python -c ' *)"
     ]
   }
 }

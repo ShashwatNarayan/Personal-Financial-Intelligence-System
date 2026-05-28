@@ -60,8 +60,13 @@ class UploadLog(db.Model):
     bank_detected = db.Column(db.String(50))
     row_count = db.Column(db.Integer)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    file_hash = db.Column(db.String(64), nullable=True)
 
     transactions = db.relationship('Transaction', backref='upload', cascade='all, delete-orphan', lazy='dynamic')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'file_hash', name='uq_uploads_user_file_hash'),
+    )
 
     def __repr__(self):
         return f'<UploadLog {self.filename} ({self.row_count} rows)>'
@@ -82,11 +87,13 @@ class Transaction(db.Model):
     entity_type = db.Column(db.String(50))
     confidence_level = db.Column(db.String(20))
     is_reimbursed = db.Column(db.Boolean, default=False)
+    fingerprint = db.Column(db.String(32), nullable=True)
 
     corrections = db.relationship('Correction', backref='transaction', cascade='all, delete-orphan', lazy='dynamic')
 
     __table_args__ = (
         db.Index('ix_transactions_user_date', 'user_id', 'txn_date'),
+        db.UniqueConstraint('user_id', 'fingerprint', name='uq_transactions_user_fingerprint'),
     )
 
     def __repr__(self):

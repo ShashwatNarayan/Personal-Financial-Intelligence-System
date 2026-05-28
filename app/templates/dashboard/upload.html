@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block title %}Upload Statement{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    corePlugins: { preflight: false },
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "primary": "#4fdbc8",
+          "primary-container": "#14b8a6",
+          "background": "#0b1326",
+          "surface": "#0b1326",
+          "surface-container": "#171f33",
+          "surface-container-high": "#222a3d",
+          "surface-container-highest": "#2d3449",
+          "surface-bright": "#31394d",
+          "on-surface": "#dae2fd",
+          "on-surface-variant": "#bbcac6",
+          "outline-variant": "#3c4947",
+          "error": "#ffb4ab",
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "fontFamily": {
+          "body-md": ["Inter"],
+          "headline-lg": ["Inter"],
+          "headline-md": ["Inter"],
+          "label-caps": ["Inter"],
+          "data-mono": ["JetBrains Mono"],
+        },
+        "fontSize": {
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+          "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+          "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+          "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+          "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+        },
+        "spacing": {
+          "sm": "8px",
+          "md": "16px",
+          "lg": "24px",
+          "xl": "48px",
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #0b1326; color: #dae2fd; }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .drag-over {
+    border-color: #4fdbc8 !important;
+    background-color: #222a3d !important;
+    transform: scale(1.01);
+  }
+</style>
+{% endblock %}
+
+{% block body_class %}bg-background text-on-surface font-body-md min-h-screen flex flex-col{% endblock %}
+
+{% block content %}
+<div class="flex-grow flex flex-col items-center justify-center relative w-full py-10">
+  <div class="absolute top-4 right-8 font-label-caps text-label-caps text-primary tracking-widest uppercase">
+    PERSONAL FINANCE
+  </div>
+  <main class="w-full max-w-[800px] px-lg flex flex-col items-center">
+
+    <!-- Header -->
+    <div class="text-center mb-xl">
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-sm">Upload Bank Statement</h1>
+      <p class="font-body-md text-on-surface-variant">Import your transactions automatically from a spreadsheet file.</p>
+    </div>
+
+    <!-- Upload Area -->
+    <div class="w-full relative group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl p-xl flex flex-col items-center justify-center transition-all duration-300 hover:border-primary/50 bg-[#0c162d] min-h-[350px] mb-lg"
+         id="dropZone">
+      <input accept=".xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+             id="fileInput" type="file"/>
+      <div class="w-20 h-20 rounded-full bg-primary-container/20 flex items-center justify-center mb-lg group-hover:scale-110 transition-transform duration-300">
+        <span class="material-symbols-outlined text-primary text-[36px]">cloud_upload</span>
+      </div>
+      <div class="text-center">
+        <p class="font-headline-md text-headline-md text-on-surface mb-sm text-[20px]">
+          Drop your bank statement here or click to browse
+        </p>
+        <p class="font-body-md text-on-surface-variant">Accepted formats: .xlsx, .xls</p>
+      </div>
+
+      <!-- File Selected State -->
+      <div class="hidden mt-lg items-center gap-md bg-surface-container-highest px-lg py-md rounded-lg border border-primary/20 relative z-20"
+           id="fileInfo">
+        <span class="material-symbols-outlined text-primary">description</span>
+        <div class="flex flex-col text-left">
+          <span class="font-body-md text-on-surface font-semibold" id="fileName"></span>
+          <span class="font-data-mono text-[12px] text-on-surface-variant" id="fileSize"></span>
+        </div>
+        <button class="ml-lg material-symbols-outlined text-on-surface-variant hover:text-error transition-colors"
+                id="removeFile" type="button">close</button>
+      </div>
+    </div>
+
+    <!-- Process Button -->
+    <button class="w-full py-md bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-md font-medium rounded-lg transition-all"
+            id="processBtn" type="button">
+      Process Statement
+    </button>
+
+    <!-- Status message area -->
+    <div class="w-full mt-md text-center text-sm hidden" id="statusMsg"></div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100" id="toast-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = '{{ csrf_token() }}';
+
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const fileInfo   = document.getElementById('fileInfo');
+const fileName   = document.getElementById('fileName');
+const fileSize   = document.getElementById('fileSize');
+const removeFile = document.getElementById('removeFile');
+const processBtn = document.getElementById('processBtn');
+const statusMsg  = document.getElementById('statusMsg');
+
+function showToast(message, type) {
+  const id = 'toast-' + Date.now();
+  const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend', `
+    <div id="${id}" class="toast align-items-center text-white ${bg} border-0 show" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  `);
+  setTimeout(() => document.getElementById(id)?.remove(), 5000);
+}
+
+// Drag and drop
+['dragenter', 'dragover'].forEach(evt => {
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); }, false);
+});
+['dragleave', 'drop'].forEach(evt => {
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); }, false);
+});
+
+dropZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(files) {
+  if (!files.length) return;
+  const file = files[0];
+  fileName.textContent = file.name;
+  fileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+  fileInfo.classList.remove('hidden');
+  fileInfo.classList.add('flex');
+  processBtn.classList.add('text-primary', 'bg-surface-container-highest');
+  processBtn.classList.remove('text-on-surface-variant', 'bg-surface-container-high');
+}
+
+removeFile.addEventListener('click', e => {
+  e.stopPropagation();
+  fileInput.value = '';
+  fileInfo.classList.add('hidden');
+  fileInfo.classList.remove('flex');
+  processBtn.classList.remove('text-primary', 'bg-surface-container-highest');
+  processBtn.classList.add('text-on-surface-variant', 'bg-surface-container-high');
+  statusMsg.classList.add('hidden');
+});
+
+processBtn.addEventListener('click', async () => {
+  if (!fileInput.files.length) {
+    showToast('Please select a file first', 'danger');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  processBtn.disabled = true;
+  processBtn.textContent = 'Processing…';
+  statusMsg.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/upload-excel', {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF},
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (res.ok && (data.status === 'success' || data.row_count)) {
+      const msg = data.message || (data.row_count + ' transactions processed');
+      showToast(msg, 'success');
+      statusMsg.textContent = msg;
+      statusMsg.classList.remove('hidden');
+      statusMsg.style.color = '#14b8a6';
+      setTimeout(() => { window.location.href = '/dashboard'; }, 1800);
+    } else {
+      const err = data.message || data.error || 'Upload failed';
+      showToast(err, 'danger');
+      statusMsg.textContent = err;
+      statusMsg.classList.remove('hidden');
+      statusMsg.style.color = '#f43f5e';
+    }
+  } catch (e) {
+    showToast('Network error — please try again', 'danger');
+  } finally {
+    processBtn.disabled = false;
+    processBtn.textContent = 'Process Statement';
+  }
+});
+</script>
+{% endblock %}

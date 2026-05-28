@@ -200,6 +200,11 @@ class TemporalInsights:
 
         return acceleration_flags
 
+    def get_monthly_totals(self):
+        """Return total spending per month across all categories, sorted chronologically."""
+        monthly = self.df.groupby('year_month')['amount'].sum().sort_index()
+        return [{'month': k, 'total': float(v)} for k, v in monthly.items()]
+
     def generate_full_report(self):
         """
         Generate complete temporal insights report
@@ -209,5 +214,6 @@ class TemporalInsights:
             'data_quality': self.get_data_quality(),
             'mom_changes': self.calculate_mom_changes(),
             'fastest_growing': self.get_fastest_growing_category(),
-            'acceleration_flags': self.detect_acceleration()
+            'acceleration_flags': self.detect_acceleration(),
+            'monthly_totals': self.get_monthly_totals(),
         }

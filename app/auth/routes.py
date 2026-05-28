@@ -12,7 +12,7 @@ from app.models import User
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('landing'))
+        return redirect(url_for('main.index'))
 
     form = RegisterForm()
     if form.validate_on_submit():
@@ -35,7 +35,7 @@ def register():
 @limiter.limit('5 per minute', methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('landing'))
+        return redirect(url_for('main.index'))
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -49,7 +49,7 @@ def login():
         user.last_login_at = datetime.utcnow()
         db.session.commit()
 
-        return redirect(url_for('landing'))
+        return redirect(url_for('main.dashboard'))
 
     return render_template('auth/login.html', form=form)
 

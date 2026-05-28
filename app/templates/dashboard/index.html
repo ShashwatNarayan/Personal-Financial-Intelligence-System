@@ -1,0 +1,546 @@
+{% extends 'base.html' %}
+{% block title %}Arthalens — Spending Dashboard{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    corePlugins: { preflight: false },
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            DEFAULT: '#14b8a6',
+            dark: '#0b1326',
+            surface: '#131b2e',
+            border: '#31394d',
+            dim: '#6b7280',
+          },
+          status: {
+            negative: '#f43f5e',
+            positive: '#10b981',
+          }
+        },
+        fontFamily: { sans: ['Inter', 'sans-serif'] },
+        borderRadius: { 'custom': '8px' }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #0b1326; color: #ffffff; font-family: 'Inter', sans-serif; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #0b1326; }
+  ::-webkit-scrollbar-thumb { background: #31394d; border-radius: 4px; }
+  .progress-bar-fill { transition: width 1s ease-in-out; }
+  .sub-card-clickable { cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+  .sub-card-clickable:hover { border-color: #14b8a6 !important; box-shadow: 0 0 0 1px #14b8a630; }
+</style>
+{% endblock %}
+
+{% block body_class %}p-0{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-10">
+<div class="max-w-7xl mx-auto space-y-8" data-purpose="dashboard-root">
+
+<!-- Header -->
+<header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div class="flex items-center gap-4" data-purpose="header-titles">
+    <img alt="Arthalens Logo" class="h-14 w-auto object-contain rounded-md"
+         src="{{ url_for('static', filename='images/logo.png') }}">
+    <div>
+      <p class="text-brand-dim text-sm mt-1">Welcome back — {{ current_user.email }}</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-3" data-purpose="header-actions">
+    <button class="px-4 py-2 bg-brand-surface border border-brand-border hover:bg-brand-border text-sm font-medium rounded-custom transition-colors text-white">
+      Export
+    </button>
+    <a href="{{ url_for('main.upload') }}"
+       class="px-4 py-2 bg-brand hover:bg-teal-500 text-brand-dark text-sm font-bold rounded-custom flex items-center gap-2 transition-colors no-underline">
+      <span>+</span> Upload Statement
+    </a>
+  </div>
+</header>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" data-purpose="summary-cards">
+
+  <!-- Avg Monthly Spend -->
+  <div class="bg-brand-surface border border-brand-border p-6 rounded-custom relative overflow-hidden">
+    <div class="flex justify-between items-start">
+      <div class="p-2 bg-[#1e293b] rounded-md text-brand">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect height="14" rx="2" width="20" x="2" y="5"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+      </div>
+    </div>
+    <div class="mt-4">
+      <h2 class="text-2xl font-bold">₹{{ "%.0f"|format(avg_monthly_spend) }}</h2>
+      <p class="text-brand-dim text-xs mt-1 font-medium">Average Monthly Spend</p>
+      <p class="text-[10px] text-brand-dim opacity-60">
+        {% if empty %}No data yet
+        {% else %}Total: ₹{{ "%.0f"|format(total_spent) }}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Top Category -->
+  <div class="bg-brand-surface border border-brand-border p-6 rounded-custom">
+    <div class="flex justify-between items-start">
+      <div class="p-2 bg-[#1e293b] rounded-md text-brand">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+      </div>
+    </div>
+    <div class="mt-4">
+      <h2 class="text-2xl font-bold">{{ top_category }}</h2>
+      <p class="text-brand-dim text-xs mt-1 font-medium">Top Category</p>
+      <p class="text-[10px] text-brand-dim opacity-60">
+        {% if not empty %}₹{{ "%.0f"|format(top_category_amount) }} total spend{% else %}No data yet{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Active Subscriptions (clickable) -->
+  <div id="sub-card"
+       class="bg-brand-surface border border-brand-border p-6 rounded-custom sub-card-clickable"
+       title="Click to view subscription details">
+    <div class="flex justify-between items-start">
+      <div class="p-2 bg-[#1e293b] rounded-md text-brand">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="m7 2 10 0"></path><path d="m7 22 10 0"></path><path d="m2 7 0 10"></path><path d="m22 7 0 10"></path><path d="m7 12 10 0"></path><path d="m12 7 0 10"></path></svg>
+      </div>
+      <div class="text-brand-dim text-xs opacity-50">↗</div>
+    </div>
+    <div class="mt-4">
+      <h2 class="text-2xl font-bold">{{ subscription_count }}</h2>
+      <p class="text-brand-dim text-xs mt-1 font-medium">Active Subscriptions</p>
+      <p class="text-[10px] text-brand-dim opacity-60">
+        {% if sub_monthly_cost > 0 %}₹{{ "%.0f"|format(sub_monthly_cost) }} / month avg
+        {% elif subscription_count == 0 %}none detected
+        {% else %}click to view{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Highest Growth Category -->
+  <div class="bg-brand-surface border border-brand-border p-6 rounded-custom">
+    <div class="flex justify-between items-start">
+      <div class="p-2 bg-[#1e293b] rounded-md text-brand">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20"></path><path d="m17 5-5-3-5 3"></path><path d="m17 19-5 3-5-3"></path><path d="M2 12h20"></path><path d="m5 7-3 5 3 5"></path><path d="m19 7 3 5-3 5"></path></svg>
+      </div>
+      {% if highest_growth_pct != 0 %}
+      <div class="flex items-center {{ 'text-status-positive' if highest_growth_pct > 0 else 'text-status-negative' }} text-xs font-medium">
+        {% if highest_growth_pct > 0 %}
+        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24"><path d="m7 17 10-10"></path><path d="M7 7h10v10"></path></svg>
+        {% else %}
+        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24"><path d="m7 7 10 10"></path><path d="M17 7v10H7"></path></svg>
+        {% endif %}
+        {{ "%+.0f"|format(highest_growth_pct) }}%
+      </div>
+      {% endif %}
+    </div>
+    <div class="mt-4">
+      <h2 class="text-2xl font-bold">{{ highest_growth_category }}</h2>
+      <p class="text-brand-dim text-xs mt-1 font-medium">Highest Growth Category</p>
+      <p class="text-[10px] text-brand-dim opacity-60">
+        {% if highest_growth_amount > 0 %}₹{{ "%.0f"|format(highest_growth_amount) }} this month
+        {% elif highest_growth_pct != 0 %}{{ "%+.0f"|format(highest_growth_pct) }}% vs last month
+        {% else %}insufficient data{% endif %}
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+  <div class="bg-brand-surface border border-brand-border p-6 rounded-custom" data-purpose="bar-chart-container">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h3 class="text-lg font-semibold">Spending by Category</h3>
+        <p class="text-brand-dim text-xs">All time</p>
+      </div>
+      <span class="px-2 py-0.5 bg-brand/10 text-brand text-[10px] font-bold uppercase rounded border border-brand/20">Live</span>
+    </div>
+    {% if empty %}
+    <div class="flex items-center justify-center h-[350px] text-brand-dim text-sm">
+      <a href="{{ url_for('main.upload') }}" class="text-brand hover:underline">Upload a statement</a>&nbsp;to see your spending breakdown
+    </div>
+    {% else %}
+    <div id="category-chart" style="height:350px"></div>
+    {% endif %}
+  </div>
+
+  <div class="bg-brand-surface border border-brand-border p-6 rounded-custom flex flex-col" data-purpose="line-chart-container">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h3 class="text-lg font-semibold">Monthly Spending Trend</h3>
+        <p class="text-brand-dim text-xs">Historical</p>
+      </div>
+      <span class="px-2 py-0.5 bg-brand/10 text-brand text-[10px] font-bold uppercase rounded border border-brand/20">Live</span>
+    </div>
+    {% if empty %}
+    <div class="flex items-center justify-center h-[350px] text-brand-dim text-sm">No trend data yet</div>
+    {% else %}
+    <div id="trend-chart" style="height:350px"></div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Transactions Table -->
+<div class="bg-brand-surface border border-brand-border rounded-custom overflow-hidden" data-purpose="transactions-container">
+  <div class="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h3 class="text-lg font-semibold">Recent Transactions</h3>
+      <p class="text-brand-dim text-xs" id="txn-count-label">
+        {% if empty %}No records yet{% else %}Showing latest {{ transactions|length }} records{% endif %}
+      </p>
+    </div>
+    {% if not empty %}
+    <div class="flex gap-2 items-center flex-wrap">
+      <select id="category-filter" class="px-3 py-1.5 bg-brand-dark border border-brand-border text-xs font-medium rounded-custom text-white hover:border-brand transition-colors outline-none">
+        <option value="">All Categories</option>
+        <option value="Food &amp; Dining">Food &amp; Dining</option>
+        <option value="Shopping">Shopping</option>
+        <option value="Transport">Transport</option>
+        <option value="Utilities">Utilities</option>
+        <option value="Entertainment">Entertainment</option>
+        <option value="Healthcare">Healthcare</option>
+        <option value="Investment">Investment</option>
+        <option value="Transfer / P2P">Transfer / P2P</option>
+        <option value="Rent">Rent</option>
+        <option value="Education">Education</option>
+        <option value="ATM / Cash">ATM / Cash</option>
+        <option value="Other">Other</option>
+      </select>
+      <button id="filter-btn" class="px-4 py-1.5 bg-brand-dark border border-brand-border text-xs font-medium rounded-custom hover:bg-brand-border transition-colors text-white">Filter</button>
+      <button id="all-txn-btn" class="px-4 py-1.5 bg-brand-dark border border-brand-border text-xs font-medium rounded-custom hover:bg-brand-border transition-colors text-white">All Transactions</button>
+    </div>
+    {% endif %}
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-xs border-t border-brand-border">
+      <thead>
+        <tr class="text-brand-dim uppercase tracking-wider font-bold">
+          <th class="px-6 py-4">Date</th>
+          <th class="px-6 py-4">Description</th>
+          <th class="px-6 py-4">Category</th>
+          <th class="px-6 py-4">Amount</th>
+          <th class="px-6 py-4">Type</th>
+          <th class="px-6 py-4 text-right"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-brand-border/50" id="txn-tbody">
+        {% if empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-10 text-center text-brand-dim">
+            No transactions yet.
+            <a href="{{ url_for('main.upload') }}" class="text-brand hover:underline">Upload a bank statement</a>
+            to get started.
+          </td>
+        </tr>
+        {% else %}
+        {% for txn in transactions %}
+        <tr class="hover:bg-brand-border/20 transition-colors">
+          <td class="px-6 py-4 text-brand-dim">{{ txn.date }}</td>
+          <td class="px-6 py-4 font-medium text-white">{{ txn.description[:60] }}</td>
+          <td class="px-6 py-4">
+            <span class="px-2 py-0.5 bg-[#1e293b] text-brand-dim rounded text-[10px]">{{ txn.category }}</span>
+          </td>
+          <td class="px-6 py-4 font-semibold text-white">₹{{ "%.2f"|format(txn.amount) }}</td>
+          <td class="px-6 py-4">
+            <span class="px-2 py-0.5 border border-brand-border bg-[#1e293b] text-brand-dim rounded text-[10px]">
+              {{ txn.transaction_type }}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-right text-brand-dim">
+            <button class="hover:text-brand transition-colors edit-btn"
+              data-txn-id="{{ txn.id }}"
+              data-category="{{ txn.category }}">✎</button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- Subscriptions Modal -->
+<div class="modal fade" id="subModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:#131b2e; border-color:#31394d; color:#fff">
+      <div class="modal-header" style="border-color:#31394d">
+        <h5 class="modal-title">Active Subscriptions</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="sub-modal-body" style="max-height:70vh; overflow-y:auto">
+        <p class="text-muted small">Loading…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#131b2e; border-color:#31394d; color:#fff">
+      <div class="modal-header" style="border-color:#31394d">
+        <h5 class="modal-title">Edit Category</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-txn-id">
+        <div class="mb-3">
+          <label class="form-label" style="color:#6b7280">New Category</label>
+          <select id="edit-category" class="form-select"
+            style="background:#0b1326; border-color:#31394d; color:#fff">
+            <option value="Food &amp; Dining">Food &amp; Dining</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Transport">Transport</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Investment">Investment</option>
+            <option value="Transfer / P2P">Transfer / P2P</option>
+            <option value="Rent">Rent</option>
+            <option value="Education">Education</option>
+            <option value="ATM / Cash">ATM / Cash</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color:#31394d">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="save-correction">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100" id="toast-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CSRF = '{{ csrf_token() }}';
+const SUBSCRIPTIONS = {{ subscriptions_json | safe }};
+
+function showToast(msg, type) {
+  const id = 'toast-' + Date.now();
+  const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend', `
+    <div id="${id}" class="toast align-items-center text-white ${bg} border-0 show" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">${msg}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  `);
+  setTimeout(() => document.getElementById(id)?.remove(), 4000);
+}
+
+function bindEditButtons(scope) {
+  (scope || document).querySelectorAll('.edit-btn, .edit-btn-dyn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('edit-txn-id').value = btn.dataset.txnId;
+      const sel = document.getElementById('edit-category');
+      if (sel) sel.value = btn.dataset.category;
+      new bootstrap.Modal(document.getElementById('editModal')).show();
+    });
+  });
+}
+bindEditButtons();
+
+document.getElementById('save-correction')?.addEventListener('click', async () => {
+  const txnId = document.getElementById('edit-txn-id').value;
+  const newCategory = document.getElementById('edit-category').value;
+  try {
+    const res = await fetch('/api/transactions/correct', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+      body: JSON.stringify({transaction_id: txnId, new_category: newCategory})
+    });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message || 'Category updated', 'success'); setTimeout(() => location.reload(), 1200); }
+    else showToast(data.message || 'Update failed', 'danger');
+  } catch(e) { showToast('Network error', 'danger'); }
+  bootstrap.Modal.getInstance(document.getElementById('editModal'))?.hide();
+});
+
+// ── Subscription modal ────────────────────────────────────────────────────
+function buildSubModal(subs) {
+  if (!subs || !subs.length) {
+    return '<p class="text-muted small py-3">No subscriptions detected yet. Upload more statements to detect recurring charges.</p>';
+  }
+
+  const regular = subs.filter(s => !s.is_intermittent);
+  const irregular = subs.filter(s => s.is_intermittent);
+
+  const flagLabel = { cost_increase: '↑ Cost rising', long_running: 'Long running', high_cost: 'High cost', irregular_pattern: 'Irregular' };
+
+  function renderRow(s) {
+    const badges = (s.flags || []).map(f =>
+      `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#1e293b;color:#6b7280;border:1px solid #31394d;margin-left:4px">${flagLabel[f] || f}</span>`
+    ).join('');
+    return `
+      <tr style="border-bottom:1px solid #31394d20">
+        <td style="padding:10px 8px;color:#fff;font-weight:500">${s.entity}${badges}</td>
+        <td style="padding:10px 8px;color:#6b7280;font-size:11px">${s.category}</td>
+        <td style="padding:10px 8px;color:#6b7280;font-size:11px;text-transform:capitalize">${s.frequency}</td>
+        <td style="padding:10px 8px;color:#14b8a6;font-weight:600;text-align:right">₹${s.avg_amount.toFixed(0)}</td>
+      </tr>`;
+  }
+
+  function renderSection(title, list, color) {
+    if (!list.length) return '';
+    return `
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${color};margin-bottom:8px">${title} (${list.length})</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead><tr style="color:#6b7280;font-size:10px;text-transform:uppercase">
+            <th style="padding:6px 8px;text-align:left">Name</th>
+            <th style="padding:6px 8px;text-align:left">Category</th>
+            <th style="padding:6px 8px;text-align:left">Frequency</th>
+            <th style="padding:6px 8px;text-align:right">Avg / cycle</th>
+          </tr></thead>
+          <tbody>${list.map(renderRow).join('')}</tbody>
+        </table>
+      </div>`;
+  }
+
+  const totalMonthly = subs.reduce((sum, s) => {
+    const m = s.frequency === 'monthly' ? s.avg_amount : s.frequency === 'quarterly' ? s.avg_amount / 3 : s.avg_amount / 12;
+    return sum + m;
+  }, 0);
+
+  return `
+    <div style="background:#0b132620;border:1px solid #31394d;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;gap:24px">
+      <div><span style="font-size:20px;font-weight:700;color:#fff">${subs.length}</span><br><span style="font-size:11px;color:#6b7280">Total detected</span></div>
+      <div><span style="font-size:20px;font-weight:700;color:#14b8a6">₹${totalMonthly.toFixed(0)}</span><br><span style="font-size:11px;color:#6b7280">Est. monthly cost</span></div>
+      <div><span style="font-size:20px;font-weight:700;color:#fff">${regular.length}</span><br><span style="font-size:11px;color:#6b7280">Regular</span></div>
+      <div><span style="font-size:20px;font-weight:700;color:#f59e0b">${irregular.length}</span><br><span style="font-size:11px;color:#6b7280">Irregular</span></div>
+    </div>
+    ${renderSection('Regular Subscriptions', regular, '#10b981')}
+    ${renderSection('Irregular / Intermittent', irregular, '#f59e0b')}
+  `;
+}
+
+document.getElementById('sub-card')?.addEventListener('click', () => {
+  document.getElementById('sub-modal-body').innerHTML = buildSubModal(SUBSCRIPTIONS);
+  new bootstrap.Modal(document.getElementById('subModal')).show();
+});
+
+{% if not empty %}
+// ── Transaction filter ────────────────────────────────────────────────────
+function renderRows(txns) {
+  const tbody = document.getElementById('txn-tbody');
+  const label = document.getElementById('txn-count-label');
+  if (!txns.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-brand-dim">No transactions found.</td></tr>';
+    label.textContent = 'No records found';
+    return;
+  }
+  label.textContent = `Showing ${txns.length} records`;
+  tbody.innerHTML = txns.map(t => `
+    <tr class="hover:bg-brand-border/20 transition-colors">
+      <td class="px-6 py-4 text-brand-dim">${(t.date || '').slice(0, 10)}</td>
+      <td class="px-6 py-4 font-medium text-white">${(t.description || '').slice(0, 60)}</td>
+      <td class="px-6 py-4"><span class="px-2 py-0.5 bg-[#1e293b] text-brand-dim rounded text-[10px]">${t.category || ''}</span></td>
+      <td class="px-6 py-4 font-semibold text-white">₹${parseFloat(t.amount || 0).toFixed(2)}</td>
+      <td class="px-6 py-4"><span class="px-2 py-0.5 border border-brand-border bg-[#1e293b] text-brand-dim rounded text-[10px]">${t.transaction_type || ''}</span></td>
+      <td class="px-6 py-4 text-right text-brand-dim">
+        <button class="hover:text-brand transition-colors edit-btn-dyn"
+          data-txn-id="${t.txn_id}" data-category="${t.category || ''}">✎</button>
+      </td>
+    </tr>
+  `).join('');
+  bindEditButtons(tbody);
+}
+
+async function fetchAllTransactions() {
+  const res = await fetch('/api/transactions/classified', {headers: {'X-CSRFToken': CSRF}});
+  if (!res.ok) throw new Error('fetch failed');
+  const data = await res.json();
+  if (data.status !== 'success') throw new Error(data.message);
+  return data.transactions;
+}
+
+document.getElementById('filter-btn')?.addEventListener('click', async () => {
+  const cat = document.getElementById('category-filter').value;
+  try {
+    let txns = await fetchAllTransactions();
+    if (cat) txns = txns.filter(t => t.category === cat);
+    renderRows(txns);
+  } catch(e) { showToast('Could not load transactions', 'danger'); }
+});
+
+document.getElementById('all-txn-btn')?.addEventListener('click', async () => {
+  try { renderRows(await fetchAllTransactions()); }
+  catch(e) { showToast('Could not load transactions', 'danger'); }
+});
+
+// ── Charts ────────────────────────────────────────────────────────────────
+async function loadCategoryChart() {
+  try {
+    const txns = await fetchAllTransactions();
+    const catMap = {};
+    txns.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+    const cats = Object.keys(catMap).sort((a, b) => catMap[b] - catMap[a]);
+    Plotly.newPlot('category-chart', [{
+      type: 'bar', x: cats, y: cats.map(c => catMap[c]), marker: {color: '#14b8a6'},
+    }], {
+      paper_bgcolor: '#131b2e', plot_bgcolor: '#131b2e',
+      font: {color: '#ffffff', family: 'Inter', size: 11},
+      margin: {t: 10, b: 80, l: 70, r: 10},
+      xaxis: {color: '#6b7280', gridcolor: '#31394d', tickangle: -30},
+      yaxis: {color: '#6b7280', gridcolor: '#31394d', tickprefix: '₹'},
+    }, {responsive: true, displayModeBar: false});
+  } catch(e) {
+    const el = document.getElementById('category-chart');
+    if (el) el.innerHTML = '<p style="color:#6b7280;padding:1rem">Could not load chart</p>';
+  }
+}
+
+async function loadTrendChart() {
+  try {
+    const res = await fetch('/api/insights/temporal', {headers: {'X-CSRFToken': CSRF}});
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status !== 'success') return;
+    const monthly = (data.insights && data.insights.monthly_totals) || [];
+    if (monthly.length < 2) {
+      const el = document.getElementById('trend-chart');
+      if (el) el.innerHTML = '<p style="color:#6b7280;padding:1rem;text-align:center">Need 2+ months of data for trend</p>';
+      return;
+    }
+    Plotly.newPlot('trend-chart', [{
+      type: 'scatter', mode: 'lines+markers',
+      x: monthly.map(m => m.month), y: monthly.map(m => m.total),
+      line: {color: '#14b8a6', width: 3}, marker: {color: '#14b8a6', size: 6},
+      fill: 'tozeroy', fillcolor: 'rgba(20,184,166,0.1)',
+    }], {
+      paper_bgcolor: '#131b2e', plot_bgcolor: '#131b2e',
+      font: {color: '#ffffff', family: 'Inter', size: 11},
+      margin: {t: 10, b: 60, l: 70, r: 10},
+      xaxis: {color: '#6b7280', gridcolor: '#31394d'},
+      yaxis: {color: '#6b7280', gridcolor: '#31394d', tickprefix: '₹'},
+    }, {responsive: true, displayModeBar: false});
+  } catch(e) {
+    const el = document.getElementById('trend-chart');
+    if (el) el.innerHTML = '<p style="color:#6b7280;padding:1rem">Could not load chart</p>';
+  }
+}
+
+loadCategoryChart();
+loadTrendChart();
+{% endif %}
+</script>
+{% endblock %}
