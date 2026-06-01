@@ -18,6 +18,17 @@ def create_app(config_object='config.Config'):
     app = Flask(__name__, template_folder='templates')
     app.config.from_object(config_object)
 
+    # pool_pre_ping handles Neon cold-start reconnects; recycle aligns with Neon's idle timeout
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_size': 5,
+        'pool_recycle': 300,
+        'connect_args': {
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000'
+        }
+    }
+
     CORS(app)
     db.init_app(app)
     migrate.init_app(app, db)

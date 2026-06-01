@@ -25,8 +25,8 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        flash('Account created. Please sign in.', 'success')
-        return redirect(url_for('auth.login'))
+        login_user(user)  # auto-login after registration
+        return redirect(url_for('main.upload'))
 
     return render_template('auth/register.html', form=form)
 
@@ -49,7 +49,7 @@ def login():
         user.last_login_at = datetime.utcnow()
         db.session.commit()
 
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('main.upload'))
 
     return render_template('auth/login.html', form=form)
 

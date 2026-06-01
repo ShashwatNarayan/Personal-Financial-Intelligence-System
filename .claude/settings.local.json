@@ -4,7 +4,13 @@
       "Bash(cp C:/Personal-Financial-Intelligence-System/src/*.py C:/Personal-Financial-Intelligence-System/app/analytics/)",
       "Bash(cp C:/Personal-Financial-Intelligence-System/templates/*.html C:/Personal-Financial-Intelligence-System/app/templates/)",
       "Bash(python -c \"from app import create_app; app = create_app\\(\\); print\\('App created OK'\\); print\\('Routes:', [str\\(r\\) for r in app.url_map.iter_rules\\(\\) if r.endpoint.startswith\\('main.'\\)]\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(dir C:\\\\Personal-Financial-Intelligence-System\\\\app\\\\templates\\\\dashboard *)",
+      "Bash(python *)",
+      "Read(//mnt/c/**)",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\('images/logo.png'\\); print\\('Size:', img.size\\); print\\('Mode:', img.mode\\)\")",
+      "Bash(dir \"C:\\\\Personal-Financial-Intelligence-System\\\\images\\\\\" && dir \"C:\\\\Personal-Financial-Intelligence-System\\\\app\\\\static\\\\\")",
+      "Bash(dir C:\\\\Personal-Financial-Intelligence-System\\\\images\\\\\" && dir C:Personal-Financial-Intelligence-Systemapp\" *)"
     ]
   }
 }

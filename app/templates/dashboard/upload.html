@@ -1,166 +1,240 @@
-{% extends 'base.html' %}
-{% block title %}Upload Statement{% endblock %}
-
-{% block head_extra %}
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<!-- Change 5: Init theme from localStorage before render to prevent flash -->
+<script>if(localStorage.getItem('arthalens-theme')==='light')document.documentElement.classList.add('light-mode');</script>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>ArthaLens — Upload Statement</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-  tailwind.config = {
-    corePlugins: { preflight: false },
-    darkMode: "class",
-    theme: {
-      extend: {
-        "colors": {
-          "primary": "#4fdbc8",
-          "primary-container": "#14b8a6",
-          "background": "#0b1326",
-          "surface": "#0b1326",
-          "surface-container": "#171f33",
-          "surface-container-high": "#222a3d",
-          "surface-container-highest": "#2d3449",
-          "surface-bright": "#31394d",
-          "on-surface": "#dae2fd",
-          "on-surface-variant": "#bbcac6",
-          "outline-variant": "#3c4947",
-          "error": "#ffb4ab",
-        },
-        "borderRadius": {
-          "DEFAULT": "0.25rem",
-          "lg": "0.5rem",
-          "xl": "0.75rem",
-          "full": "9999px"
-        },
-        "fontFamily": {
-          "body-md": ["Inter"],
-          "headline-lg": ["Inter"],
-          "headline-md": ["Inter"],
-          "label-caps": ["Inter"],
-          "data-mono": ["JetBrains Mono"],
-        },
-        "fontSize": {
-          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
-          "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-          "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
-          "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
-          "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
-        },
-        "spacing": {
-          "sm": "8px",
-          "md": "16px",
-          "lg": "24px",
-          "xl": "48px",
-        }
-      }
-    }
-  }
-</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  body { background-color: #0b1326; color: #dae2fd; }
+  /* Change 3: CSS Variables */
+  :root {
+    --bg: #0d0f0d;
+    --card: #131a13;
+    --navbar: #0a0c0a;
+    --border: #1f2a1f;
+    --text-primary: #f0f0f0;
+    --text-secondary: #6b7280;
+    --accent: #4ade80;
+  }
+  html.light-mode {
+    --bg: #f5f7f5;
+    --card: #ffffff;
+    --navbar: #ffffff;
+    --border: #e2e8e2;
+    --text-primary: #0d0f0d;
+    --text-secondary: #4b5563;
+    --accent: #4ade80;
+  }
+  /* Theme toggle pill */
+  .theme-toggle-pill {
+    width: 48px; height: 24px;
+    border-radius: 12px;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+  }
+  .theme-toggle-pill-circle {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform 0.25s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
+  body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+    transition: background-color 0.25s, color 0.25s;
+  }
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: background-color 0.25s, border-color 0.25s;
+  }
+  .text-accent { color: #4ade80; }
+  .bg-accent { background-color: #4ade80; color: #0d0f0d; }
   .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
-  .drag-over {
-    border-color: #4fdbc8 !important;
-    background-color: #222a3d !important;
-    transform: scale(1.01);
+  #dropZone {
+    border: 2px dashed #1f2a1f;
+    border-radius: 12px;
+    transition: border-color 0.2s, background-color 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  #dropZone.drag-over {
+    border-color: #4ade80;
+    background-color: rgba(74, 222, 128, 0.04);
+  }
+  #dropZone:hover {
+    border-color: #3f493f;
+  }
+  #processBtn {
+    background-color: #4ade80;
+    color: #0d0f0d;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+  }
+  #processBtn:hover:not(:disabled) { background-color: #3bc26b; }
+  #processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .toast-item {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: opacity 0.4s, transform 0.4s;
   }
 </style>
-{% endblock %}
+</head>
+<body style="font-family:Inter,sans-serif;min-height:100vh">
 
-{% block body_class %}bg-background text-on-surface font-body-md min-h-screen flex flex-col{% endblock %}
-
-{% block content %}
-<div class="flex-grow flex flex-col items-center justify-center relative w-full py-10">
-  <div class="absolute top-4 right-8 font-label-caps text-label-caps text-primary tracking-widest uppercase">
-    PERSONAL FINANCE
+<!-- Top Navigation — Change 1: single logo img; Change 2: bell/gear removed, theme toggle added -->
+<nav style="position:fixed;top:0;width:100%;height:56px;background:var(--navbar);border-bottom:1px solid var(--border);z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 24px;transition:background-color 0.25s,border-color 0.25s">
+  <div style="display:flex;align-items:center">
+    <img src="{{ url_for('static', filename='images/logo.png') }}"
+         alt="ArthaLens"
+         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
   </div>
-  <main class="w-full max-w-[800px] px-lg flex flex-col items-center">
+  <div style="display:flex;align-items:center;height:100%">
+    <a href="{{ url_for('main.dashboard') }}"
+       style="height:100%;padding:0 16px;display:flex;align-items:center;border-bottom:2px solid #4ade80;color:var(--text-primary);font-weight:500;text-decoration:none;font-size:14px">
+      Dashboard
+    </a>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <!-- Change 2: Theme toggle (same as dashboard) -->
+    <button class="theme-toggle-pill" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+      <div class="theme-toggle-pill-circle" id="theme-circle">
+        <span id="theme-icon">☾</span>
+      </div>
+    </button>
+    <span style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-secondary)">
+      <span class="material-symbols-outlined" style="font-size:20px">person</span>
+    </span>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main style="padding-top:72px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding-left:16px;padding-right:16px">
+  <div class="card" style="width:100%;max-width:560px;padding:40px">
 
     <!-- Header -->
-    <div class="text-center mb-xl">
-      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-sm">Upload Bank Statement</h1>
-      <p class="font-body-md text-on-surface-variant">Import your transactions automatically from a spreadsheet file.</p>
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(74,222,128,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <span class="material-symbols-outlined text-accent" style="font-size:28px">account_balance</span>
+      </div>
+      <h1 style="font-size:24px;font-weight:600;color:#fff;letter-spacing:-0.01em;margin:0 0 8px">Upload Bank Statement</h1>
+      <p style="font-size:14px;color:#6b7280;margin:0">Import your transactions automatically from an Excel file.</p>
     </div>
 
-    <!-- Upload Area -->
-    <div class="w-full relative group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl p-xl flex flex-col items-center justify-center transition-all duration-300 hover:border-primary/50 bg-[#0c162d] min-h-[350px] mb-lg"
-         id="dropZone">
-      <input accept=".xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-             id="fileInput" type="file"/>
-      <div class="w-20 h-20 rounded-full bg-primary-container/20 flex items-center justify-center mb-lg group-hover:scale-110 transition-transform duration-300">
-        <span class="material-symbols-outlined text-primary text-[36px]">cloud_upload</span>
-      </div>
-      <div class="text-center">
-        <p class="font-headline-md text-headline-md text-on-surface mb-sm text-[20px]">
-          Drop your bank statement here or click to browse
-        </p>
-        <p class="font-body-md text-on-surface-variant">Accepted formats: .xlsx, .xls</p>
-      </div>
+    <!-- Drop Zone -->
+    <div id="dropZone" style="min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;margin-bottom:24px;text-align:center">
+      <!-- Hidden file input covers the whole zone -->
+      <input id="fileInput" type="file" accept=".xlsx,.xls"
+             style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
 
-      <!-- File Selected State -->
-      <div class="hidden mt-lg items-center gap-md bg-surface-container-highest px-lg py-md rounded-lg border border-primary/20 relative z-20"
-           id="fileInfo">
-        <span class="material-symbols-outlined text-primary">description</span>
-        <div class="flex flex-col text-left">
-          <span class="font-body-md text-on-surface font-semibold" id="fileName"></span>
-          <span class="font-data-mono text-[12px] text-on-surface-variant" id="fileSize"></span>
+      <!-- Default state -->
+      <div id="dropDefault">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(74,222,128,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+          <span class="material-symbols-outlined text-accent" style="font-size:32px">cloud_upload</span>
         </div>
-        <button class="ml-lg material-symbols-outlined text-on-surface-variant hover:text-error transition-colors"
-                id="removeFile" type="button">close</button>
+        <p style="font-size:16px;font-weight:500;color:#fff;margin:0 0 6px">Drag &amp; drop your bank statement here</p>
+        <p style="font-size:13px;color:#6b7280;margin:0 0 10px">or click to browse</p>
+        <p style="font-size:11px;color:#3f493f;margin:0">Supports HDFC and SBI Excel statements (.xlsx, .xls)</p>
+      </div>
+
+      <!-- File selected state (hidden until file chosen) -->
+      <div id="fileInfo" style="display:none;align-items:center;gap:12px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:12px 16px;position:relative;z-index:20">
+        <span class="material-symbols-outlined text-accent" style="font-size:22px;flex-shrink:0">description</span>
+        <div style="text-align:left;flex:1;min-width:0">
+          <div id="fileName" style="font-size:13px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="fileSize" style="font-size:11px;color:#6b7280;font-family:'JetBrains Mono',monospace"></div>
+        </div>
+        <button id="removeFile" type="button"
+          style="background:none;border:none;color:#6b7280;cursor:pointer;padding:4px;display:flex;align-items:center;flex-shrink:0"
+          onmouseenter="this.style.color='#f87171'" onmouseleave="this.style.color='#6b7280'">
+          <span class="material-symbols-outlined" style="font-size:18px">close</span>
+        </button>
       </div>
     </div>
 
-    <!-- Process Button -->
-    <button class="w-full py-md bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest font-body-md font-medium rounded-lg transition-all"
-            id="processBtn" type="button">
-      Process Statement
+    <!-- Upload Button -->
+    <button id="processBtn" type="button">
+      <span id="processBtnText">Upload Statement</span>
     </button>
 
-    <!-- Status message area -->
-    <div class="w-full mt-md text-center text-sm hidden" id="statusMsg"></div>
+    <!-- Status Message -->
+    <div id="statusMsg" style="display:none;text-align:center;font-size:13px;margin-top:16px;padding:10px 16px;border-radius:8px"></div>
 
-  </main>
-</div>
+    <!-- Back link -->
+    <div style="text-align:center;margin-top:20px">
+      <a href="{{ url_for('main.dashboard') }}"
+         style="font-size:13px;color:#6b7280;text-decoration:none"
+         onmouseenter="this.style.color='#4ade80'" onmouseleave="this.style.color='#6b7280'">
+        ← Back to Dashboard
+      </a>
+    </div>
 
-<!-- Toast container -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100" id="toast-container"></div>
-{% endblock %}
+  </div>
+</main>
 
-{% block scripts %}
 <script>
-const CSRF = '{{ csrf_token() }}';
+const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
 const dropZone   = document.getElementById('dropZone');
 const fileInput  = document.getElementById('fileInput');
 const fileInfo   = document.getElementById('fileInfo');
+const dropDefault = document.getElementById('dropDefault');
 const fileName   = document.getElementById('fileName');
 const fileSize   = document.getElementById('fileSize');
 const removeFile = document.getElementById('removeFile');
 const processBtn = document.getElementById('processBtn');
+const processBtnText = document.getElementById('processBtnText');
 const statusMsg  = document.getElementById('statusMsg');
 
-function showToast(message, type) {
-  const id = 'toast-' + Date.now();
-  const bg = type === 'success' ? 'bg-success' : 'bg-danger';
-  document.getElementById('toast-container').insertAdjacentHTML('beforeend', `
-    <div id="${id}" class="toast align-items-center text-white ${bg} border-0 show" role="alert">
-      <div class="d-flex">
-        <div class="toast-body">${message}</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
-    </div>
-  `);
-  setTimeout(() => document.getElementById(id)?.remove(), 5000);
+function showToast(message, ok) {
+  const t = document.createElement('div');
+  t.className = 'toast-item';
+  t.style.background = ok ? '#4ade80' : '#ef4444';
+  t.style.color = ok ? '#0d0f0d' : '#fff';
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 3000);
+  setTimeout(() => t.remove(), 3500);
 }
 
-// Drag and drop
-['dragenter', 'dragover'].forEach(evt => {
-  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); }, false);
-});
-['dragleave', 'drop'].forEach(evt => {
-  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); }, false);
-});
+// Drag-and-drop
+['dragenter', 'dragover'].forEach(evt =>
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
+);
+['dragleave', 'drop'].forEach(evt =>
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); })
+);
 
 dropZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
 fileInput.addEventListener('change', e => handleFiles(e.target.files));
@@ -170,25 +244,36 @@ function handleFiles(files) {
   const file = files[0];
   fileName.textContent = file.name;
   fileSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
-  fileInfo.classList.remove('hidden');
-  fileInfo.classList.add('flex');
-  processBtn.classList.add('text-primary', 'bg-surface-container-highest');
-  processBtn.classList.remove('text-on-surface-variant', 'bg-surface-container-high');
+  dropDefault.style.display = 'none';
+  fileInfo.style.display = 'flex';
+  statusMsg.style.display = 'none';
 }
 
 removeFile.addEventListener('click', e => {
   e.stopPropagation();
   fileInput.value = '';
-  fileInfo.classList.add('hidden');
-  fileInfo.classList.remove('flex');
-  processBtn.classList.remove('text-primary', 'bg-surface-container-highest');
-  processBtn.classList.add('text-on-surface-variant', 'bg-surface-container-high');
-  statusMsg.classList.add('hidden');
+  dropDefault.style.display = 'block';
+  fileInfo.style.display = 'none';
+  statusMsg.style.display = 'none';
+});
+
+// Change 2 & 3: Theme toggle (same logic as dashboard)
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
+  _syncThemeUI(isLight);
+}
+function _syncThemeUI(isLight) {
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = isLight ? '☀' : '☾';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  _syncThemeUI(document.documentElement.classList.contains('light-mode'));
 });
 
 processBtn.addEventListener('click', async () => {
   if (!fileInput.files.length) {
-    showToast('Please select a file first', 'danger');
+    showToast('Please select a file first', false);
     return;
   }
 
@@ -196,37 +281,42 @@ processBtn.addEventListener('click', async () => {
   formData.append('file', fileInput.files[0]);
 
   processBtn.disabled = true;
-  processBtn.textContent = 'Processing…';
-  statusMsg.classList.add('hidden');
+  processBtnText.textContent = 'Processing…';
+  statusMsg.style.display = 'none';
 
   try {
     const res = await fetch('/api/upload-excel', {
       method: 'POST',
-      headers: {'X-CSRFToken': CSRF},
+      headers: { 'X-CSRFToken': CSRF },
       body: formData,
     });
     const data = await res.json();
 
-    if (res.ok && (data.status === 'success' || data.row_count)) {
-      const msg = data.message || (data.row_count + ' transactions processed');
-      showToast(msg, 'success');
+    if (res.ok && (data.status === 'success' || data.status === 'info')) {
+      const msg = data.message || 'Transactions processed successfully';
+      showToast(msg, true);
       statusMsg.textContent = msg;
-      statusMsg.classList.remove('hidden');
-      statusMsg.style.color = '#14b8a6';
-      setTimeout(() => { window.location.href = '/dashboard'; }, 1800);
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(74,222,128,0.08)';
+      statusMsg.style.border = '1px solid rgba(74,222,128,0.2)';
+      statusMsg.style.color = '#4ade80';
+      setTimeout(() => { window.location.href = '{{ url_for("main.dashboard") }}'; }, 1800);
     } else {
       const err = data.message || data.error || 'Upload failed';
-      showToast(err, 'danger');
+      showToast(err, false);
       statusMsg.textContent = err;
-      statusMsg.classList.remove('hidden');
-      statusMsg.style.color = '#f43f5e';
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239,68,68,0.08)';
+      statusMsg.style.border = '1px solid rgba(239,68,68,0.2)';
+      statusMsg.style.color = '#f87171';
     }
-  } catch (e) {
-    showToast('Network error — please try again', 'danger');
+  } catch (_e) {
+    showToast('Network error — please try again', false);
   } finally {
     processBtn.disabled = false;
-    processBtn.textContent = 'Process Statement';
+    processBtnText.textContent = 'Upload Statement';
   }
 });
 </script>
-{% endblock %}
+</body>
+</html>

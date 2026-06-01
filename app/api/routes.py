@@ -1,5 +1,6 @@
 import hashlib
 import os
+import time
 import pandas as pd
 from datetime import datetime
 
@@ -61,6 +62,7 @@ def get_user_transactions_df(user_id, months=None):
 @login_required
 def upload_excel():
     try:
+        t_total_start = time.time()
         if 'file' not in request.files:
             return jsonify({'status': 'error', 'message': 'No file provided'}), 400
 
@@ -96,11 +98,13 @@ def upload_excel():
 
         # S-1: Detect bank and parse statement
         print("Step 1: Detecting bank and parsing Excel...")
+        t1 = time.time()
         bank = detect_bank(temp_path)
         print(f"   Bank detected: {bank.upper()}")
 
         parser, validator = get_parser(bank)
         df = parser.parse(temp_path)
+        print(f"[PERF] File parse: {time.time()-t1:.2f}s")
 
         if not validator.validate(df):
             return jsonify({
@@ -115,8 +119,10 @@ def upload_excel():
 
         # S-3: Categorize
         print("Step 3: Categorizing transactions...")
+        t3 = time.time()
         categorizer = SmartCategorizer(user_id=current_user.id)
         df_expenses = categorizer.categorize_dataframe(df_expenses)
+        print(f"[PERF] Categorization {len(df_expenses)} rows: {time.time()-t3:.2f}s")
         print(f"   Entity resolution:")
         print(f"   - Platforms: {len(df_expenses[df_expenses['entity_type'] == 'platform'])}")
         print(f"   - Persons: {len(df_expenses[df_expenses['entity_type'] == 'person'])}")
@@ -131,7 +137,7 @@ def upload_excel():
         # Detect reimbursements
         print("Detecting reimbursements...")
         from app.analytics.reimbursement_detector import ReimbursementDetector
-        detector = ReimbursementDetector(df_expenses, window_days=14)
+        detector = ReimbursementDetector(df_expenses, window_days=60)
         reimbursement_report = detector.generate_full_report()
         df_expenses = detector.df
         print(f"      Total reimbursed: ₹{reimbursement_report['summary']['total_reimbursed']:,.0f}")
@@ -164,6 +170,7 @@ def upload_excel():
 
         # S-4: Persist to database (with row-level deduplication)
         print("Step 4: Saving to database...")
+        t4 = time.time()
 
         # Pre-load all fingerprints already stored for this user (one query)
         existing_fps = set(
@@ -183,7 +190,8 @@ def upload_excel():
         db.session.add(upload)
         db.session.flush()  # get upload.id before inserting rows
 
-        new_count = 0
+        # Build deduplicated list of dicts for bulk insert — no model objects in loop
+        transactions_to_insert = []
         skipped_count = 0
         for _, row in df_expenses.iterrows():
             fp = compute_fingerprint(
@@ -196,26 +204,29 @@ def upload_excel():
                 skipped_count += 1
                 continue
             existing_fps.add(fp)  # guard against intra-batch duplicates
+            transactions_to_insert.append({
+                'user_id':          current_user.id,
+                'upload_id':        upload.id,
+                'fingerprint':      fp,
+                'txn_date':         row['date'],
+                'description':      str(row.get('description', ''))[:200],
+                'entity_name':      str(row.get('entity_name', row.get('merchant', 'Unknown'))),
+                'amount':           float(row.get('amount', 0)),
+                'transaction_type': str(row.get('transaction_type', 'debit')),
+                'category':         str(row.get('category', 'Other')),
+                'entity_type':      str(row.get('entity_type', '')),
+                'confidence_level': str(row.get('confidence_level', 'medium')),
+                'is_reimbursed':    bool(row.get('is_reimbursed', False)),
+            })
 
-            txn = Transaction(
-                user_id=current_user.id,
-                upload_id=upload.id,
-                fingerprint=fp,
-                txn_date=row['date'],
-                description=str(row.get('description', '')),
-                entity_name=str(row.get('entity_name', row.get('merchant', ''))),
-                amount=float(row.get('amount', 0)),
-                transaction_type=str(row.get('transaction_type', 'debit')),
-                category=str(row.get('category', 'Other')),
-                entity_type=str(row.get('entity_type', '')),
-                confidence_level=str(row.get('confidence_level', 'medium')),
-                is_reimbursed=bool(row.get('is_reimbursed', False)),
-            )
-            db.session.add(txn)
-            new_count += 1
+        new_count = len(transactions_to_insert)
 
+        # Single bulk insert — one DB round trip instead of N
+        if transactions_to_insert:
+            db.session.bulk_insert_mappings(Transaction, transactions_to_insert)
         upload.row_count = new_count
         db.session.commit()
+        print(f"[PERF] Bulk insert {new_count} rows: {time.time()-t4:.2f}s")
         print(f"    Saved {new_count} new transactions, skipped {skipped_count} duplicates (upload_id={upload.id})")
 
         if new_count == 0:
@@ -229,6 +240,36 @@ def upload_excel():
                 'new_count': 0,
                 'skipped_count': skipped_count,
             }), 200
+
+        # S-4b: Bulk upsert entity memory — seed for future uploads, one commit
+        t_mem = time.time()
+        entity_updates = {}
+        for _, row in df_expenses.iterrows():
+            entity_name = str(row.get('entity_name', row.get('merchant', 'Unknown')))
+            if entity_name not in entity_updates:
+                entity_updates[entity_name] = {
+                    'user_id':          current_user.id,
+                    'entity_name':      entity_name,
+                    'category':         str(row.get('category', 'Other')),
+                    'entity_type':      str(row.get('entity_type', 'unknown')),
+                    'confidence':       0.8,
+                    'correction_count': 0,
+                }
+        if entity_updates:
+            existing_mems = EntityMemory.query.filter_by(
+                user_id=current_user.id,
+            ).filter(
+                EntityMemory.entity_name.in_(entity_updates.keys())
+            ).all()
+            existing_mem_names = {e.entity_name for e in existing_mems}
+            new_memories = [
+                v for k, v in entity_updates.items()
+                if k not in existing_mem_names
+            ]
+            if new_memories:
+                db.session.bulk_insert_mappings(EntityMemory, new_memories)
+                db.session.commit()
+            print(f"[PERF] Entity memory seeded {len(new_memories)} new entities: {time.time()-t_mem:.2f}s")
 
         # S-5: Calculate summary statistics from in-memory df
         print(" Step 5: Calculating statistics...")
@@ -276,6 +317,7 @@ def upload_excel():
             os.remove(temp_path)
 
         skip_note = f' ({skipped_count} duplicates skipped)' if skipped_count else ''
+        print(f"[PERF] Total upload: {time.time()-t_total_start:.2f}s")
         return jsonify({
             'status': 'success',
             'message': f'Added {new_count} new transactions over {months:.1f} months{skip_note}',
@@ -563,7 +605,7 @@ def get_reimbursement_report():
 
     try:
         from app.analytics.reimbursement_detector import ReimbursementDetector
-        detector = ReimbursementDetector(df, window_days=14)
+        detector = ReimbursementDetector(df, window_days=60)
         report = detector.generate_full_report()
 
         print(f"   Reimbursement report generated:")

@@ -1,199 +1,479 @@
-{% extends 'base.html' %}
-{% block title %}Financial Intelligence System{% endblock %}
-
-{% block head_extra %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Init theme before render to prevent flash -->
+<script>if(localStorage.getItem('arthalens-theme')==='light')document.documentElement.classList.add('light-mode');</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArthaLens — Understand Your Spending</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── CSS Variables ── */
+:root {
+  --bg: #0d0f0d;
+  --card: #131a13;
+  --navbar: #0a0c0a;
+  --border: #1f2a1f;
+  --text-primary: #f0f0f0;
+  --text-secondary: #6b7280;
+  --accent: #4ade80;
+}
+html.light-mode {
+  --bg: #f5f7f5;
+  --card: #ffffff;
+  --navbar: #ffffff;
+  --border: #e2e8e2;
+  --text-primary: #0d0f0d;
+  --text-secondary: #4b5563;
+  --accent: #4ade80;
+}
 
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        background: #1a1a1a;
-        color: #ffffff;
-        min-height: 100vh;
-    }
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.25s, color 0.25s;
+}
+a { text-decoration: none; color: inherit; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-    .hero {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 100px 40px;
-        text-align: center;
-    }
+/* ── Navbar ── */
+.l-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: var(--navbar);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  transition: background-color 0.25s, border-color 0.25s;
+}
+.l-nav-brand { display: flex; align-items: center; gap: 10px; }
+.l-nav-brand span { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+.l-nav-right { display: flex; align-items: center; gap: 12px; }
 
-    .hero h1 {
-        font-size: 56px;
-        font-weight: 700;
-        margin-bottom: 24px;
-        line-height: 1.2;
-    }
+.btn-outline {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  transition: border-color 0.2s, color 0.2s;
+  font-family: inherit;
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 
-    .hero p {
-        font-size: 20px;
-        color: #a3a3a3;
-        margin-bottom: 40px;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+.btn-filled {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #0d0f0d;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-filled:hover { opacity: 0.88; }
 
-    .cta-button {
-        display: inline-block;
-        background: #00b8a3;
-        color: white;
-        padding: 16px 40px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 16px;
-        font-weight: 600;
-        transition: all 0.2s;
-        border: none;
-        cursor: pointer;
-    }
+/* ── Theme Toggle ── */
+.theme-toggle {
+  width: 48px; height: 24px;
+  border-radius: 12px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+.theme-toggle-circle {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: transform 0.25s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  pointer-events: none;
+}
+html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 
-    .cta-button:hover {
-        background: #009688;
-        transform: translateY(-2px);
-        color: white;
-    }
+/* ── Hero ── */
+.l-hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 24px 60px;
+}
+.l-hero h1 {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--text-primary);
+  max-width: 720px;
+  margin-bottom: 20px;
+}
+.l-hero h1 span { color: var(--accent); }
+.l-hero p {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 560px;
+  line-height: 1.65;
+  margin-bottom: 36px;
+}
+.hero-ctas { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+.btn-hero-primary {
+  padding: 12px 28px;
+  background: var(--accent);
+  color: #0d0f0d;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+}
+.btn-hero-primary:hover { opacity: 0.88; color: #0d0f0d; }
+.btn-hero-ghost {
+  padding: 12px 28px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.btn-hero-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.trust-line {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.trust-dot { color: var(--border); }
 
-    .features {
-        max-width: 1200px;
-        margin: 80px auto;
-        padding: 0 40px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 40px;
-    }
+/* ── Section shared ── */
+.l-section { padding: 80px 32px; max-width: 1200px; margin: 0 auto; }
+.l-section-heading {
+  text-align: center;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 48px;
+}
 
-    .feature-card {
-        background: #2d2d2d;
-        border: 1px solid #404040;
-        border-radius: 12px;
-        padding: 32px;
-        transition: all 0.3s;
-    }
+/* ── Feature Cards ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .features-grid { grid-template-columns: 1fr; } }
 
-    .feature-card:hover {
-        border-color: #00b8a3;
-        transform: translateY(-4px);
-    }
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  transition: border-color 0.2s;
+}
+.feature-card:hover { border-color: var(--accent); }
+.feature-icon {
+  width: 44px; height: 44px;
+  background: rgba(74,222,128,0.1);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+.feature-card h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.feature-card p  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 
-    .feature-icon {
-        width: 48px;
-        height: 48px;
-        background: rgba(0, 184, 163, 0.15);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-        font-size: 24px;
-        color: #00b8a3;
-    }
+/* ── How It Works ── */
+.how-section { padding: 80px 32px; background: var(--bg); transition: background-color 0.25s; }
+.how-section .l-section-heading { margin-bottom: 56px; }
+.steps-row {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+.step {
+  flex: 1;
+  text-align: center;
+  padding: 0 24px;
+  position: relative;
+}
+.step::after {
+  content: '';
+  position: absolute;
+  top: 28px; right: 0;
+  width: 100%; height: 0;
+  border-top: 2px dashed var(--border);
+  transform: translateX(50%);
+}
+.step:last-child::after { display: none; }
+.step-num {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.step h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.step p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 
-    .feature-card h3 { font-size: 20px; margin-bottom: 12px; color: #ffffff; }
-    .feature-card p  { color: #a3a3a3; line-height: 1.6; font-size: 15px; }
+/* ── Stats Strip ── */
+.stats-strip {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 48px 32px;
+  transition: background-color 0.25s;
+}
+.stats-row {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  text-align: center;
+}
+@media (max-width: 700px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+.stat-num {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+.stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
 
-    .stats {
-        background: #262626;
-        border-top: 1px solid #404040;
-        border-bottom: 1px solid #404040;
-        padding: 60px 40px;
-        margin-top: 80px;
-    }
-
-    .stats-grid {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 40px;
-        text-align: center;
-    }
-
-    .stat-item h4 { font-size: 42px; color: #00b8a3; margin-bottom: 8px; }
-    .stat-item p  { color: #a3a3a3; font-size: 14px; }
-
-    .footer { text-align: center; padding: 40px; color: #737373; font-size: 14px; }
+/* ── Footer ── */
+.l-footer {
+  background: var(--navbar);
+  border-top: 1px solid var(--border);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background-color 0.25s;
+}
 </style>
-{% endblock %}
+</head>
+<body>
 
-{% block navbar %}
-<div class="header" style="background:#262626; border-bottom:1px solid #404040; padding:20px 40px;">
-    <div style="max-width:1400px; margin:0 auto; display:flex; align-items:center; justify-content:space-between;">
-        <div style="font-size:20px; font-weight:600; color:#ffffff;">Financial Intelligence</div>
-        <div style="display:flex; gap:30px;">
-            <a href="#features" style="color:#a3a3a3; text-decoration:none; font-size:14px; transition:color 0.2s;">Features</a>
-            <a href="#about" style="color:#a3a3a3; text-decoration:none; font-size:14px; transition:color 0.2s;">About</a>
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('main.dashboard') }}" style="color:#00b8a3; text-decoration:none; font-size:14px; font-weight:600;">Dashboard</a>
-            {% else %}
-            <a href="{{ url_for('auth.login') }}" style="color:#a3a3a3; text-decoration:none; font-size:14px; transition:color 0.2s;">Login</a>
-            {% endif %}
+<!-- ── Navbar ── -->
+<nav class="l-nav">
+  <!-- Change 1: Single img — logo PNG already contains brand name text -->
+  <a class="l-nav-brand" href="#">
+    <img src="{{ url_for('static', filename='images/logo.png') }}"
+         alt="ArthaLens"
+         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+  </a>
+
+  <div class="l-nav-right">
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('main.dashboard') }}" class="btn-outline">Dashboard</a>
+    {% else %}
+      <a href="{{ url_for('auth.login') }}" class="btn-outline">Login</a>
+      <a href="{{ url_for('auth.register') }}" class="btn-filled">Get Started</a>
+    {% endif %}
+
+    <!-- Change 3: Theme toggle -->
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+      <div class="theme-toggle-circle" id="theme-circle">
+        <span id="theme-icon">☾</span>
+      </div>
+    </button>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="l-hero">
+  <h1>Understand Your <span>Spending</span><br>in Seconds</h1>
+  <p>Upload your HDFC or SBI bank statement and get instant AI-powered categorization, anomaly detection, and spending insights.</p>
+  <div class="hero-ctas">
+    <a href="{{ url_for('auth.register') if not current_user.is_authenticated else url_for('main.upload') }}" class="btn-hero-primary">
+      <span class="material-symbols-outlined" style="font-size:18px">rocket_launch</span>
+      Get Started Free
+    </a>
+    <a href="#how-it-works" class="btn-hero-ghost">See How It Works</a>
+  </div>
+  <div class="trust-line">
+    <span>No manual entry</span>
+    <span class="trust-dot">·</span>
+    <span>Works with HDFC &amp; SBI</span>
+    <span class="trust-dot">·</span>
+    <span>Your data stays private</span>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section style="padding:80px 32px;background:var(--bg);transition:background-color 0.25s">
+  <div class="l-section" style="padding:0;max-width:1100px">
+    <h2 class="l-section-heading">Everything you need to understand your money</h2>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined" style="font-size:28px">donut_large</span>
         </div>
-    </div>
-</div>
-{% endblock %}
+        <h3>Smart Categorization</h3>
+        <p>85–92% accuracy. Food, transport, shopping — automatically organized the moment you upload.</p>
+      </div>
 
-{% block content %}
-<!-- Hero Section -->
-<div class="hero">
-    <h1>Understand Your Spending<br>in 5 Seconds</h1>
-    <p>Upload your bank statement and get instant insights with AI-powered categorization. No manual work required.</p>
-    <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.register') }}"
-       class="cta-button">Get Started</a>
-</div>
-
-<!-- Features Section -->
-<div class="features" id="features">
-    <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>Automatic Categorization</h3>
-        <p>85-92% accuracy with smart keyword matching. Food, transport, shopping - all organized automatically.</p>
-    </div>
-
-    <div class="feature-card">
-        <div class="feature-icon">🔍</div>
-        <h3>Interactive Drill-Down</h3>
-        <p>Click any category to see detailed transactions. Verify categorization and find specific expenses instantly.</p>
-    </div>
-
-    <div class="feature-card">
-        <div class="feature-icon">💰</div>
-        <h3>Monthly Insights</h3>
-        <p>See average monthly spending, fixed vs variable expenses, and spending trends over time.</p>
-    </div>
-
-    <div class="feature-card">
-        <div class="feature-icon">🔒</div>
-        <h3>Privacy First</h3>
-        <p>All processing happens on your account. Your financial data stays secure and isolated.</p>
-    </div>
-</div>
-
-<!-- Stats Section -->
-<div class="stats" id="about">
-    <div class="stats-grid">
-        <div class="stat-item">
-            <h4>85-92%</h4>
-            <p>Categorization Accuracy</p>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined" style="font-size:28px">trending_up</span>
         </div>
-        <div class="stat-item">
-            <h4>5 sec</h4>
-            <p>Processing Time</p>
+        <h3>Spending Trends</h3>
+        <p>Month-over-month changes, acceleration flags, and fastest-growing categories at a glance.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined" style="font-size:28px">warning</span>
         </div>
-        <div class="stat-item">
-            <h4>10+</h4>
-            <p>Categories Detected</p>
+        <h3>Anomaly Detection</h3>
+        <p>Z-score based alerts when your spending in any category spikes beyond your normal baseline.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined" style="font-size:28px">autorenew</span>
         </div>
-        <div class="stat-item">
-            <h4>100%</h4>
-            <p>Data Isolated Per User</p>
+        <h3>Subscription Auditor</h3>
+        <p>Detects recurring payments automatically. See what you're paying monthly and what's increasing.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined" style="font-size:28px">currency_rupee</span>
         </div>
+        <h3>Reimbursement Tracker</h3>
+        <p>Matches credits to debits within a 14-day window so you see your actual net spend.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <span class="material-symbols-outlined" style="font-size:28px">edit</span>
+        </div>
+        <h3>Learns From You</h3>
+        <p>Correct any categorization once and it remembers for every future upload. Gets smarter over time.</p>
+      </div>
+
     </div>
+  </div>
+</section>
+
+<!-- ── How It Works ── -->
+<section class="how-section" id="how-it-works">
+  <h2 class="l-section-heading">How It Works</h2>
+  <div class="steps-row">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Upload</h3>
+      <p>Drop your HDFC or SBI Excel statement. No formatting needed.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>Analyze</h3>
+      <p>AI categorizes every transaction and runs anomaly, subscription, and reimbursement analysis.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Understand</h3>
+      <p>Explore your dashboard. Drill into categories. Correct anything. The system learns.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats ── -->
+<div class="stats-strip">
+  <div class="stats-row">
+    <div>
+      <div class="stat-num">85–92%</div>
+      <div class="stat-label">Categorization Accuracy</div>
+    </div>
+    <div>
+      <div class="stat-num">HDFC + SBI</div>
+      <div class="stat-label">Banks Supported</div>
+    </div>
+    <div>
+      <div class="stat-num">6</div>
+      <div class="stat-label">Analytics Engines Running</div>
+    </div>
+    <div>
+      <div class="stat-num">0</div>
+      <div class="stat-label">Manual Entry Required</div>
+    </div>
+  </div>
 </div>
 
-<!-- Footer -->
-<div class="footer">
-    <p>&copy; 2026 Financial Intelligence System. Built for smarter spending decisions.</p>
-</div>
-{% endblock %}
+<!-- ── Footer ── -->
+<footer class="l-footer">
+  <span>&copy; 2025 ArthaLens</span>
+  <span>Built with Flask &middot; Deployed on Render</span>
+</footer>
+
+<script>
+// ── Theme toggle (Change 3) ──
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
+  _syncToggleUI(isLight);
+}
+
+function _syncToggleUI(isLight) {
+  const icon   = document.getElementById('theme-icon');
+  const circle = document.getElementById('theme-circle');
+  if (icon)   icon.textContent  = isLight ? '☀' : '☾'; // ☀ / ☾
+  // circle slides via CSS (html.light-mode .theme-toggle-circle { transform: translateX(24px) })
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  _syncToggleUI(document.documentElement.classList.contains('light-mode'));
+});
+</script>
+</body>
+</html>

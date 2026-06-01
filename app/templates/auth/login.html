@@ -1,165 +1,252 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Init theme before render to prevent flash -->
+<script>if(localStorage.getItem('arthalens-theme')==='light')document.documentElement.classList.add('light-mode');</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArthaLens — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── CSS Variables ── */
+:root {
+  --bg: #0d0f0d;
+  --card: #131a13;
+  --navbar: #0a0c0a;
+  --border: #1f2a1f;
+  --text-primary: #f0f0f0;
+  --text-secondary: #6b7280;
+  --accent: #4ade80;
+  --overlay: rgba(0,0,0,0.65);
+  --card-glass: rgba(19,26,19,0.85);
+}
+html.light-mode {
+  --bg: #f5f7f5;
+  --card: #ffffff;
+  --navbar: #ffffff;
+  --border: #e2e8e2;
+  --text-primary: #0d0f0d;
+  --text-secondary: #4b5563;
+  --accent: #4ade80;
+  --overlay: rgba(0,0,0,0.45);
+  --card-glass: rgba(255,255,255,0.92);
+}
 
-{% block head_extra %}
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-    tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                "colors": {
-                    "on-secondary-fixed-variant": "#004493",
-                    "secondary-container": "#0070ea",
-                    "primary-fixed-dim": "#afc8f0",
-                    "on-secondary": "#ffffff",
-                    "secondary-fixed": "#d8e2ff",
-                    "inverse-primary": "#afc8f0",
-                    "surface-container-lowest": "#ffffff",
-                    "background": "#f8f9fa",
-                    "on-error-container": "#93000a",
-                    "surface-container-highest": "#e1e3e4",
-                    "on-error": "#ffffff",
-                    "surface-variant": "#e1e3e4",
-                    "inverse-surface": "#2e3132",
-                    "tertiary-fixed-dim": "#4ae183",
-                    "on-tertiary": "#ffffff",
-                    "outline-variant": "#c4c6cf",
-                    "on-tertiary-fixed-variant": "#005228",
-                    "secondary-fixed-dim": "#adc7ff",
-                    "on-primary-fixed-variant": "#2f486a",
-                    "surface": "#f8f9fa",
-                    "surface-container": "#edeeef",
-                    "error-container": "#ffdad6",
-                    "on-secondary-container": "#fefcff",
-                    "on-tertiary-container": "#009b50",
-                    "on-primary-container": "#6f88ad",
-                    "surface-container-low": "#f3f4f5",
-                    "tertiary-fixed": "#6bfe9c",
-                    "secondary": "#0059bb",
-                    "surface-bright": "#f8f9fa",
-                    "on-tertiary-fixed": "#00210c",
-                    "surface-tint": "#476083",
-                    "primary-fixed": "#d4e3ff",
-                    "on-background": "#191c1d",
-                    "surface-dim": "#d9dadb",
-                    "error": "#ba1a1a",
-                    "tertiary": "#000802",
-                    "on-surface": "#191c1d",
-                    "on-surface-variant": "#43474e",
-                    "on-secondary-fixed": "#001a41",
-                    "inverse-on-surface": "#f0f1f2",
-                    "on-primary-fixed": "#001c3a",
-                    "primary-container": "#001f3f",
-                    "on-primary": "#ffffff",
-                    "surface-container-high": "#e7e8e9",
-                    "tertiary-container": "#00250e",
-                    "primary": "#000613",
-                    "outline": "#74777f"
-                },
-                "borderRadius": {
-                    "DEFAULT": "0.125rem",
-                    "lg": "0.25rem",
-                    "xl": "0.5rem",
-                    "full": "0.75rem"
-                },
-                "spacing": {
-                    "margin-page": "2rem",
-                    "stack-md": "1rem",
-                    "stack-lg": "2rem",
-                    "gutter": "1.5rem",
-                    "container-max": "1320px",
-                    "stack-sm": "0.5rem"
-                },
-                "fontFamily": {
-                    "headline-lg": ["Hanken Grotesk"],
-                    "body-md": ["Hanken Grotesk"],
-                    "label-sm": ["JetBrains Mono"],
-                    "headline-lg-mobile": ["Hanken Grotesk"],
-                    "display-lg": ["Hanken Grotesk"],
-                    "title-md": ["Hanken Grotesk"]
-                },
-                "fontSize": {
-                    "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
-                    "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
-                    "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
-                    "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
-                    "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-                    "title-md": ["18px", { "lineHeight": "24px", "fontWeight": "600" }]
-                },
-                boxShadow: {
-                    'level1': '0 4px 12px rgba(0, 31, 63, 0.05)',
-                    'level2': '0 8px 24px rgba(0, 31, 63, 0.08)',
-                }
-            }
-        }
-    }
-</script>
-{% endblock %}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Inter, system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.25s;
+}
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-{% block body_class %}min-h-screen bg-surface flex items-center justify-center relative overflow-hidden font-body-md text-body-md text-on-surface{% endblock %}
+/* Background image — kept exactly as original */
+.auth-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoTNYSiY3dXzyq8DZ6JiqT9MWnyODBB5ThGbKo0vd49mFviwbGaMtHcfDKshEHA18eGLYeOKN5EJl5a1C4ERXTC5QCdBT7venh3IhwI2YTTX4DSmqlG0Wi_9MPSUyiYa_Bk-H7xd9DjlibPzqa_ToeYLUdNs0gqM3JgbKH0He4SLCtBkGZFCd6zjOqmyGfkWqZvedlNMzltvCdC3DP0BEZXrXKLK6K2h0dcNPLhPSApfdzcjCNTM9_jSAUh7iTwjS8VFHq9pon_hM');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* overlay removed — Change 7: background image shows naturally */
 
-{% block navbar %}{% endblock %}
+/* Auth card */
+.auth-main {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 400px;
+  padding: 16px;
+}
+.auth-card {
+  background: var(--card-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  position: relative;
+  transition: background 0.25s, border-color 0.25s;
+}
 
-{% block content %}
-<!-- Full Screen Background Image -->
-<div class="absolute inset-0 z-0 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoTNYSiY3dXzyq8DZ6JiqT9MWnyODBB5ThGbKo0vd49mFviwbGaMtHcfDKshEHA18eGLYeOKN5EJl5a1C4ERXTC5QCdBT7venh3IhwI2YTTX4DSmqlG0Wi_9MPSUyiYa_Bk-H7xd9DjlibPzqa_ToeYLUdNs0gqM3JgbKH0He4SLCtBkGZFCd6zjOqmyGfkWqZvedlNMzltvCdC3DP0BEZXrXKLK6K2h0dcNPLhPSApfdzcjCNTM9_jSAUh7iTwjS8VFHq9pon_hM');"></div>
+/* Logo + name */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.auth-brand-row { display: flex; align-items: center; gap: 8px; }
+.auth-brand-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.auth-title { font-size: 24px; font-weight: 700; color: var(--text-primary); text-align: center; }
+.auth-subtitle { font-size: 13px; color: var(--text-secondary); text-align: center; margin-top: 4px; }
 
-<main class="relative z-10 w-full max-w-[480px] px-margin-page">
-    <div class="bg-surface-container-lowest rounded-xl shadow-level2 overflow-hidden flex flex-col p-stack-lg border border-outline-variant">
+/* Form fields */
+.field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.al-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, background 0.25s;
+}
+.al-input:focus { border-color: var(--accent); }
+.al-input::placeholder { color: var(--text-secondary); opacity: 0.7; }
 
-        <!-- Brand Header -->
-        <div class="flex flex-col items-center justify-center mb-stack-lg">
-            <h1 class="font-headline-lg text-headline-lg text-primary text-center">Sign In</h1>
-            <p class="font-body-md text-body-md text-on-surface-variant text-center mt-2">Access your financial dashboard</p>
-        </div>
+/* Submit */
+.al-submit {
+  width: 100%;
+  background: var(--accent);
+  color: #0d0f0d;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 8px;
+  transition: opacity 0.2s;
+}
+.al-submit:hover { opacity: 0.88; }
 
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="mb-stack-md px-4 py-3 rounded-lg text-sm font-body-md
-                        {% if category == 'danger' or category == 'error' %}bg-error-container text-on-error-container
-                        {% elif category == 'success' %}bg-[#e6f4ea] text-[#1e4620]
-                        {% else %}bg-surface-container text-on-surface{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+/* Flash messages */
+.flash { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+.flash-danger { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.flash-success { background: rgba(74,222,128,0.1); color: var(--accent); border: 1px solid rgba(74,222,128,0.2); }
+.flash-info { background: rgba(107,114,128,0.1); color: var(--text-secondary); border: 1px solid var(--border); }
 
-        <!-- Login Form -->
-        <form action="{{ url_for('auth.login') }}" class="flex flex-col gap-stack-md" method="POST">
-            {{ form.csrf_token }}
+/* Footer link */
+.auth-footer-link {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.auth-footer-link a { color: var(--accent); font-weight: 600; }
 
-            <!-- Email -->
-            <div class="flex flex-col gap-2">
-                {{ form.email.label(class="font-label-sm text-label-sm text-on-surface") }}
-                {{ form.email(class="w-full px-4 py-3 rounded-DEFAULT border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors font-body-md", placeholder="name@example.com") }}
-            </div>
+/* Theme toggle (top-right of card) */
+.theme-toggle-btn {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 48px; height: 24px;
+  border-radius: 12px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  transition: background 0.25s;
+}
+.theme-toggle-circle {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: transform 0.25s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  pointer-events: none;
+}
+html.light-mode .theme-toggle-circle { transform: translateX(24px); }
+</style>
+</head>
+<body>
+<div class="auth-bg"></div>
 
-            <!-- Password -->
-            <div class="flex flex-col gap-2">
-                <div class="flex justify-between items-center">
-                    {{ form.password.label(class="font-label-sm text-label-sm text-on-surface") }}
-                    <a class="font-label-sm text-label-sm text-secondary hover:text-on-secondary-fixed-variant transition-colors" href="#">Forgot password?</a>
-                </div>
-                {{ form.password(class="w-full px-4 py-3 rounded-DEFAULT border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary transition-colors font-body-md", placeholder="••••••••") }}
-            </div>
+<main class="auth-main">
+  <div class="auth-card">
 
-            <!-- Submit -->
-            {{ form.submit(class="w-full py-3 mt-stack-sm bg-secondary text-on-secondary rounded-lg font-title-md text-title-md hover:bg-on-secondary-fixed-variant transition-colors shadow-level1 active:scale-[0.98]") }}
-        </form>
+    <!-- Change 3: Theme toggle top-right of card -->
+    <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+      <div class="theme-toggle-circle" id="theme-circle">
+        <span id="theme-icon">☾</span>
+      </div>
+    </button>
 
-        <!-- Footer Link -->
-        <div class="mt-stack-lg text-center border-t border-surface-container-high pt-stack-md">
-            <p class="font-body-md text-body-md text-on-surface-variant">
-                Don't have an account?
-                <a class="text-secondary font-bold hover:underline transition-all" href="{{ url_for('auth.register') }}">Register</a>
-            </p>
-        </div>
-
+    <!-- Brand — Change 1: single img, logo PNG contains brand name -->
+    <div class="auth-brand">
+      <img src="{{ url_for('static', filename='images/logo.png') }}"
+           alt="ArthaLens"
+           style="height:76px;width:auto;object-fit:contain;display:block;margin:0 auto 24px auto;flex-shrink:0">
+      <h1 class="auth-title">Welcome Back</h1>
+      <p class="auth-subtitle">Sign in to your account</p>
     </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-danger' if category in ('danger','error') else 'flash-success' if category == 'success' else 'flash-info' }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Login form — action/method/csrf kept intact -->
+    <form action="{{ url_for('auth.login') }}" method="POST">
+      {{ form.csrf_token }}
+
+      <div class="field-group">
+        {{ form.email.label(class="field-label") }}
+        {{ form.email(class="al-input", placeholder="name@example.com", autocomplete="email") }}
+      </div>
+
+      <div class="field-group">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          {{ form.password.label(class="field-label") }}
+          <a href="#" style="font-size:11px;color:var(--accent)">Forgot password?</a>
+        </div>
+        {{ form.password(class="al-input", placeholder="••••••••", autocomplete="current-password") }}
+      </div>
+
+      {{ form.submit(class="al-submit") }}
+    </form>
+
+    <div class="auth-footer-link">
+      Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a>
+    </div>
+
+  </div>
 </main>
-{% endblock %}
+
+<script>
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
+  _syncUI(isLight);
+}
+function _syncUI(isLight) {
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = isLight ? '☀' : '☾';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  _syncUI(document.documentElement.classList.contains('light-mode'));
+});
+</script>
+</body>
+</html>
