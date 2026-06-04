@@ -22,3 +22,13 @@ def dashboard():
 @login_required
 def upload():
     return render_template('dashboard/upload.html')
+
+
+@main_bp.route('/privacy')
+def privacy():
+    return render_template('legal/privacy.html')
+
+
+@main_bp.route('/terms')
+def terms():
+    return render_template('legal/terms.html')

@@ -91,7 +91,7 @@ def detect_bank(filepath: str) -> str:
             if 'HDFC' in all_text or 'WITHDRAWAL AMT' in all_text:
                 return 'hdfc'
 
-        print("   [BankDetector] Could not identify bank — defaulting to HDFC parser")
+        print("   [BankDetector] Could not identify bank - defaulting to HDFC parser")
         return 'unknown'
 
     except Exception as e:
@@ -105,9 +105,9 @@ def get_parser(bank: str):
     Imports are deferred to avoid circular dependencies.
     """
     if bank == 'sbi':
-        from src.sbi_parser import SBIStatementParser, SBIStatementValidator
+        from app.analytics.sbi_parser import SBIStatementParser, SBIStatementValidator
         return SBIStatementParser(), SBIStatementValidator()
     else:
         # Default to HDFC for both 'hdfc' and 'unknown'
-        from src.bank_statement_parser import HDFCStatementParser, BankStatementValidator
+        from app.analytics.bank_statement_parser import HDFCStatementParser, BankStatementValidator
         return HDFCStatementParser(), BankStatementValidator()

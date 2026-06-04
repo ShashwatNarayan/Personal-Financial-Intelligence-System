@@ -140,7 +140,7 @@ def upload_excel():
         detector = ReimbursementDetector(df_expenses, window_days=60)
         reimbursement_report = detector.generate_full_report()
         df_expenses = detector.df
-        print(f"      Total reimbursed: ₹{reimbursement_report['summary']['total_reimbursed']:,.0f}")
+        print(f"      Total reimbursed: Rs.{reimbursement_report['summary']['total_reimbursed']:,.0f}")
         print(f"      Reimbursed transactions: {reimbursement_report['reimbursements']['reimbursed_transactions']}")
         print(f"      Full: {reimbursement_report['reimbursements']['full_reimbursements']}, "
               f"Partial: {reimbursement_report['reimbursements']['partial_reimbursements']}")
@@ -151,7 +151,7 @@ def upload_excel():
         anomaly_detector = AnomalyDetector(df_expenses, threshold=2.0, min_months=3)
         anomaly_report = anomaly_detector.generate_report()
         if anomaly_report['summary']['total_anomalies'] > 0:
-            print(f"   ⚠️  {anomaly_report['summary']['total_anomalies']} anomalies detected")
+            print(f"   [WARN] {anomaly_report['summary']['total_anomalies']} anomalies detected")
         else:
             print("    No significant anomalies")
 
@@ -162,9 +162,9 @@ def upload_excel():
         sub_report = sub_auditor.generate_report()
         if sub_report['summary']['total_subscriptions'] > 0:
             print(f"      {sub_report['summary']['total_subscriptions']} subscriptions detected")
-            print(f"      Est. monthly cost: ₹{sub_report['summary']['total_monthly_cost']:,.0f}")
+            print(f"      Est. monthly cost: Rs.{sub_report['summary']['total_monthly_cost']:,.0f}")
             if sub_report['summary']['increasing_cost'] > 0:
-                print(f"      ⚠️  {sub_report['summary']['increasing_cost']} with cost increases")
+                print(f"      [WARN] {sub_report['summary']['increasing_cost']} with cost increases")
         else:
             print("    No recurring subscriptions detected")
 
@@ -310,8 +310,8 @@ def upload_excel():
         fixed_total = category_spend[category_spend.index.isin(fixed_categories)].sum()
         variable_total = category_spend[~category_spend.index.isin(fixed_categories)].sum()
 
-        print(f"     Total: ₹{total_spent:,.0f} over {months:.1f} months")
-        print(f"     Average monthly: ₹{avg_monthly:,.0f}")
+        print(f"     Total: Rs.{total_spent:,.0f} over {months:.1f} months")
+        print(f"     Average monthly: Rs.{avg_monthly:,.0f}")
 
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -390,12 +390,26 @@ def get_transactions():
         }), 400
 
     try:
+        try:
+            from app.analytics.subscription_auditor import SubscriptionAuditor
+            sub_auditor = SubscriptionAuditor(df, min_occurrences=3)
+            sub_report = sub_auditor.generate_report()
+            # Extract bare entity names (strip tier suffix like " (₹130 tier)")
+            import re
+            subscription_entities = set()
+            for s in sub_report.get('subscriptions', []):
+                name = re.sub(r'\s*\(₹[\d,]+ tier\)', '', s['entity']).strip().lower()
+                subscription_entities.add(name)
+        except Exception:
+            subscription_entities = set()
+
         transactions = []
         for _, row in df.iterrows():
+            entity_name = str(row.get('entity_name', row.get('merchant', 'Unknown')))
             transactions.append({
                 'txn_id': str(int(row['id'])),
                 'date': str(row['date'])[:10],
-                'merchant': str(row.get('entity_name', row.get('merchant', 'Unknown'))),
+                'merchant': entity_name,
                 'description': str(row.get('description', ''))[:60],
                 'amount': float(row['amount']),
                 'net_amount': float(row.get('net_amount', row['amount'])),
@@ -409,6 +423,7 @@ def get_transactions():
                 'reimbursed_amount': 0.0,
                 'is_reimbursement_credit': False,
                 'needs_review': False,
+                'is_subscription': entity_name.lower() in subscription_entities,
             })
 
         print(f" Returning {len(transactions)} transactions for drill-down")
@@ -530,7 +545,7 @@ def correct_transaction():
 
         db.session.commit()
 
-        print(f"   User correction: {entity_name} → {new_category}")
+        print(f"   User correction: {entity_name} -> {new_category}")
         print(f"   Updated {updated_count} transactions")
 
         # Recalculate aggregates from DB for response
@@ -609,9 +624,9 @@ def get_reimbursement_report():
         report = detector.generate_full_report()
 
         print(f"   Reimbursement report generated:")
-        print(f"   Gross: ₹{report['summary']['gross_spend']:,.0f}")
-        print(f"   Net: ₹{report['summary']['net_spend']:,.0f}")
-        print(f"   Reimbursed: ₹{report['summary']['total_reimbursed']:,.0f}")
+        print(f"   Gross: Rs.{report['summary']['gross_spend']:,.0f}")
+        print(f"   Net: Rs.{report['summary']['net_spend']:,.0f}")
+        print(f"   Reimbursed: Rs.{report['summary']['total_reimbursed']:,.0f}")
 
         return jsonify({'status': 'success', 'report': report})
 
@@ -662,7 +677,7 @@ def get_subscription_audit():
 
         print(f"   Subscription audit:")
         print(f"   Total: {report['summary']['total_subscriptions']}")
-        print(f"   Monthly: ₹{report['summary']['total_monthly_cost']:,.0f}")
+        print(f"   Monthly: Rs.{report['summary']['total_monthly_cost']:,.0f}")
 
         return jsonify({'status': 'success', 'report': report})
 

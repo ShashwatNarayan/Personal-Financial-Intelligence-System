@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<!-- Change 3: Init theme from localStorage before render to prevent flash -->
+<script>if(localStorage.getItem('arthalens-theme')==='light')document.documentElement.classList.add('light-mode');</script>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<!-- CLAUDE CODE: CSRF token for POST requests -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>ArthaLens - Spending Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- CLAUDE CODE: Plotly for category donut and monthly trend charts -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "secondary": "#88d899",
+                "background": "#101510",
+                "secondary-container": "#01602e",
+                "inverse-surface": "#dfe4dc",
+                "tertiary-fixed": "#ffd9e0",
+                "inverse-on-surface": "#2d322c",
+                "primary-container": "#5bae6d",
+                "tertiary": "#ffb1c3",
+                "surface-variant": "#313631",
+                "error": "#ffb4ab",
+                "on-primary": "#003916",
+                "outline-variant": "#3f493f",
+                "on-error-container": "#ffdad6",
+                "error-container": "#93000a",
+                "surface-bright": "#363a35",
+                "primary-fixed": "#a0f6ae",
+                "on-tertiary": "#5e112e",
+                "primary-fixed-dim": "#84d993",
+                "on-primary-container": "#003e19",
+                "surface-container-high": "#262b26",
+                "on-secondary": "#003918",
+                "on-primary-fixed": "#00210a",
+                "tertiary-container": "#e57d99",
+                "tertiary-fixed-dim": "#ffb1c3",
+                "surface-container-highest": "#313631",
+                "secondary-fixed-dim": "#88d899",
+                "surface-container": "#1c211c",
+                "on-tertiary-container": "#641632",
+                "on-surface-variant": "#bfc9bc",
+                "on-background": "#dfe4dc",
+                "surface-tint": "#84d993",
+                "primary": "#84d993",
+                "on-secondary-fixed-variant": "#005226",
+                "surface-container-low": "#181d18",
+                "outline": "#899488",
+                "on-secondary-fixed": "#00210c",
+                "surface-container-lowest": "#0b0f0b",
+                "on-surface": "#dfe4dc",
+                "on-secondary-container": "#87d899",
+                "surface": "#101510",
+                "on-tertiary-fixed-variant": "#7b2944",
+                "on-error": "#690005",
+                "on-tertiary-fixed": "#3f0019",
+                "surface-dim": "#101510",
+                "secondary-fixed": "#a3f5b3",
+                "inverse-primary": "#126d34",
+                "on-primary-fixed-variant": "#005323"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "margin-mobile": "16px",
+                "gutter": "16px",
+                "lg": "24px",
+                "md": "16px",
+                "max-width": "1280px",
+                "sm": "8px",
+                "xl": "40px",
+                "base": "4px",
+                "xs": "4px",
+                "margin-desktop": "32px"
+        },
+        "fontFamily": {
+                "headline-lg-mobile": ["Inter"],
+                "data-mono": ["JetBrains Mono"],
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-caps": ["Inter"],
+                "headline-lg": ["Inter"],
+                "headline-md": ["Inter"]
+        },
+        "fontSize": {
+                "headline-lg-mobile": ["24px", {"lineHeight":"1.2","letterSpacing":"-0.01em","fontWeight":"600"}],
+                "data-mono": ["14px", {"lineHeight":"1.5","letterSpacing":"-0.01em","fontWeight":"400"}],
+                "body-md": ["14px", {"lineHeight":"1.5","letterSpacing":"0","fontWeight":"400"}],
+                "body-lg": ["16px", {"lineHeight":"1.6","letterSpacing":"0","fontWeight":"400"}],
+                "label-caps": ["12px", {"lineHeight":"1","letterSpacing":"0.05em","fontWeight":"600"}],
+                "headline-lg": ["32px", {"lineHeight":"1.2","letterSpacing":"-0.02em","fontWeight":"600"}],
+                "headline-md": ["20px", {"lineHeight":"1.4","letterSpacing":"-0.01em","fontWeight":"500"}]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  /* ── CSS Variables ── */
+  :root {
+    --bg: #0d0f0d;
+    --card: #131a13;
+    --navbar: #0a0c0a;
+    --border: #1f2a1f;
+    --text-primary: #f0f0f0;
+    --text-secondary: #6b7280;
+    --accent: #4ade80;
+    --row-hover: #1c241c;     /* Change 3: table row hover */
+  }
+  html.light-mode {
+    --bg: #f5f7f5;
+    --card: #ffffff;
+    --navbar: #ffffff;
+    --border: #e2e8e2;
+    --text-primary: #0d0f0d;
+    --text-secondary: #4b5563;
+    --accent: #4ade80;
+    --row-hover: #f0f7f0;     /* Change 3: subtle green tint in light mode */
+  }
+  /* ── Light-mode overrides ── */
+  html.light-mode body { background-color: var(--bg) !important; color: var(--text-primary); }
+  html.light-mode .card { background-color: var(--card) !important; border-color: var(--border) !important; }
+  html.light-mode nav  { background-color: var(--navbar) !important; border-bottom-color: var(--border) !important; }
+  html.light-mode .text-white { color: var(--text-primary) !important; }
+  html.light-mode .text-secondary { color: var(--text-secondary) !important; }
+  /* Intelligence alerts strip */
+  html.light-mode section.bg-\[#131a13\] { background-color: var(--card) !important; border-color: var(--border) !important; }
+  /* Date range badge, search/filter controls */
+  html.light-mode .bg-\[#131a13\] { background-color: var(--card) !important; }
+  html.light-mode .border-\[#1f2a1f\] { border-color: var(--border) !important; }
+  html.light-mode .bg-\[#0a0c0a\] { background-color: var(--navbar) !important; }
+  /* Search input */
+  html.light-mode #txn-search { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  /* Category dropdown */
+  html.light-mode #cat-filter { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  /* Table header row */
+  html.light-mode table thead tr { background-color: var(--navbar) !important; }
+  html.light-mode table thead th { color: var(--text-secondary) !important; border-color: var(--border) !important; }
+  html.light-mode tbody.divide-y { border-color: var(--border) !important; }
+  html.light-mode tbody tr { border-color: var(--border) !important; }
+  /* Avatar button */
+  html.light-mode #avatar-btn { background-color: var(--border) !important; border-color: var(--border) !important; }
+  /* Profile dropdown */
+  html.light-mode #profile-dropdown { background: var(--card) !important; border-color: var(--border) !important; }
+  /* Subscriptions modal */
+  html.light-mode #subs-modal > div { background-color: var(--card) !important; border-color: var(--border) !important; }
+  /* Modal footer */
+  html.light-mode #subs-modal .bg-\[#0a0c0a\] { background-color: var(--navbar) !important; border-color: var(--border) !important; }
+  /* Trend toggle group */
+  html.light-mode #trend-toggle-group { background-color: var(--bg) !important; border-color: var(--border) !important; }
+  /* Inline edit select */
+  html.light-mode .inline-edit-select { background: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  /* Shimmer in light mode */
+  html.light-mode .shimmer { background: linear-gradient(90deg, #f0f0f0 0%, #e2e8e2 50%, #f0f0f0 100%); }
+  /* Load more / filter buttons */
+  html.light-mode .hover\:bg-\[#1f2a1f\]:hover { background-color: var(--border) !important; }
+  /* Reimbursements border */
+  html.light-mode .border-t { border-color: var(--border) !important; }
+  /* bg-[#1f2a1f] used as a background fill (not just border) */
+  html.light-mode .bg-\[#1f2a1f\] { background-color: var(--border) !important; }
+  /* Change 2: Intelligence Alerts strip — theme-aware via class */
+  .alerts-strip {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    transition: background-color 0.25s, border-color 0.25s;
+  }
+  html.light-mode .alerts-strip { border-color: var(--border); }
+  html.light-mode .alerts-strip .alert-label { color: var(--text-primary); }
+  .alert-divider { background-color: var(--border); transition: background-color 0.25s; }
+  /* Change 3: Transaction row hover — theme-aware */
+  .transaction-row:hover { background-color: var(--row-hover) !important; }
+  /* Table row dividers via border (replaces Tailwind divide-y) */
+  #txn-tbody tr { border-bottom: 1px solid var(--border); }
+  /* Theme toggle pill */
+  .theme-toggle-pill {
+    width: 48px; height: 24px;
+    border-radius: 12px;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+  }
+  .theme-toggle-pill-circle {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform 0.25s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+  }
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    transition: border-color 0.2s, background-color 0.25s;
+  }
+  .card:hover {
+    border-color: #4ade80;
+  }
+  .glass-card {
+    background: rgba(19, 26, 19, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .text-accent { color: #4ade80; }
+  .bg-accent { background-color: #4ade80; color: #0d0f0d; }
+  .border-accent { border-color: #4ade80; }
+  .text-secondary { color: #6b7280; }
+  .shimmer {
+    background: linear-gradient(90deg, #131a13 0%, #1f2a1f 50%, #131a13 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  #subs-modal { display: none; }
+  #subs-modal.active { display: flex; }
+  .bounce-down { animation: bounceDown 2s infinite; }
+  @keyframes bounceDown {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(4px); }
+    60% { transform: translateY(2px); }
+  }
+  .inline-edit-select {
+    background: var(--border);
+    border: 1px solid #3f493f;
+    color: var(--text-primary);
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+  .sub-badge {
+    display: inline-block;
+    font-size: 11px;
+    color: #a78bfa;
+    background: rgba(167, 139, 250, 0.12);
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body class="font-body-md min-h-screen overflow-x-hidden">
+
+<!-- Top Navigation -->
+<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
+  <div class="flex items-center">
+    <img src="{{ url_for('static', filename='images/logo.png') }}"
+         alt="ArthaLens"
+         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+  </div>
+  <div class="hidden md:flex items-center h-full">
+    <a class="h-full px-4 flex items-center border-b-2 border-accent text-white font-medium" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+  </div>
+  <div class="flex items-center gap-4">
+    <!-- Change 3: Theme toggle -->
+    <button class="theme-toggle-pill" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+      <div class="theme-toggle-pill-circle" id="theme-circle">
+        <span id="theme-icon">☾</span>
+      </div>
+    </button>
+    <!-- Change 3: Profile dropdown avatar -->
+    <div style="position:relative" id="avatar-wrapper">
+      <button id="avatar-btn"
+        class="w-8 h-8 rounded-full flex items-center justify-center text-secondary text-xs font-bold cursor-pointer transition-colors"
+        style="background:var(--border);border:1px solid var(--border)"
+        onmouseenter="this.style.borderColor='#4ade80'" onmouseleave="this.style.borderColor='var(--border)'"
+        onclick="toggleProfileDropdown(event)"
+        aria-label="User profile menu">
+        <span class="material-symbols-outlined text-[20px]">person</span>
+      </button>
+      <div id="profile-dropdown"
+        style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--card);border:1px solid var(--border);border-radius:8px;min-width:180px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:200">
+        <div style="font-weight:600;color:var(--text-primary);font-size:13px;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          {{ current_user.email }}
+        </div>
+        <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+        <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;padding:0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+            style="width:100%;text-align:left;background:none;border:none;color:var(--text-primary);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-family:inherit"
+            onmouseenter="this.style.color='#4ade80'"
+            onmouseleave="this.style.color='var(--text-primary)'">
+            <span class="material-symbols-outlined" style="font-size:16px">logout</span>
+            Logout
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="pt-[72px] pb-12 px-6 max-w-7xl mx-auto flex flex-col gap-4">
+
+  <!-- Header -->
+  <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div>
+      <h1 class="font-headline-lg font-bold text-white mb-1">Spending Dashboard</h1>
+      <p class="font-body-md" style="color:var(--text-secondary)">Comprehensive analysis of your recent outflows and categorized expenses.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center rounded-full px-3 py-1.5 text-sm" style="background:var(--card);border:1px solid var(--border)">
+        <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+        <span class="mr-2" style="color:var(--text-primary)">Bank Statement</span>
+        <span class="pl-2" style="color:var(--text-secondary);border-left:1px solid var(--border)" id="date-range-text">All Time</span>
+      </div>
+      <!-- CLAUDE CODE: Upload button wired to Flask upload route -->
+      <a href="{{ url_for('main.upload') }}" class="bg-accent hover:bg-[#3bc26b] text-[#0d0f0d] font-medium px-4 py-2 rounded-[8px] transition-colors flex items-center gap-2 no-underline">
+        <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
+      </a>
+    </div>
+  </header>
+
+  <!-- Zone 1: KPIs -->
+  <!-- CLAUDE CODE: KPI values derived client-side from /api/transactions/classified + /api/subscriptions/audit -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Avg Monthly Spend -->
+    <div class="card flex flex-col justify-between h-32 relative overflow-hidden group">
+      <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Avg Monthly Spend</div>
+      <div class="font-data-mono text-2xl text-white mt-2" id="kpi-avg-monthly">
+        <div class="shimmer h-8 w-32 rounded"></div>
+      </div>
+      <div class="absolute bottom-0 left-0 w-full h-12 opacity-30 group-hover:opacity-50 transition-opacity">
+        <svg class="w-full h-full text-accent stroke-current fill-none" preserveAspectRatio="none" stroke-width="2" viewBox="0 0 100 30">
+          <path d="M0,20 L20,25 L40,15 L60,20 L80,5 L100,10"></path>
+          <path class="fill-accent opacity-10 stroke-none" d="M0,20 L20,25 L40,15 L60,20 L80,5 L100,10 L100,30 L0,30 Z"></path>
+        </svg>
+      </div>
+    </div>
+    <!-- Top Category -->
+    <div class="card flex flex-col justify-between h-32">
+      <div class="flex justify-between items-start">
+        <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Top Category</div>
+        <span class="material-symbols-outlined text-secondary text-[18px]">swap_horiz</span>
+      </div>
+      <div>
+        <div class="text-white font-medium mb-1" id="kpi-top-cat-name">
+          <div class="shimmer h-5 w-28 rounded"></div>
+        </div>
+        <div class="font-data-mono text-xl text-secondary" id="kpi-top-cat-amount">
+          <div class="shimmer h-5 w-24 rounded mt-1"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Active Subscriptions -->
+    <div class="card flex flex-col justify-between h-32 cursor-pointer hover:border-[#4ade80]" onclick="openModal()">
+      <div class="flex justify-between items-start">
+        <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Active Subscriptions</div>
+        <span class="material-symbols-outlined text-secondary text-[18px]">calendar_month</span>
+      </div>
+      <div>
+        <div class="text-white font-medium mb-1" id="kpi-sub-count">
+          <div class="shimmer h-5 w-24 rounded"></div>
+        </div>
+        <div class="flex justify-between items-end">
+          <div class="font-data-mono text-xl text-secondary" id="kpi-sub-monthly">
+            <div class="shimmer h-5 w-20 rounded mt-1"></div>
+          </div>
+          <button class="text-accent text-xs font-medium hover:underline">View all ›</button>
+        </div>
+      </div>
+    </div>
+    <!-- Highest Growth -->
+    <div class="card flex flex-col justify-between h-32">
+      <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Highest Growth</div>
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-white font-medium" id="kpi-growth-cat">
+            <span class="shimmer inline-block h-4 w-20 rounded"></span>
+          </span>
+          <span class="bg-accent/10 text-accent px-1.5 py-0.5 rounded text-[10px] font-bold" id="kpi-growth-pct"></span>
+        </div>
+        <div class="font-data-mono text-xl text-secondary" id="kpi-growth-amount">
+          <div class="shimmer h-5 w-24 rounded"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Zone 2: Intelligence Alerts -->
+  <!-- CLAUDE CODE: Alerts wired to /api/anomalies/report — spike anomalies as red pills, drops as blue -->
+  <section class="alerts-strip flex items-center gap-4 rounded-lg px-4 py-3">
+    <div class="alert-label flex items-center gap-2 font-medium whitespace-nowrap shrink-0" style="color:var(--text-primary)">
+      <span class="material-symbols-outlined text-accent text-[20px]">lightbulb</span>
+      Intelligence Alerts
+    </div>
+    <div class="w-px h-6 shrink-0 alert-divider"></div>
+    <div class="flex overflow-x-auto hide-scrollbar gap-3 w-full" id="alerts-container">
+      <div class="shimmer h-7 w-48 rounded-full"></div>
+      <div class="shimmer h-7 w-56 rounded-full"></div>
+      <div class="shimmer h-7 w-40 rounded-full"></div>
+    </div>
+  </section>
+
+  <!-- Zone 3: Charts Row -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+    <!-- Left: Donut Chart -->
+    <!-- CLAUDE CODE: Category donut chart rendered by Plotly into #categoryDonut -->
+    <div class="card h-[340px] flex flex-col relative">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="text-white font-medium">Spending by Category</h3>
+        <span class="text-[10px] text-secondary">Powered by Plotly</span>
+      </div>
+      <div class="flex-1 flex flex-col" style="min-height:0">
+        <div id="categoryDonut" style="width:100%;height:260px;"></div>
+      </div>
+    </div>
+    <!-- Right: Monthly Trend Chart -->
+    <!-- CLAUDE CODE: Monthly trend chart rendered by Plotly into #monthlyTrendChart from /api/insights/temporal -->
+    <div class="card h-[340px] flex flex-col">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-white font-medium">Monthly Spending Trend</h3>
+        <!-- Change 4: 6M/1Y/All trend toggle, wired to Plotly.react() -->
+        <div class="flex rounded p-0.5" id="trend-toggle-group" style="background:var(--navbar);border:1px solid var(--border)">
+          <button id="trend-btn-6m" class="px-2 py-1 text-[10px] font-bold uppercase rounded" style="background:var(--border);color:var(--text-primary)" onclick="setTrendFilter(6)">6M</button>
+          <button id="trend-btn-1y" class="px-2 py-1 text-[10px] font-bold uppercase rounded" style="background:transparent;color:var(--text-secondary)" onclick="setTrendFilter(12)">1Y</button>
+          <button id="trend-btn-all" class="px-2 py-1 text-[10px] font-bold uppercase rounded" style="background:transparent;color:var(--text-secondary)" onclick="setTrendFilter(0)">All</button>
+        </div>
+      </div>
+      <div class="flex-1" style="min-height:0">
+        <div id="monthlyTrendChart" style="width:100%;height:240px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Zone 4: Intelligence Cards -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+    <!-- Subscriptions Intelligence Card -->
+    <!-- CLAUDE CODE: Subscriptions card wired to /api/subscriptions/audit -->
+    <div class="card flex flex-col">
+      <h3 class="text-white font-medium mb-4 flex items-center justify-between">
+        Subscriptions
+        <span class="text-secondary text-xs font-normal" id="subs-card-count">Active (—)</span>
+      </h3>
+      <div class="space-y-4" id="subs-card-body">
+        <div class="shimmer h-8 rounded mb-2"></div>
+        <div class="shimmer h-8 rounded mb-2"></div>
+        <div class="shimmer h-8 rounded mb-2"></div>
+        <div class="shimmer h-8 rounded"></div>
+      </div>
+    </div>
+    <!-- Reimbursements Intelligence Card -->
+    <!-- CLAUDE CODE: Reimbursements card wired to /api/reimbursements/report -->
+    <div class="card flex flex-col">
+      <h3 class="text-white font-medium mb-4">Reimbursements</h3>
+      <div class="space-y-4">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-secondary">Gross Claims</span>
+          <span class="font-data-mono text-white" id="reimb-gross">
+            <span class="shimmer inline-block h-4 w-20 rounded"></span>
+          </span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-secondary">Net Approved</span>
+          <span class="font-data-mono text-white" id="reimb-net">
+            <span class="shimmer inline-block h-4 w-20 rounded"></span>
+          </span>
+        </div>
+        <div class="mt-4 p-3 border border-accent/20 bg-accent/5 rounded-lg flex justify-between items-center">
+          <span class="text-sm text-accent font-medium">You saved</span>
+          <span class="font-data-mono text-accent font-bold" id="reimb-saved">
+            <span class="shimmer inline-block h-4 w-16 rounded"></span>
+          </span>
+        </div>
+        <!-- Change 3: Matched Refunds collapsible — hidden until pairs load -->
+        <div id="matched-refunds-section" style="display:none;margin-top:12px">
+          <button id="matched-refunds-toggle" onclick="toggleMatchedRefunds()"
+            style="width:100%;text-align:left;background:none;border:none;padding:6px 0;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;color:var(--text-secondary)">
+            <span>Matched Refunds</span>
+            <span id="matched-refunds-chevron" style="font-size:13px;transition:transform 0.2s ease">▾</span>
+          </button>
+          <div id="matched-refunds-list" style="display:none;margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Needs Review Card -->
+    <!-- CLAUDE CODE: Needs Review card wired to /api/transactions/needs-review -->
+    <div class="card flex flex-col">
+      <h3 class="text-white font-medium mb-4">Needs Review</h3>
+      <div class="space-y-4" id="needs-review-body">
+        <div class="shimmer h-8 rounded mb-2"></div>
+        <div class="shimmer h-8 rounded mb-2"></div>
+        <div class="shimmer h-8 rounded mb-2"></div>
+        <div class="shimmer h-8 rounded"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Zone 6: Temporal Insights -->
+  <!-- CLAUDE CODE: Temporal Insights section wired to /api/insights/temporal -->
+  <section class="flex flex-col gap-6 mt-4">
+    <div class="flex items-center">
+      <!-- Change 3: Chevron toggles collapse/expand of temporal content -->
+      <button onclick="toggleTemporalInsights()" aria-label="Toggle Temporal Insights" class="flex items-center gap-2 cursor-pointer" style="background:none;border:none;padding:0;font-family:inherit">
+        <span id="temporal-chevron" class="material-symbols-outlined text-secondary" style="transition:transform 0.2s ease">expand_more</span>
+        <h2 class="font-headline-md font-bold text-white">Temporal Insights</h2>
+      </button>
+    </div>
+    <!-- Change 3: Collapsible content wrapper -->
+    <div id="temporalContent">
+      <!-- CLAUDE CODE: MoM cards container, populated from insights.mom_changes -->
+      <div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2" id="mom-cards-container">
+        <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
+        <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
+        <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
+        <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
+      </div>
+      <!-- CLAUDE CODE: Fastest growing banner, populated from insights.fastest_growing -->
+      <div class="bg-accent/10 border border-accent/20 rounded-lg p-4 flex items-center justify-between mt-6" id="fastest-growing-banner">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+            <span class="material-symbols-outlined">trending_up</span>
+          </div>
+          <div>
+            <div class="shimmer h-5 w-64 rounded mb-2"></div>
+            <div class="shimmer h-4 w-48 rounded"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Zone 5: Transactions Table -->
+  <!-- CLAUDE CODE: Transactions table wired to /api/transactions/classified -->
+  <section class="flex flex-col gap-4 mt-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <h2 class="font-headline-md font-bold text-white">Recent Transactions</h2>
+      <div class="flex items-center gap-2">
+        <!-- Change 2: Search transactions input, filters client-side on merchant/description -->
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" style="font-size:16px">search</span>
+          <input id="txn-search" type="text" placeholder="Search transactions…"
+            class="rounded-lg text-sm pl-8 pr-3 py-2 focus:outline-none transition-all w-48"
+            style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);caret-color:#4ade80"
+            oninput="filterTransactions()"
+            onfocus="this.style.borderColor='#4ade80'"
+            onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <div class="relative">
+          <select id="cat-filter" class="appearance-none rounded-lg text-sm pl-3 pr-8 py-2 focus:ring-0" style="background:var(--card);border:1px solid var(--border);color:var(--text-secondary)" onchange="filterTransactions()">
+            <option value="">All Categories</option>
+            <option>Food &amp; Dining</option>
+            <option>Shopping</option>
+            <option>Transport</option>
+            <option>Utilities</option>
+            <option>Entertainment</option>
+            <option>Healthcare</option>
+            <option>Transfer / P2P</option>
+            <option>Rent</option>
+            <option>Education</option>
+            <option>ATM / Cash</option>
+            <option>Other</option>
+          </select>
+          <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-secondary text-[18px] pointer-events-none">expand_more</span>
+        </div>
+        <!-- Change 5: Filter button removed; Change 6: All Transactions wired with sort toggle -->
+        <button id="all-txn-btn" onclick="allTransactionsClick()" class="px-4 py-2 bg-accent/10 border border-accent/20 text-accent rounded-lg text-sm font-medium hover:bg-accent/20 transition-colors flex items-center gap-1">
+          All Transactions <span class="material-symbols-outlined text-[16px]" id="sort-arrow-icon">arrow_downward</span>
+        </button>
+      </div>
+    </div>
+    <div class="card p-0 overflow-hidden flex flex-col" style="border-color:var(--border)">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr style="background:var(--navbar);border-bottom:1px solid var(--border)">
+              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-[100px]">Date</th>
+              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-auto">Merchant</th>
+              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-[150px]">Category</th>
+              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest text-right w-[120px]">Amount</th>
+              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-[40px]"></th>
+            </tr>
+          </thead>
+          <tbody id="txn-tbody" style="border-color:var(--border)">
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-6 py-4 flex justify-center" style="border-top:1px solid var(--border)">
+        <button id="load-more-btn" class="px-6 py-2 rounded-lg text-sm transition-colors w-full sm:w-auto" style="border:1px solid var(--border);color:var(--text-secondary)" onmouseenter="this.style.color='var(--text-primary)';this.style.borderColor='var(--border)'" onmouseleave="this.style.color='var(--text-secondary)'" onclick="loadMoreTransactions()">Load More</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Legal footer links -->
+<div style="text-align: center; padding: 16px; font-size: 12px; color: var(--text-secondary); opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;">
+    <a href="/privacy" style="color: inherit; text-decoration: none; margin: 0 12px;">Privacy Policy</a>
+    <a href="/terms" style="color: inherit; text-decoration: none; margin: 0 12px;">Terms of Service</a>
+    <span style="margin: 0 12px;">© 2026 Shashwat Narayan</span>
+</div>
+
+<!-- Subscriptions Modal -->
+<!-- CLAUDE CODE: Modal populated from /api/subscriptions/audit response -->
+<div class="fixed inset-0 z-[100] items-center justify-center p-4 bg-black/70 backdrop-blur-sm" id="subs-modal" onclick="closeModal(event)">
+  <div class="rounded-[12px] w-full max-w-[480px] shadow-2xl flex flex-col max-h-[80vh]" style="background:var(--card);border:1px solid var(--border)" onclick="event.stopPropagation()">
+    <div class="p-6 flex justify-between items-start" style="border-bottom:1px solid var(--border)">
+      <div>
+        <h2 class="font-headline-md font-bold" style="color:var(--text-primary)">Active Subscriptions</h2>
+        <p class="font-data-mono mt-1" style="color:var(--text-secondary)" id="modal-total">—</p>
+      </div>
+      <button style="color:var(--text-secondary);background:none;border:none;cursor:pointer" onmouseenter="this.style.color='var(--text-primary)'" onmouseleave="this.style.color='var(--text-secondary)'" onclick="closeModalBtn()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto space-y-5 hide-scrollbar" id="modal-sub-body">
+      <div class="shimmer h-10 rounded mb-2"></div>
+      <div class="shimmer h-10 rounded mb-2"></div>
+      <div class="shimmer h-10 rounded mb-2"></div>
+      <div class="shimmer h-10 rounded"></div>
+    </div>
+    <div class="p-6 flex justify-between items-center rounded-b-[12px]" style="border-top:1px solid var(--border);background:var(--navbar)">
+      <p class="text-xs" style="color:var(--text-secondary)" id="modal-showing">Loading…</p>
+      <button class="px-4 py-2 border border-accent text-accent rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors" onclick="closeModalBtn()">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CLAUDE CODE: Dashboard API wiring — all endpoints wired below
+// ============================================================
+
+const CATEGORIES = [
+  'Food & Dining','Shopping','Transport','Utilities','Entertainment',
+  'Healthcare','Transfer / P2P','Rent','Education','ATM / Cash','Other'
+];
+
+const CAT_COLORS = {
+  'Food & Dining':  { bg: 'rgba(249,115,22,0.12)', text: '#fb923c' },
+  'Shopping':       { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa' },
+  'Transport':      { bg: 'rgba(14,165,233,0.12)',  text: '#38bdf8' },
+  'Utilities':      { bg: 'rgba(34,197,94,0.12)',   text: '#4ade80' },
+  'Entertainment':  { bg: 'rgba(168,85,247,0.12)',  text: '#c084fc' },
+  'Healthcare':     { bg: 'rgba(239,68,68,0.12)',   text: '#f87171' },
+  'Transfer / P2P': { bg: 'rgba(234,179,8,0.12)',   text: '#facc15' },
+  'Rent':           { bg: 'rgba(236,72,153,0.12)',  text: '#f472b6' },
+  'Education':      { bg: 'rgba(99,102,241,0.12)',  text: '#818cf8' },
+  'ATM / Cash':     { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' },
+  'Other':          { bg: 'rgba(120,113,108,0.12)', text: '#a8a29e' },
+};
+
+// Change 2: Donut colour gradient — dark-to-bright green
+const DONUT_COLORS = [
+  '#4ade80','#3bc26b','#2da855','#1f8e40','#14742e','#0a5a1f','#063d14','#041f0a'
+];
+
+let _allTransactions = [];
+let _subsReport = null;
+let _allMonthlyTotals = []; // stores full monthly_totals for trend toggle
+let sortAscending = false;  // Change 6: default newest-first (descending)
+
+function getCsrf() {
+  return document.querySelector('meta[name="csrf-token"]').content;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtAmt(n) {
+  return '₹' + parseFloat(n || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+function fmtDate(s) {
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function catPill(cat) {
+  const c = CAT_COLORS[cat] || CAT_COLORS['Other'];
+  return `<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style="background:${c.bg};color:${c.text}">${escHtml(cat)}</span>`;
+}
+
+function emptyState(msg) {
+  const text = msg || 'Upload a statement to see your data';
+  return `<div class="flex flex-col items-center justify-center py-8 gap-2" style="color:#6b7280">
+    <span class="material-symbols-outlined" style="font-size:28px;color:#6b7280">cloud_upload</span>
+    <span class="text-sm">${escHtml(text)}</span>
+  </div>`;
+}
+
+function showToast(msg, ok) {
+  const t = document.createElement('div');
+  t.style.cssText = [
+    'position:fixed','bottom:24px','right:24px','z-index:9999',
+    'padding:12px 20px','border-radius:8px','font-size:14px','font-weight:500',
+    'box-shadow:0 4px 20px rgba(0,0,0,0.5)',
+    'transition:opacity 0.4s,transform 0.4s',
+    ok === false ? 'background:#ef4444;color:#fff' : 'background:#4ade80;color:#0d0f0d'
+  ].join(';');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 2600);
+  setTimeout(() => t.remove(), 3100);
+}
+
+// ---- Zone: Transactions Table ----
+// CLAUDE CODE: Renders rows from /api/transactions/classified
+let pageSize = 20;
+let currentOffset = 0;
+function renderTransactions(txns) {
+  const tbody = document.getElementById('txn-tbody');
+  const loadMoreBtn = document.getElementById('load-more-btn');
+  if (!txns || !txns.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState()}</td></tr>`;
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    return;
+  }
+  const filtered = applyFilter(txns);
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8"><div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+    <div style="font-size: 28px; margin-bottom: 12px;">🗂️</div>
+    <div style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">No transactions found</div>
+    <div style="font-size: 13px; opacity: 0.7;">No transactions in this category yet</div>
+</div></td></tr>`;
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    return;
+  }
+  const allShown = currentOffset + pageSize >= filtered.length;
+  let rowsHtml = filtered.slice(0, currentOffset + pageSize).map(t => `
+    <tr class="transaction-row transition-colors" data-txn-id="${escHtml(t.txn_id)}">
+      <td class="px-6 py-4 text-sm" style="color:#6b7280">${fmtDate(t.date)}</td>
+      <td class="px-6 py-4 text-sm text-white">${escHtml(t.merchant)}${t.is_subscription ? '<br><span class="sub-badge">Subscription</span>' : ''}</td>
+      <td class="px-6 py-4"><span class="cat-cell">${catPill(t.category)}</span></td>
+      <td class="px-6 py-4 text-sm font-data-mono text-white text-right">${fmtAmt(t.amount)}</td>
+      <td class="px-6 py-4 text-right">
+        <button class="p-2 edit-btn cursor-pointer transition-colors"
+          style="color:#6b7280"
+          data-txn-id="${escHtml(t.txn_id)}"
+          data-category="${escHtml(t.category)}"
+          onmouseenter="this.style.color='#4ade80'"
+          onmouseleave="this.style.color='#6b7280'">
+          <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+  if (allShown) {
+    rowsHtml += `<tr><td colspan="5" style="padding:0"><div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.05);">
+    ✦ All transactions shown
+</div></td></tr>`;
+  }
+  tbody.innerHTML = rowsHtml;
+  tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn)));
+  if (loadMoreBtn) {
+    if (allShown) {
+      loadMoreBtn.style.display = 'none';
+    } else {
+      loadMoreBtn.style.display = '';
+      loadMoreBtn.textContent = `Load More (${filtered.length - currentOffset - pageSize} remaining)`;
+    }
+  }
+}
+
+function applyFilter(txns) {
+  const catVal = (document.getElementById('cat-filter') || {}).value || '';
+  const searchVal = ((document.getElementById('txn-search') || {}).value || '').toLowerCase().trim();
+  let filtered = txns;
+  if (catVal) filtered = filtered.filter(t => t.category === catVal);
+  if (searchVal) filtered = filtered.filter(t =>
+    (t.merchant || '').toLowerCase().includes(searchVal) ||
+    (t.description || '').toLowerCase().includes(searchVal)
+  );
+  // Change 6: sort by date according to current sortAscending state
+  filtered = [...filtered].sort((a, b) => {
+    const cmp = a.date.localeCompare(b.date);
+    return sortAscending ? cmp : -cmp;
+  });
+  return filtered;
+}
+
+function filterTransactions() {
+  currentOffset = 0;
+  renderTransactions(_allTransactions);
+}
+
+function loadMoreTransactions() {
+  currentOffset += pageSize;
+  renderTransactions(_allTransactions);
+}
+
+// Change 6: All Transactions button — resets filters, toggles sort direction
+function allTransactionsClick() {
+  sortAscending = !sortAscending;
+  const arrow = document.getElementById('sort-arrow-icon');
+  if (arrow) arrow.textContent = sortAscending ? 'arrow_upward' : 'arrow_downward';
+  const searchEl = document.getElementById('txn-search');
+  const catEl = document.getElementById('cat-filter');
+  if (searchEl) searchEl.value = '';
+  if (catEl) catEl.value = '';
+  currentOffset = 0;
+  renderTransactions(_allTransactions);
+}
+
+// Change 3: Toggle Temporal Insights section collapse
+function toggleTemporalInsights() {
+  const content = document.getElementById('temporalContent');
+  const chevron = document.getElementById('temporal-chevron');
+  if (!content) return;
+  const isNowHidden = content.style.display !== 'none';
+  content.style.display = isNowHidden ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isNowHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// ---- Zone: Inline Category Edit (Task 4) ----
+// CLAUDE CODE: Inline edit → POST /api/transactions/correct with CSRF token
+function openEdit(btn) {
+  const txnId = btn.dataset.txnId;
+  const row = btn.closest('tr');
+  const catCell = row.querySelector('.cat-cell');
+  const origHtml = catCell.innerHTML;
+  const origCat = btn.dataset.category;
+
+  catCell.innerHTML = `
+    <div class="flex items-center gap-1 flex-wrap">
+      <select class="inline-edit-select">
+        ${CATEGORIES.map(c =>
+          `<option value="${escHtml(c)}" ${c === origCat ? 'selected' : ''}>${escHtml(c)}</option>`
+        ).join('')}
+      </select>
+      <button class="save-edit px-2 py-1 rounded text-xs font-bold" style="background:#4ade80;color:#0d0f0d">✓</button>
+      <button class="cancel-edit px-2 py-1 rounded text-xs" style="background:var(--border);color:var(--text-secondary)">✕</button>
+    </div>
+  `;
+
+  catCell.querySelector('.cancel-edit').addEventListener('click', () => {
+    catCell.innerHTML = origHtml;
+  });
+
+  catCell.querySelector('.save-edit').addEventListener('click', async () => {
+    const newCat = catCell.querySelector('.inline-edit-select').value;
+    try {
+      const res = await fetch('/api/transactions/correct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrf()
+        },
+        body: JSON.stringify({ transaction_id: txnId, new_category: newCat })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        btn.dataset.category = newCat;
+        catCell.innerHTML = catPill(newCat);
+        // Update in-memory store so re-renders reflect the change
+        const txn = _allTransactions.find(t => t.txn_id === txnId);
+        if (txn) txn.category = newCat;
+        showToast('✓ Category updated');
+      } else {
+        showToast('Update failed', false);
+        catCell.innerHTML = origHtml;
+      }
+    } catch (_e) {
+      showToast('Network error', false);
+      catCell.innerHTML = origHtml;
+    }
+  });
+}
+
+// ---- Zone: KPIs derived from classified transactions ----
+// CLAUDE CODE: KPIs calculated client-side from /api/transactions/classified data
+function renderKpis(txns) {
+  if (!txns || !txns.length) {
+    ['kpi-avg-monthly','kpi-top-cat-name','kpi-top-cat-amount','kpi-growth-cat','kpi-growth-pct','kpi-growth-amount'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = emptyState('—');
+    });
+    return;
+  }
+
+  // Monthly buckets
+  const byMonth = {};
+  txns.forEach(t => {
+    const m = t.date.slice(0, 7);
+    byMonth[m] = (byMonth[m] || 0) + parseFloat(t.amount);
+  });
+  const months = Object.keys(byMonth).sort();
+  const total = txns.reduce((s, t) => s + parseFloat(t.amount), 0);
+  const avgMonthly = total / (months.length || 1);
+
+  const avgEl = document.getElementById('kpi-avg-monthly');
+  if (avgEl) avgEl.textContent = fmtAmt(avgMonthly);
+
+  // Top category
+  const byCat = {};
+  txns.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + parseFloat(t.amount); });
+  const sortedCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  if (sortedCats.length) {
+    const [topCat, topAmt] = sortedCats[0];
+    const nameEl = document.getElementById('kpi-top-cat-name');
+    const amtEl = document.getElementById('kpi-top-cat-amount');
+    if (nameEl) nameEl.textContent = topCat;
+    if (amtEl) amtEl.innerHTML = `${fmtAmt(topAmt)} <span class="text-xs ml-1">total</span>`;
+  }
+
+  // Highest growth (current vs previous month)
+  if (months.length >= 2) {
+    const currM = months[months.length - 1];
+    const prevM = months[months.length - 2];
+    const currCat = {}, prevCat = {};
+    txns.filter(t => t.date.startsWith(currM)).forEach(t => {
+      currCat[t.category] = (currCat[t.category] || 0) + parseFloat(t.amount);
+    });
+    txns.filter(t => t.date.startsWith(prevM)).forEach(t => {
+      prevCat[t.category] = (prevCat[t.category] || 0) + parseFloat(t.amount);
+    });
+
+    let bestCat = null, bestPct = -Infinity, bestAmt = 0;
+    Object.keys(currCat).forEach(cat => {
+      if (prevCat[cat] && prevCat[cat] > 0) {
+        const pct = (currCat[cat] - prevCat[cat]) / prevCat[cat] * 100;
+        if (pct > bestPct) { bestPct = pct; bestCat = cat; bestAmt = currCat[cat]; }
+      }
+    });
+
+    if (bestCat) {
+      const catEl = document.getElementById('kpi-growth-cat');
+      const pctEl = document.getElementById('kpi-growth-pct');
+      const amtEl = document.getElementById('kpi-growth-amount');
+      if (catEl) catEl.textContent = bestCat;
+      if (pctEl) pctEl.textContent = `+${Math.round(bestPct)}%`;
+      if (amtEl) amtEl.innerHTML = `${fmtAmt(bestAmt)} <span class="text-xs ml-1">vs last mo</span>`;
+    }
+  }
+}
+
+// ---- Change 6: Dynamic date range badge ----
+function updateDateRange(txns) {
+  const el = document.getElementById('date-range-text');
+  if (!el) return;
+  if (!txns || !txns.length) {
+    el.textContent = 'No data uploaded';
+    el.style.color = '#6b7280';
+    return;
+  }
+  const sorted = txns.map(t => t.date).sort();
+  const fmtMonthYear = d => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  const start = fmtMonthYear(sorted[0]);
+  const end   = fmtMonthYear(sorted[sorted.length - 1]);
+  el.textContent = start === end ? start : `${start} – ${end}`;
+  el.style.color = '';
+}
+
+// ---- Change 3: Plotly dynamic theme helper ----
+function getPlotlyTheme() {
+  const isLight = document.documentElement.classList.contains('light-mode');
+  return {
+    plot_bgcolor:       isLight ? '#ffffff' : '#131a13',
+    paper_bgcolor:      isLight ? '#ffffff' : '#131a13',
+    font_color:         isLight ? '#4b5563' : '#6b7280',
+    gridcolor:          isLight ? '#e2e8e2' : '#1f2a1f',
+    linecolor:          '#4ade80',
+    annotation_color:   isLight ? '#0d0f0d' : '#ffffff',
+    // Change 1: primary text colour for donut centre annotation
+    font_color_primary: isLight ? '#0d0f0d' : '#f0f0f0',
+  };
+}
+
+// ---- Zone: Category Donut (Plotly) ----
+// CLAUDE CODE: Plotly donut chart built from classified transactions
+function renderCategoryDonut(txns) {
+  const el = document.getElementById('categoryDonut');
+  if (!el) return;
+
+  if (!txns || !txns.length) {
+    el.innerHTML = emptyState();
+    return;
+  }
+
+  const byCat = {};
+  txns.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + parseFloat(t.amount); });
+  const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  const total = sorted.reduce((s, [, v]) => s + v, 0);
+
+  const th = getPlotlyTheme();
+  Plotly.newPlot(el, [{
+    type: 'pie',
+    hole: 0.6,
+    labels: sorted.map(([k]) => k),
+    values: sorted.map(([, v]) => v),
+    marker: {
+      colors: DONUT_COLORS.slice(0, sorted.length),
+      line: { color: th.plot_bgcolor, width: 2 }
+    },
+    textinfo: 'none',
+    hovertemplate: '<b>%{label}</b><br>₹%{value:,.0f}<br>%{percent}<extra></extra>',
+  }], {
+    plot_bgcolor:  th.plot_bgcolor,
+    paper_bgcolor: th.paper_bgcolor,
+    margin: { t: 10, b: 60, l: 10, r: 10 },
+    showlegend: true,
+    legend: {
+      font: { color: th.font_color, size: 10 },
+      orientation: 'h',
+      y: -0.15, x: 0.5, xanchor: 'center'
+    },
+    font: { color: th.font_color },
+    annotations: [{
+      font: { size: 16, color: th.font_color_primary, family: 'JetBrains Mono' },
+      showarrow: false,
+      text: `₹${(total / 1000).toFixed(1)}k`,
+      x: 0.5, y: 0.5
+    }]
+  }, { responsive: true, displayModeBar: false });
+
+  // Click a category slice → filter the Recent Transactions list and scroll to it
+  el.style.cursor = 'pointer';
+  el.on('plotly_click', function(data) {
+    const category = data.points[0].label;
+    const filterDropdown = document.getElementById('cat-filter');
+    if (filterDropdown) {
+      filterDropdown.value = category;
+      filterDropdown.dispatchEvent(new Event('change'));
+      filterDropdown.closest('section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+}
+
+// ---- Zone: Monthly Trend Chart (Plotly) ----
+// CLAUDE CODE: Plotly line/area chart from /api/insights/temporal monthly_totals
+// stores full data, defaults to 6M slice, toggle uses Plotly.react()
+function renderMonthlyTrend(insights) {
+  const el = document.getElementById('monthlyTrendChart');
+  if (!el) return;
+
+  _allMonthlyTotals = insights.monthly_totals || [];
+  if (!_allMonthlyTotals.length) {
+    el.innerHTML = emptyState();
+    return;
+  }
+
+  // Default to 6M on initial load
+  const sliced = _allMonthlyTotals.length > 6 ? _allMonthlyTotals.slice(-6) : _allMonthlyTotals;
+  _drawTrendChart(sliced, true);
+}
+
+// Change 3: build layout dynamically from current theme
+function _getTrendLayout() {
+  const th = getPlotlyTheme();
+  return {
+    plot_bgcolor:  th.plot_bgcolor,
+    paper_bgcolor: th.paper_bgcolor,
+    margin: { t: 10, b: 40, l: 65, r: 10 },
+    xaxis: {
+      color: th.font_color, gridcolor: th.gridcolor, showgrid: false,
+      tickfont: { size: 10, color: th.font_color }
+    },
+    yaxis: {
+      color: th.font_color, gridcolor: th.gridcolor, showgrid: true, gridwidth: 1,
+      tickprefix: '₹', tickfont: { size: 10, color: th.font_color }
+    },
+    font: { color: th.font_color },
+  };
+}
+
+function _drawTrendChart(data, isFirst) {
+  const el = document.getElementById('monthlyTrendChart');
+  if (!el) return;
+  const trace = [{
+    x: data.map(m => m.month),
+    y: data.map(m => m.total),
+    type: 'scatter',
+    mode: 'lines',
+    fill: 'tozeroy',
+    line: { color: '#4ade80', width: 2, shape: 'spline' },
+    fillcolor: 'rgba(74,222,128,0.08)',
+    hovertemplate: '<b>%{x}</b><br>₹%{y:,.0f}<extra></extra>',
+  }];
+  const config = { responsive: true, displayModeBar: false };
+  if (isFirst) {
+    Plotly.newPlot(el, trace, _getTrendLayout(), config);
+  } else {
+    Plotly.react(el, trace, _getTrendLayout(), config);
+  }
+}
+
+// Change 4: called by toggle buttons — 6=6M, 12=1Y, 0=All
+function setTrendFilter(count) {
+  if (!_allMonthlyTotals.length) return;
+
+  // Update active button styles (use CSS vars so they adapt to theme)
+  ['trend-btn-6m','trend-btn-1y','trend-btn-all'].forEach(id => {
+    const b = document.getElementById(id);
+    b.style.background = 'transparent';
+    b.style.color = 'var(--text-secondary)';
+  });
+
+  let activeBtn;
+  let sliced;
+  if (count === 6) {
+    activeBtn = document.getElementById('trend-btn-6m');
+    sliced = _allMonthlyTotals.length > 6 ? _allMonthlyTotals.slice(-6) : _allMonthlyTotals;
+  } else if (count === 12) {
+    activeBtn = document.getElementById('trend-btn-1y');
+    sliced = _allMonthlyTotals.length > 12 ? _allMonthlyTotals.slice(-12) : _allMonthlyTotals;
+  } else {
+    activeBtn = document.getElementById('trend-btn-all');
+    sliced = _allMonthlyTotals;
+  }
+
+  if (activeBtn) { activeBtn.style.background = 'var(--border)'; activeBtn.style.color = 'var(--text-primary)'; }
+  _drawTrendChart(sliced, false);
+}
+
+// ---- Zone: Subscriptions KPI card ----
+// CLAUDE CODE: Subscription count and monthly cost from /api/subscriptions/audit
+function renderSubsKpi(report) {
+  const count = report.summary.total_subscriptions || 0;
+  const monthly = report.summary.total_monthly_cost || 0;
+  const countEl = document.getElementById('kpi-sub-count');
+  const monthEl = document.getElementById('kpi-sub-monthly');
+  if (countEl) countEl.textContent = `${count} Service${count !== 1 ? 's' : ''}`;
+  if (monthEl) monthEl.innerHTML = `${fmtAmt(monthly)} <span class="text-xs ml-1">avg/mo</span>`;
+}
+
+// ---- Zone: Subscriptions Intelligence Card ----
+// CLAUDE CODE: Subscription list from /api/subscriptions/audit
+function renderSubsCard(report) {
+  const countEl = document.getElementById('subs-card-count');
+  if (countEl) countEl.textContent = `Active (${report.summary.total_subscriptions || 0})`;
+
+  const body = document.getElementById('subs-card-body');
+  if (!body) return;
+
+  const subs = report.subscriptions || [];
+  if (!subs.length) { body.innerHTML = emptyState('No subscriptions detected'); return; }
+
+  body.innerHTML = subs.slice(0, 5).map(s => `
+    <div class="flex justify-between items-center">
+      <div>
+        <p class="text-sm" style="color:var(--text-primary)">${escHtml(s.entity)}</p>
+        <span class="text-[10px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5"
+          style="color:var(--text-secondary);background:var(--border)">${escHtml(s.frequency)}</span>
+      </div>
+      <span class="font-data-mono" style="color:var(--text-primary)">${fmtAmt(s.avg_amount)}</span>
+    </div>
+  `).join('');
+}
+
+// ---- Zone: Reimbursements ----
+// CLAUDE CODE: Reimbursements wired to /api/reimbursements/report
+function renderReimb(report) {
+  const s = report.summary;
+  const grossEl = document.getElementById('reimb-gross');
+  const netEl   = document.getElementById('reimb-net');
+  const savedEl = document.getElementById('reimb-saved');
+  if (grossEl) grossEl.textContent = fmtAmt(s.gross_spend);
+  if (netEl)   netEl.textContent   = fmtAmt(s.net_spend);
+  if (savedEl) savedEl.textContent = fmtAmt(s.total_reimbursed);
+
+  // Change 3: populate matched refunds collapsible
+  const pairs   = report.matched_pairs || [];
+  const section = document.getElementById('matched-refunds-section');
+  const list    = document.getElementById('matched-refunds-list');
+  if (!section || !list) return;
+
+  if (!pairs.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  list.innerHTML = pairs.map(p => {
+    const badge = p.confidence === 'high'
+      ? `<span style="background:rgba(74,222,128,0.12);color:#4ade80;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">✓ exact</span>`
+      : `<span style="background:rgba(234,179,8,0.12);color:#facc15;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">~ close</span>`;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-secondary);font-size:11px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(p.debit_entity)} → ${escHtml(p.credit_entity || '?')}">
+          ${escHtml(p.debit_entity)} → ${escHtml(p.credit_entity || '?')}
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-primary)">${fmtAmt(p.credit_amount)}</span>
+          ${badge}
+        </span>
+      </div>`;
+  }).join('');
+}
+
+// Change 3: toggle matched refunds list visibility
+function toggleMatchedRefunds() {
+  const list    = document.getElementById('matched-refunds-list');
+  const chevron = document.getElementById('matched-refunds-chevron');
+  if (!list) return;
+  const isOpen = list.style.display !== 'none';
+  list.style.display    = isOpen ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ---- Zone: Needs Review ----
+// CLAUDE CODE: Needs Review list wired to /api/transactions/needs-review
+function renderNeedsReview(txns) {
+  const body = document.getElementById('needs-review-body');
+  if (!body) return;
+  if (!txns || !txns.length) {
+    body.innerHTML = emptyState('No transactions need review');
+    return;
+  }
+  body.innerHTML = txns.slice(0, 6).map(t => `
+    <div class="flex justify-between items-center" data-review-row="${escHtml(t.txn_id)}">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full" style="background:#eab308;flex-shrink:0"></span>
+        <p class="text-sm" style="color:var(--text-primary)">${escHtml(t.merchant)}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="review-cat-cell">${catPill(t.category)}</span>
+        <button class="review-edit-btn"
+          style="background:none;border:none;cursor:pointer;padding:2px;color:var(--text-secondary)"
+          data-txn-id="${escHtml(t.txn_id)}"
+          data-category="${escHtml(t.category)}"
+          onmouseenter="this.style.color='#4ade80'"
+          onmouseleave="this.style.color='var(--text-secondary)'">
+          <span class="material-symbols-outlined" style="font-size:16px;pointer-events:none">edit</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+  body.querySelectorAll('.review-edit-btn').forEach(btn => btn.addEventListener('click', () => openReviewEdit(btn)));
+}
+
+function openReviewEdit(btn) {
+  const txnId = btn.dataset.txnId;
+  const origCat = btn.dataset.category;
+  const row = btn.closest('[data-review-row]');
+  const catCell = row.querySelector('.review-cat-cell');
+  const origHtml = catCell.innerHTML;
+
+  catCell.innerHTML = `
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+      <select class="review-inline-select" style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;padding:4px 8px;font-size:12px">
+        ${CATEGORIES.map(c => `<option value="${escHtml(c)}" ${c === origCat ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
+      </select>
+      <button class="review-save-btn" style="background:#4ade80;color:#0d0f0d;border:none;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer">✓</button>
+      <button class="review-cancel-btn" style="background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer">✕</button>
+    </div>
+  `;
+  btn.style.display = 'none';
+
+  catCell.querySelector('.review-cancel-btn').addEventListener('click', () => {
+    catCell.innerHTML = origHtml;
+    btn.style.display = '';
+  });
+
+  catCell.querySelector('.review-save-btn').addEventListener('click', async () => {
+    const newCat = catCell.querySelector('.review-inline-select').value;
+    try {
+      const res = await fetch('/api/transactions/correct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify({ transaction_id: txnId, new_category: newCat })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        showToast('✓ Category updated');
+        const txn = _allTransactions.find(t => t.txn_id === txnId);
+        if (txn) txn.category = newCat;
+        setTimeout(() => row.remove(), 1000);
+      } else {
+        showToast('Update failed', false);
+        catCell.innerHTML = origHtml;
+        btn.style.display = '';
+      }
+    } catch (_e) {
+      showToast('Network error', false);
+      catCell.innerHTML = origHtml;
+      btn.style.display = '';
+    }
+  });
+}
+
+// ---- Zone: Intelligence Alerts ----
+// CLAUDE CODE: Alerts from /api/anomalies/report — spike=red pill, drop=blue pill
+function renderAlerts(report) {
+  const container = document.getElementById('alerts-container');
+  if (!container) return;
+
+  const anomalies = report.anomalies || [];
+  if (!anomalies.length) {
+    container.innerHTML = `<span class="text-xs" style="color:var(--text-secondary)">No anomalies detected in your spending data.</span>`;
+    return;
+  }
+
+  container.innerHTML = anomalies.slice(0, 8).map(a => {
+    const isSpike = a.anomaly_type === 'spike';
+    const bg = isSpike ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)';
+    const border = isSpike ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)';
+    const color = isSpike ? '#f87171' : '#60a5fa';
+    const icon = isSpike ? 'warning' : 'trending_down';
+    return `
+      <div class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex items-center gap-1"
+        style="background:${bg};border:1px solid ${border};color:${color};flex-shrink:0">
+        <span class="material-symbols-outlined" style="font-size:14px">${icon}</span>
+        ${escHtml(a.explanation)}
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- Zone: Temporal Insights (MoM cards + fastest growing) ----
+// CLAUDE CODE: MoM cards from /api/insights/temporal mom_changes
+function renderTemporal(insights) {
+  const container = document.getElementById('mom-cards-container');
+  if (container) {
+    const momChanges = insights.mom_changes || [];
+    if (!momChanges.length) {
+      container.innerHTML = `<div class="card min-w-[240px]">${emptyState('Not enough data for MoM analysis')}</div>`;
+    } else {
+      container.innerHTML = momChanges.slice(0, 6).map(c => {
+        const isPos = c.change_percent >= 0;
+        const pctColor = isPos ? '#f87171' : '#4ade80';
+        const arrow = isPos ? '↑' : '↓';
+        return `
+          <div class="card min-w-[240px] flex flex-col gap-3">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-secondary)">${escHtml(c.category)}</span>
+              <span class="text-[10px] font-bold" style="color:${pctColor}">${arrow} ${Math.abs(c.change_percent).toFixed(0)}%</span>
+            </div>
+            <div class="text-lg font-data-mono" style="color:var(--text-primary)">${fmtAmt(c.current_spend)} <span class="text-xs font-normal" style="color:var(--text-secondary)">MoM</span></div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // CLAUDE CODE: Fastest growing banner from /api/insights/temporal fastest_growing
+  const bannerEl = document.getElementById('fastest-growing-banner');
+  if (!bannerEl) return;
+
+  const fg = insights.fastest_growing;
+  if (!fg) {
+    // Change 3: no upload CTA — simply collapse the banner when no data
+    bannerEl.style.display = 'none';
+    return;
+  }
+
+  bannerEl.innerHTML = `
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(74,222,128,0.2);color:#4ade80">
+        <span class="material-symbols-outlined">trending_up</span>
+      </div>
+      <div>
+        <h4 class="font-medium" style="color:var(--text-primary)">Fastest Growing: <span style="color:#4ade80">${escHtml(fg.category)}</span></h4>
+        <p class="text-xs" style="color:var(--text-secondary)">${escHtml(fg.explanation)}</p>
+      </div>
+    </div>
+    <button class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors flex-shrink-0"
+      style="border:1px solid rgba(74,222,128,0.3);color:#4ade80">View Details</button>
+  `;
+}
+
+// ---- Modal: Subscriptions (Task 5) ----
+// CLAUDE CODE: Modal populated from stored /api/subscriptions/audit response
+function openModal() {
+  const modal = document.getElementById('subs-modal');
+  if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; }
+  if (_subsReport) populateModal(_subsReport);
+}
+
+function populateModal(report) {
+  const body = document.getElementById('modal-sub-body');
+  const totalEl = document.getElementById('modal-total');
+  const showingEl = document.getElementById('modal-showing');
+
+  const subs = report.subscriptions || [];
+  const monthly = report.summary.total_monthly_cost || 0;
+
+  if (totalEl) totalEl.textContent = `${fmtAmt(monthly)}/mo total`;
+  if (showingEl) showingEl.textContent = `Showing ${subs.length} active service${subs.length !== 1 ? 's' : ''}`;
+
+  if (!body) return;
+  if (!subs.length) { body.innerHTML = emptyState('No subscriptions detected'); return; }
+
+  body.innerHTML = subs.map(s => {
+    const hasCostIncrease = (s.flags || []).includes('cost_increase');
+    return `
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-sm font-medium" style="color:var(--text-primary)">${escHtml(s.entity)}</p>
+          <span class="text-[10px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5 mt-1 inline-block"
+            style="color:var(--text-secondary);background:var(--border)">${escHtml(s.frequency)}</span>
+        </div>
+        <div class="text-right flex items-center gap-2">
+          ${hasCostIncrease
+            ? `<span class="font-bold flex items-center" style="color:#fb923c;font-size:12px">
+                 <span class="material-symbols-outlined" style="font-size:14px">arrow_upward</span>
+               </span>`
+            : ''}
+          <span class="font-data-mono" style="color:var(--text-primary)">${fmtAmt(s.avg_amount)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function closeModal(e) {
+  if (e.target.id === 'subs-modal') {
+    document.getElementById('subs-modal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+  }
+}
+
+function closeModalBtn() {
+  document.getElementById('subs-modal').classList.remove('active');
+  document.body.style.overflow = 'auto';
+}
+
+// ---- Main Dashboard Loader ----
+// CLAUDE CODE: Parallel fetch of all 6 endpoints on DOMContentLoaded
+async function loadDashboard() {
+  try {
+    const [txnRes, subRes, reimRes, reviewRes, anomRes, tempRes] = await Promise.all([
+      fetch('/api/transactions/classified'),   // → transactions table, KPIs, donut
+      fetch('/api/subscriptions/audit'),       // → subscriptions card + KPI + modal
+      fetch('/api/reimbursements/report'),     // → reimbursements card
+      fetch('/api/transactions/needs-review'), // → needs review card
+      fetch('/api/anomalies/report'),          // → intelligence alerts strip
+      fetch('/api/insights/temporal'),         // → MoM cards, fastest growing, trend chart
+    ]);
+
+    const [txnData, subData, reimData, reviewData, anomData, tempData] = await Promise.all([
+      txnRes.json(), subRes.json(), reimRes.json(),
+      reviewRes.json(), anomRes.json(), tempRes.json()
+    ]);
+
+    // CLAUDE CODE: Wire /api/transactions/classified → table + KPIs + donut
+    if (txnData.status === 'success') {
+      _allTransactions = txnData.transactions;
+      renderTransactions(_allTransactions);
+      renderKpis(_allTransactions);
+      renderCategoryDonut(_allTransactions);
+      updateDateRange(_allTransactions); // Change 6: update date range badge
+    } else {
+      const tbody = document.getElementById('txn-tbody');
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState()}</td></tr>`;
+      ['kpi-avg-monthly','kpi-top-cat-name','kpi-top-cat-amount'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      });
+      updateDateRange([]); // Change 6: show "No data uploaded" when no transactions
+    }
+
+    // CLAUDE CODE: Wire /api/subscriptions/audit → subscriptions card + KPI + modal
+    if (subData.status === 'success') {
+      _subsReport = subData.report;
+      renderSubsKpi(subData.report);
+      renderSubsCard(subData.report);
+    } else {
+      const body = document.getElementById('subs-card-body');
+      if (body) body.innerHTML = emptyState();
+      const countEl = document.getElementById('kpi-sub-count');
+      if (countEl) countEl.textContent = '0 Services';
+    }
+
+    // CLAUDE CODE: Wire /api/reimbursements/report → reimbursements card
+    if (reimData.status === 'success') {
+      renderReimb(reimData.report);
+    } else {
+      ['reimb-gross','reimb-net','reimb-saved'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '₹0.00';
+      });
+    }
+
+    // CLAUDE CODE: Wire /api/transactions/needs-review → needs review card
+    renderNeedsReview(reviewData.status === 'success' ? reviewData.transactions : []);
+
+    // CLAUDE CODE: Wire /api/anomalies/report → intelligence alerts strip
+    if (anomData.status === 'success') {
+      renderAlerts(anomData.report);
+    } else {
+      const alertsEl = document.getElementById('alerts-container');
+      if (alertsEl) alertsEl.innerHTML = `<span class="text-xs" style="color:var(--text-secondary)">Upload more statements for anomaly detection.</span>`;
+    }
+
+    // CLAUDE CODE: Wire /api/insights/temporal → MoM cards + fastest growing + trend chart
+    if (tempData.status === 'success') {
+      renderTemporal(tempData.insights);
+      renderMonthlyTrend(tempData.insights);
+    } else {
+      const mc = document.getElementById('mom-cards-container');
+      const fb = document.getElementById('fastest-growing-banner');
+      const tc = document.getElementById('monthlyTrendChart');
+      if (mc) mc.innerHTML = `<div class="card min-w-[240px]">${emptyState()}</div>`;
+      if (fb) fb.style.display = 'none'; // Change 3: hide banner instead of upload CTA
+      if (tc) tc.innerHTML = emptyState();
+    }
+
+  } catch (err) {
+    console.error('Dashboard load error:', err);
+    const tbody = document.getElementById('txn-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState('Error loading data — please refresh the page')}</td></tr>`;
+  }
+}
+
+// ---- Change 3: Theme toggle ----
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
+  _syncThemeUI(isLight);
+  // re-theme Plotly charts after toggle
+  const th = getPlotlyTheme();
+  const chartUpdate = {
+    plot_bgcolor:  th.plot_bgcolor,
+    paper_bgcolor: th.paper_bgcolor,
+    'font.color':  th.font_color,
+  };
+  if (document.getElementById('categoryDonut')?.data?.length) {
+    // Change 1: also update donut annotation colour
+    Plotly.relayout('categoryDonut', {
+      ...chartUpdate,
+      annotations: [{
+        font: { size: 16, color: th.font_color_primary, family: 'JetBrains Mono' },
+        showarrow: false,
+        text: document.getElementById('categoryDonut').layout?.annotations?.[0]?.text || '',
+        x: 0.5, y: 0.5
+      }]
+    });
+  }
+  if (document.getElementById('monthlyTrendChart')?.data?.length) {
+    Plotly.relayout('monthlyTrendChart', chartUpdate);
+  }
+}
+function _syncThemeUI(isLight) {
+  const icon   = document.getElementById('theme-icon');
+  if (icon) icon.textContent = isLight ? '☀' : '☾';
+  // circle slides via CSS (html.light-mode .theme-toggle-pill-circle { transform: translateX(24px) })
+}
+
+// ---- Change 3: Profile dropdown ----
+function toggleProfileDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profile-dropdown');
+  if (!dd) return;
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close dropdown when clicking anywhere outside it
+document.addEventListener('click', () => {
+  const dd = document.getElementById('profile-dropdown');
+  if (dd) dd.style.display = 'none';
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  _syncThemeUI(document.documentElement.classList.contains('light-mode'));
+  loadDashboard();
+});
+</script>
+
+<!-- ── AI Chat Widget (ArthaLens AI) ──────────────────────────────────────── -->
+<style>
+  .ai-msg-user {
+    align-self: flex-end;
+    background: rgba(74,222,128,0.16);
+    border: 1px solid rgba(74,222,128,0.30);
+    color: var(--text-primary);
+    border-radius: 12px 12px 2px 12px;
+    padding: 8px 12px; max-width: 80%; font-size: 13px; line-height: 1.45;
+  }
+  .ai-msg-bot {
+    align-self: flex-start;
+    background: rgba(74,222,128,0.06);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 12px 12px 12px 2px;
+    padding: 8px 12px; max-width: 80%; font-size: 13px; line-height: 1.45;
+  }
+  .ai-msg-loading { color: var(--text-secondary); font-style: italic; }
+  .ai-msg-error { border-color: rgba(255,68,68,0.40) !important; color: #ff6b6b !important; }
+  #aiChatPanel.open { display: flex !important; flex-direction: column; animation: aiSlideUp 0.2s ease; }
+  @keyframes aiSlideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+  #aiChatFab { transition: transform 0.2s; }
+  #aiChatFab:hover { transform: scale(1.08); }
+</style>
+
+<button id="aiChatFab" onclick="toggleAiChat()" aria-label="Open ArthaLens AI"
+  style="position:fixed;bottom:28px;right:28px;z-index:1000;width:56px;height:56px;border-radius:50%;background:#4ade80;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(74,222,128,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;color:#0d0f0d;">
+  ✦
+</button>
+
+<div id="aiChatPanel"
+  style="position:fixed;bottom:96px;right:28px;z-index:999;width:360px;height:480px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:none;">
+
+  <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="color:#4ade80;font-size:18px;">✦</span>
+      <span style="font-weight:700;color:var(--text-primary);font-size:15px;">ArthaLens AI</span>
+      <span style="font-size:10px;padding:2px 6px;background:rgba(74,222,128,0.12);color:#4ade80;border-radius:4px;border:1px solid rgba(74,222,128,0.25);">Beta</span>
+    </div>
+    <button onclick="toggleAiChat()" aria-label="Close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;line-height:1;padding:0;">✕</button>
+  </div>
+
+  <div style="padding:8px 16px 10px;color:var(--text-secondary);font-size:12px;">Ask anything about your spending</div>
+
+  <div id="aiChatHistory"
+    style="display:flex;flex-direction:column;gap:8px;padding:12px 16px;overflow-y:auto;height:calc(480px - 180px);">
+    <div class="ai-msg-bot">Hi! Try asking: <em>How much did I spend on food last month?</em> or <em>Who did I pay the most?</em></div>
+  </div>
+
+  <div style="position:absolute;bottom:0;width:100%;padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;box-sizing:border-box;background:var(--card);border-radius:0 0 16px 16px;">
+    <input id="aiQuestionInput" type="text" placeholder="Ask about your spending..." maxlength="500"
+      style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;"
+      onkeydown="if(event.key==='Enter') submitAiQuery()">
+    <button id="aiSendBtn" onclick="submitAiQuery()"
+      style="background:#4ade80;color:#0d0f0d;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;">
+      Send
+    </button>
+  </div>
+</div>
+
+<script>
+function aiEsc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleAiChat() {
+  const panel = document.getElementById('aiChatPanel');
+  const opened = panel.classList.toggle('open');
+  if (opened) setTimeout(() => document.getElementById('aiQuestionInput')?.focus(), 50);
+}
+
+async function submitAiQuery() {
+  const input = document.getElementById('aiQuestionInput');
+  const question = input.value.trim();
+  if (!question) return;
+
+  const history = document.getElementById('aiChatHistory');
+  const btn = document.getElementById('aiSendBtn');
+
+  history.innerHTML += `<div class="ai-msg-user">${aiEsc(question)}</div>`;
+  input.value = '';
+  btn.disabled = true;
+
+  const loadId = 'ai-load-' + Date.now();
+  history.innerHTML += `<div class="ai-msg-bot ai-msg-loading" id="${loadId}">✦ Thinking…</div>`;
+  history.scrollTop = history.scrollHeight;
+
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const res = await fetch('/api/ai/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify({ question })
+    });
+    const data = await res.json();
+    document.getElementById(loadId)?.remove();
+    // Route returns { status:'success', answer } or { status:'error', message }
+    if (data.status === 'success') {
+      history.innerHTML += `<div class="ai-msg-bot">✦ ${aiEsc(data.answer)}</div>`;
+    } else {
+      history.innerHTML += `<div class="ai-msg-bot ai-msg-error">⚠ ${aiEsc(data.message || 'Something went wrong.')}</div>`;
+    }
+  } catch (e) {
+    document.getElementById(loadId)?.remove();
+    history.innerHTML += `<div class="ai-msg-bot ai-msg-error">⚠ Connection error. Try again.</div>`;
+  } finally {
+    btn.disabled = false;
+    history.scrollTop = history.scrollHeight;
+  }
+}
+</script>
+</body>
+</html>

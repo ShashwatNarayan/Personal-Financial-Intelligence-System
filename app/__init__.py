@@ -53,6 +53,9 @@ def create_app(config_object='config.Config'):
     from app.main import main_bp
     app.register_blueprint(main_bp)
 
+    from app.ai import ai_bp
+    app.register_blueprint(ai_bp)
+
     from app.cli import deduplicate_cmd, clear_data_cmd
     app.cli.add_command(deduplicate_cmd)
     app.cli.add_command(clear_data_cmd)

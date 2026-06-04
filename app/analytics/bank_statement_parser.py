@@ -240,7 +240,7 @@ class HDFCStatementParser:
 
         # Last resort: try positional mapping
         # HDFC format: Date | Narration | Ref | Value Dt | Withdrawal | Deposit | Balance
-        print("⚠️  Trying positional column mapping...")
+        print("[WARN] Trying positional column mapping...")
         cols = list(df.columns)
         positional_map = {}
 
@@ -317,7 +317,7 @@ class HDFCStatementParser:
                 return pd.Series([0] * len(df))
             return (
                 series.astype(str)
-                .str.replace('[₹,\s]', '', regex=True)
+                .str.replace(r'[\u20b9,\s]', '', regex=True)
                 .pipe(pd.to_numeric, errors='coerce')
                 .fillna(0)
             )
@@ -407,7 +407,7 @@ class HDFCStatementParser:
 
         removed = initial - len(df)
         if removed > 0:
-            print(f"⚠️  Removed {removed} invalid rows")
+            print(f"[WARN] Removed {removed} invalid rows")
 
         return df
 
@@ -420,7 +420,7 @@ class BankStatementValidator:
         self.warnings = []
 
     def validate(self, df):
-        print("\n🔍 Running validation checks...")
+        print("\n[INFO] Running validation checks...")
         self.errors = []
         self.warnings = []
 
@@ -447,7 +447,7 @@ class BankStatementValidator:
             return False
 
         if self.warnings:
-            print("\n⚠️  VALIDATION WARNINGS:")
+            print("\n[WARN] VALIDATION WARNINGS:")
             for w in self.warnings:
                 print(f"   WARNING: {w}")
 
@@ -466,8 +466,8 @@ def test_parser(filepath):
     if is_valid:
         print("\n  Sample Data (first 5 rows):")
         print(df[['date', 'merchant', 'amount', 'transaction_type']].head())
-        print(f"\n  Debits:  ₹{df[df['transaction_type']=='debit']['amount'].sum():,.2f}")
-        print(f"   Credits: ₹{df[df['transaction_type']=='credit']['amount'].sum():,.2f}")
+        print(f"\n  Debits:  Rs.{df[df['transaction_type']=='debit']['amount'].sum():,.2f}")
+        print(f"   Credits: Rs.{df[df['transaction_type']=='credit']['amount'].sum():,.2f}")
         print(f"\n  Top Merchants:")
         print(df['merchant'].value_counts().head(8))
 

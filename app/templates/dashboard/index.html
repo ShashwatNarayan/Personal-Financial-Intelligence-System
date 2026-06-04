@@ -326,6 +326,139 @@
 
 <!-- Toast container -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100" id="toast-container"></div>
+
+<!-- ── AI Chat Widget ─────────────────────────────────────────────────────── -->
+<style>
+.ai-msg-user {
+  align-self: flex-end;
+  background: #4ade8022;
+  border: 1px solid #4ade8044;
+  color: inherit;
+  border-radius: 12px 12px 2px 12px;
+  padding: 8px 12px;
+  max-width: 80%;
+  font-size: 13px;
+}
+.ai-msg-bot {
+  align-self: flex-start;
+  background: rgba(74,222,128,0.06);
+  border: 1px solid #2a2e2a;
+  border-radius: 12px 12px 12px 2px;
+  padding: 8px 12px;
+  max-width: 80%;
+  font-size: 13px;
+}
+.ai-msg-loading {
+  align-self: flex-start;
+  background: rgba(74,222,128,0.06);
+  border: 1px solid #2a2e2a;
+  border-radius: 12px 12px 12px 2px;
+  padding: 8px 12px;
+  max-width: 80%;
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+}
+.ai-msg-error { border-color: #ff444440 !important; color: #ff6b6b; }
+#aiChatPanel.open { display: flex !important; flex-direction: column; animation: slideUp 0.2s ease; }
+@keyframes slideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+#aiChatFab { transition: transform 0.2s; }
+#aiChatFab:hover { transform: scale(1.08); }
+html:not(.dark) #aiChatPanel { background: white; border-color: #e5e5e5; }
+html:not(.dark) .ai-msg-bot { background: #f5f5f5; border-color: #e5e5e5; }
+</style>
+
+<!-- FAB trigger -->
+<button id="aiChatFab" onclick="toggleAiChat()"
+  style="position:fixed;bottom:28px;right:28px;z-index:1000;width:56px;height:56px;border-radius:50%;background:#4ade80;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(74,222,128,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;color:#0d0f0d;">
+  ✦
+</button>
+
+<!-- Chat panel -->
+<div id="aiChatPanel"
+  style="position:fixed;bottom:96px;right:28px;z-index:999;width:360px;height:480px;background:#161a16;border:1px solid #2a2e2a;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:none;">
+
+  <!-- Header -->
+  <div style="padding:16px;border-bottom:1px solid #2a2e2a;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="color:#4ade80;font-size:18px;">✦</span>
+      <span style="font-weight:700;color:#fff;font-size:15px;">ArthaLens AI</span>
+      <span style="font-size:10px;padding:2px 6px;background:rgba(74,222,128,0.12);color:#4ade80;border-radius:4px;border:1px solid rgba(74,222,128,0.25);">Beta</span>
+    </div>
+    <button onclick="toggleAiChat()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px;line-height:1;padding:0;">✕</button>
+  </div>
+
+  <!-- Subtext -->
+  <div style="padding:8px 16px 10px;color:#6b7280;font-size:12px;">Ask anything about your spending</div>
+
+  <!-- Chat history -->
+  <div id="aiChatHistory"
+    style="display:flex;flex-direction:column;gap:8px;padding:12px 16px;overflow-y:auto;height:calc(480px - 180px);">
+    <div class="ai-msg-bot">Hi! Try asking: <em>How much did I spend on food last month?</em> or <em>Who did I pay the most?</em></div>
+  </div>
+
+  <!-- Input row -->
+  <div style="position:absolute;bottom:0;width:100%;padding:12px 16px;border-top:1px solid #2a2e2a;display:flex;gap:8px;box-sizing:border-box;background:#161a16;border-radius:0 0 16px 16px;">
+    <input id="aiQuestionInput" type="text" placeholder="Ask about your spending..."
+      style="flex:1;background:#0d0f0d;border:1px solid #2a2e2a;border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;outline:none;"
+      onkeydown="if(event.key==='Enter') submitAiQuery()">
+    <button id="aiSendBtn" onclick="submitAiQuery()"
+      style="background:#4ade80;color:#0d0f0d;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;">
+      Send
+    </button>
+  </div>
+</div>
+
+<script>
+function toggleAiChat() {
+  const panel = document.getElementById('aiChatPanel');
+  panel.classList.toggle('open');
+}
+
+async function submitAiQuery() {
+  const input = document.getElementById('aiQuestionInput');
+  const question = input.value.trim();
+  if (!question) return;
+
+  const history = document.getElementById('aiChatHistory');
+  const btn = document.getElementById('aiSendBtn');
+
+  history.innerHTML += `<div class="ai-msg-user">${escapeHtml(question)}</div>`;
+  input.value = '';
+  btn.disabled = true;
+
+  const loadId = 'ai-load-' + Date.now();
+  history.innerHTML += `<div class="ai-msg-bot ai-msg-loading" id="${loadId}">✦ Thinking...</div>`;
+  history.scrollTop = history.scrollHeight;
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                      document.querySelector('input[name="csrf_token"]')?.value || '';
+    const res = await fetch('/api/ai/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ question })
+    });
+    const data = await res.json();
+    document.getElementById(loadId)?.remove();
+    if (data.error) {
+      history.innerHTML += `<div class="ai-msg-bot ai-msg-error">⚠ ${escapeHtml(data.error)}</div>`;
+    } else {
+      history.innerHTML += `<div class="ai-msg-bot">✦ ${escapeHtml(data.answer)}</div>`;
+    }
+  } catch(e) {
+    document.getElementById(loadId)?.remove();
+    history.innerHTML += `<div class="ai-msg-bot ai-msg-error">⚠ Connection error. Try again.</div>`;
+  } finally {
+    btn.disabled = false;
+    history.scrollTop = history.scrollHeight;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
 {% endblock %}
 
 {% block scripts %}
@@ -386,13 +519,19 @@ function buildSubModal(subs) {
 
   const flagLabel = { cost_increase: '↑ Cost rising', long_running: 'Long running', high_cost: 'High cost', irregular_pattern: 'Irregular' };
 
+  const categoryColor = { Entertainment: '#a78bfa', Utilities: '#38bdf8', Healthcare: '#34d399', Education: '#fb923c', Services: '#94a3b8' };
+
   function renderRow(s) {
     const badges = (s.flags || []).map(f =>
       `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#1e293b;color:#6b7280;border:1px solid #31394d;margin-left:4px">${flagLabel[f] || f}</span>`
     ).join('');
+    const catColor = categoryColor[s.category] || '#94a3b8';
+    const catBadge = s.category
+      ? `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#1e293b;color:${catColor};border:1px solid ${catColor}55;margin-left:4px">${s.category}</span>`
+      : '';
     return `
       <tr style="border-bottom:1px solid #31394d20">
-        <td style="padding:10px 8px;color:#fff;font-weight:500">${s.entity}${badges}</td>
+        <td style="padding:10px 8px;color:#fff;font-weight:500">${s.entity}${badges}${catBadge}</td>
         <td style="padding:10px 8px;color:#6b7280;font-size:11px">${s.category}</td>
         <td style="padding:10px 8px;color:#6b7280;font-size:11px;text-transform:capitalize">${s.frequency}</td>
         <td style="padding:10px 8px;color:#14b8a6;font-weight:600;text-align:right">₹${s.avg_amount.toFixed(0)}</td>

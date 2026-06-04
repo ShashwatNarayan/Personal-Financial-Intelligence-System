@@ -11,6 +11,15 @@ from collections import defaultdict
 class SubscriptionAuditor:
     """Detect and audit recurring subscriptions"""
 
+    KNOWN_NON_SUBSCRIPTIONS = {
+        'kims new',
+        'blinkit', 'grofers', 'bigbasket', 'zepto', 'instamart', 'swiggy instamart',
+        'amazon', 'flipkart', 'meesho', 'myntra', 'ajio', 'nykaa',
+        'probo', 'dream11', 'mpl', 'winzo', 'my11circle',
+        'zerodha', 'groww', 'upstox', 'kuvera', 'smallcase',
+        'zomato', 'swiggy', 'dunzo'
+    }
+
     def __init__(self, df, min_occurrences=3, amount_tolerance=0.15):
         """
         Args:
@@ -22,10 +31,10 @@ class SubscriptionAuditor:
         self.min_occurrences = min_occurrences
         self.amount_tolerance = amount_tolerance
 
-        # Subscription-heavy categories (expanded to include Shopping for app stores)
+        # Subscription-heavy categories
         self.subscription_categories = [
-            'Entertainment', 'Utilities', 'Services', 'Shopping',
-            'Healthcare', 'Education', 'Other'
+            'Entertainment', 'Utilities', 'Services',
+            'Healthcare', 'Education'
         ]
 
         self._prepare_data()
@@ -42,7 +51,8 @@ class SubscriptionAuditor:
         self.df = self.df[self.df['category'].isin(self.subscription_categories)]
 
         # Filter out P2P (persons)
-        self.df = self.df[self.df.get('entity_type', 'unknown') != 'person']
+        if 'entity_type' in self.df.columns:
+            self.df = self.df[self.df['entity_type'] != 'person']
 
         # Sort by entity and date
         self.df = self.df.sort_values(['entity_name', 'date'])
@@ -57,6 +67,9 @@ class SubscriptionAuditor:
         # Group by entity
         for entity in self.df['entity_name'].unique():
             if entity == 'Unknown':
+                continue
+
+            if any(block in entity.lower() for block in self.KNOWN_NON_SUBSCRIPTIONS):
                 continue
 
             entity_txns = self.df[self.df['entity_name'] == entity]

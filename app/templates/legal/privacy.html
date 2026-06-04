@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy — Arthalens{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Dark-theme variables (base.html / Bootstrap does not define these) */
+  :root {
+    --bg: #0d0f0d;
+    --card: #131a13;
+    --border: #1f2a1f;
+    --text-primary: #f0f0f0;
+    --text-secondary: #6b7280;
+    --accent: #4ade80;
+  }
+  body { background-color: var(--bg); color: var(--text-primary); }
+
+  .legal-doc h1 { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
+  .legal-doc h2 { font-size: 21px; font-weight: 600; margin: 32px 0 12px; }
+  .legal-doc h3 { font-size: 16px; font-weight: 600; margin: 22px 0 8px; }
+  .legal-doc p  { margin: 12px 0; }
+  .legal-doc ul { margin: 12px 0 12px 24px; }
+  .legal-doc li { margin: 6px 0; }
+  .legal-doc a  { color: var(--accent); }
+  .legal-doc code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  .legal-doc hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+  .legal-doc .muted { color: var(--text-secondary); }
+  .legal-doc table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  .legal-doc th, .legal-doc td {
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .legal-doc th { background: rgba(255,255,255,0.04); }
+  .legal-doc .warning-box {
+    background: rgba(251,191,36,0.1);
+    border-left: 3px solid #fbbf24;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 16px 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-doc" style="max-width: 800px; margin: 40px auto; padding: 0 24px; color: var(--text-primary); line-height: 1.8;">
+
+  <h1>Privacy Policy</h1>
+  <p class="muted"><strong>Personal Financial Intelligence System</strong><br>Last updated: June 2026</p>
+
+  <hr>
+
+  <h2>1. Who We Are</h2>
+  <p>This Privacy Policy applies to the Personal Financial Intelligence System ("the Platform", "we", "us"), operated by <strong>Shashwat Narayan</strong>, an individual developer based in Jawahar Nagar, Shameerpet Mandal, Hyderabad, Telangana 500078, India.</p>
+  <p>Contact for privacy matters: <strong>shashwatn2802@gmail.com</strong></p>
+
+  <hr>
+
+  <h2>2. What This Policy Covers</h2>
+  <p>This policy explains what personal and financial data we collect, how we use it, who we share it with (including third-party AI services), how long we keep it, and your rights under India's Digital Personal Data Protection Act, 2023 ("DPDP Act") and the Information Technology Act, 2000.</p>
+  <p>By using this Platform, you consent to the practices described in this policy.</p>
+
+  <hr>
+
+  <h2>3. What Data We Collect</h2>
+
+  <h3>3a. Account Data</h3>
+  <p>When you register, we collect:</p>
+  <ul>
+    <li><strong>Email address</strong> — used to identify your account and for password reset</li>
+    <li><strong>Password</strong> — stored only as a one-way cryptographic hash (bcrypt/Werkzeug). Your plaintext password is never stored.</li>
+    <li><strong>Account creation timestamp</strong> and <strong>last login timestamp</strong></li>
+  </ul>
+  <p>We do not collect your name, phone number, address, date of birth, or any government ID.</p>
+
+  <h3>3b. Financial Transaction Data</h3>
+  <p>When you upload a bank statement, we extract and store the following from your statement:</p>
+  <ul>
+    <li>Transaction date</li>
+    <li>Transaction description (truncated to 200 characters)</li>
+    <li>Merchant / payee name (extracted from description)</li>
+    <li>Transaction amount (INR)</li>
+    <li>Transaction type (debit or credit)</li>
+    <li>Assigned spending category (e.g. Food &amp; Dining, Transport)</li>
+    <li>Merchant type classification (merchant / person / platform)</li>
+    <li>Confidence level of categorization</li>
+    <li>Reimbursement status</li>
+  </ul>
+  <p>We also store:</p>
+  <ul>
+    <li>A SHA-256 hash of the uploaded file (to prevent duplicate uploads)</li>
+    <li>The original filename of your uploaded statement</li>
+    <li>A record of any category corrections you make, including the old and new category</li>
+  </ul>
+  <p><strong>This is sensitive financial data.</strong> We treat it with the highest level of care.</p>
+
+  <h3>3c. Usage Data (Logs)</h3>
+  <p>Our server logs may capture:</p>
+  <ul>
+    <li>Aggregate financial summaries (total spend, monthly averages) for debugging</li>
+    <li>Merchant names when you manually correct a transaction category</li>
+    <li>Full error tracebacks if a processing error occurs (which may incidentally contain transaction data)</li>
+    <li>Your uploaded statement filename (which may contain your bank account number)</li>
+  </ul>
+  <p>These logs are stored on our hosting provider's infrastructure (Render) and are not shared externally.</p>
+
+  <h3>3d. Session Data</h3>
+  <p>We use a browser session cookie (named <code>session</code>) to keep you logged in. This cookie:</p>
+  <ul>
+    <li>Contains only your internal user ID and a session token — no financial data</li>
+    <li>Is signed (tamper-proof) but not encrypted</li>
+    <li>Expires when you close your browser (we do not use persistent "remember me" cookies)</li>
+    <li>Is protected by CSRF tokens on all form submissions</li>
+  </ul>
+
+  <hr>
+
+  <h2>4. How We Use Your Data</h2>
+  <table>
+    <thead>
+      <tr><th>Purpose</th><th>Data Used</th><th>Legal Basis</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Providing the service (parsing, categorizing, displaying your transactions)</td><td>Financial transaction data</td><td>Consent (DPDP Act)</td></tr>
+      <tr><td>AI-powered query feature (answering natural language questions about your spending)</td><td>See Section 5</td><td>Consent — explicit disclosure below</td></tr>
+      <tr><td>Preventing duplicate uploads</td><td>SHA-256 file hash</td><td>Legitimate interest</td></tr>
+      <tr><td>Security and fraud prevention</td><td>Session data, login timestamps</td><td>Legitimate interest</td></tr>
+      <tr><td>Debugging and error resolution</td><td>Server logs</td><td>Legitimate interest</td></tr>
+      <tr><td>Improving categorization accuracy per user</td><td>Entity memory (merchant→category mappings)</td><td>Consent</td></tr>
+    </tbody>
+  </table>
+  <p>We do <strong>not</strong> use your data for advertising, profiling for third parties, or any purpose not listed above.</p>
+
+  <hr>
+
+  <h2>5. AI Feature — What Gets Sent to Google</h2>
+
+  <div class="warning-box">
+    <p style="margin:0">⚠️ <strong>This section requires your careful attention before using the AI query feature.</strong></p>
+  </div>
+
+  <p>The Platform includes an AI assistant that lets you ask natural language questions about your spending (e.g. "How much did I spend on food last month?"). This feature uses <strong>Google's Gemini API</strong>.</p>
+
+  <p><strong>What is sent to Google, depending on your question type:</strong></p>
+  <table>
+    <thead>
+      <tr><th>Question Type</th><th>Data Sent to Google</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Specific data queries ("how much did I spend on food?")</td><td>Your question + up to 20 actual transaction rows (merchant names, amounts, dates, categories)</td><td>"Food &amp; Dining, Swiggy, ₹340, 2026-05-01"</td></tr>
+      <tr><td>Opinion/analysis questions ("what do you think of my spending?")</td><td>Your question + aggregated summary only (total spend, avg monthly, top 3 category totals — no individual transactions)</td><td>"Total: ₹4.4L, Avg monthly: ₹36k, Top: Transfer/P2P, Food, Shopping"</td></tr>
+      <tr><td>Subscription questions ("how much do I spend on subscriptions?")</td><td><strong>Nothing — processed entirely on our servers, no data sent to Google</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <p style="margin:0 0 8px"><strong>⚠️ Critical disclosure — Free Tier Terms:</strong></p>
+    <p style="margin:0">We currently use Google's free tier Gemini API. Under Google's free tier terms, prompts and responses submitted to the API <strong>may be used by Google to improve their products and machine learning models</strong>, and may be subject to human review by Google. This means transaction data included in AI queries (see table above) <strong>may be seen or used by Google</strong>.</p>
+  </div>
+
+  <p>If this is unacceptable to you, <strong>do not use the AI query feature</strong>. All other features of the Platform (categorization, charts, subscriptions, anomaly detection) operate entirely on our servers and do not send your data to Google.</p>
+  <p>We plan to upgrade to a paid Gemini API tier in the future, which eliminates Google's use of data for model training.</p>
+
+  <hr>
+
+  <h2>6. Third Parties We Share Data With</h2>
+  <p>We do not sell your data. We share data only with the following infrastructure providers:</p>
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Purpose</th><th>Data Shared</th><th>Location</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Neon</strong> (PostgreSQL)</td><td>Database storage</td><td>All account and transaction data</td><td>Singapore (AWS ap-southeast-1)</td></tr>
+      <tr><td><strong>Render</strong></td><td>Application hosting</td><td>All data processed by the app</td><td>United States</td></tr>
+      <tr><td><strong>Google (Gemini API)</strong></td><td>AI query feature only</td><td>See Section 5</td><td>United States / Global</td></tr>
+      <tr><td><strong>Google Fonts / CDN</strong></td><td>Font and UI loading in your browser</td><td>Your IP address and browser info (via browser request)</td><td>United States</td></tr>
+      <tr><td><strong>Plotly CDN, Bootstrap CDN, Tailwind CDN</strong></td><td>UI libraries loaded in your browser</td><td>Your IP address and browser info (via browser request)</td><td>Various</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Cross-Border Data Transfers</h3>
+  <p>Your data is stored on servers in <strong>Singapore</strong> (Neon) and processed on servers in the <strong>United States</strong> (Render, Google). By using this Platform, you consent to this cross-border transfer of your personal and financial data.</p>
+
+  <hr>
+
+  <h2>7. Data Retention</h2>
+  <table>
+    <thead>
+      <tr><th>Data Type</th><th>Retention Period</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Account data (email, password hash)</td><td>Until you delete your account</td></tr>
+      <tr><td>Transaction data</td><td>Until you delete your account or request erasure</td></tr>
+      <tr><td>Entity memory (learned merchant categories)</td><td>Until you delete your account</td></tr>
+      <tr><td>Category correction history</td><td>Until you delete your account</td></tr>
+      <tr><td>Upload log (filename, file hash)</td><td>Until you delete your account</td></tr>
+      <tr><td>Server logs</td><td>As per Render's log retention policy (typically 7–30 days)</td></tr>
+      <tr><td>Uploaded bank statement file</td><td>Deleted immediately after parsing (within seconds). Not stored permanently.</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <h2>8. Your Rights Under DPDP Act 2023</h2>
+  <p>As a data principal under India's DPDP Act, you have the right to:</p>
+  <ul>
+    <li><strong>Access</strong> — request a copy of all personal data we hold about you</li>
+    <li><strong>Correction</strong> — request correction of inaccurate data</li>
+    <li><strong>Erasure</strong> — request deletion of all your data ("right to be forgotten")</li>
+    <li><strong>Grievance redressal</strong> — lodge a complaint with us directly</li>
+    <li><strong>Withdraw consent</strong> — withdraw consent for data processing at any time (this will prevent you from using the Platform)</li>
+    <li><strong>Nominate</strong> — nominate another person to exercise rights on your behalf in the event of death or incapacity</li>
+  </ul>
+  <p><strong>To exercise any of these rights</strong>, email us at <strong>shashwatn2802@gmail.com</strong> with the subject line "DPDP Data Request". We will respond within 30 days.</p>
+  <p><strong>Note on account deletion:</strong> There is currently no self-service account deletion button in the app. To request full deletion of your account and all associated data, please email us at the address above. We will permanently delete all your data within 7 business days.</p>
+
+  <hr>
+
+  <h2>9. Data Security</h2>
+  <p>We implement the following security measures:</p>
+  <ul>
+    <li>Passwords stored as cryptographic hashes only (never plaintext)</li>
+    <li>Database connections encrypted in transit (TLS/SSL)</li>
+    <li>Session cookies are CSRF-protected and signed</li>
+    <li>Separate read-only database role used for AI queries (cannot modify your data)</li>
+    <li>Deduplication fingerprints prevent duplicate data injection</li>
+  </ul>
+  <p><strong>Known limitations:</strong> Our session cookies are not currently flagged as <code>Secure</code> (HTTPS-only), meaning they could theoretically be transmitted over unencrypted HTTP connections. We recommend always accessing the Platform via HTTPS.</p>
+
+  <hr>
+
+  <h2>10. Children's Privacy</h2>
+  <p>This Platform is not intended for individuals under the age of 18. We do not knowingly collect data from minors. If you believe a minor has created an account, please contact us and we will delete the account immediately.</p>
+
+  <hr>
+
+  <h2>11. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy as the Platform evolves. We will notify you of material changes by updating the "Last updated" date at the top of this document. Continued use of the Platform after changes constitutes acceptance of the updated policy.</p>
+
+  <hr>
+
+  <h2>12. Grievance Officer</h2>
+  <p>In accordance with the Information Technology Act, 2000 and DPDP Act, 2023:</p>
+  <p>
+    <strong>Grievance Officer:</strong> Shashwat Narayan<br>
+    <strong>Email:</strong> shashwatn2802@gmail.com<br>
+    <strong>Address:</strong> Jawahar Nagar, Shameerpet Mandal, Hyderabad, Telangana 500078, India<br>
+    <strong>Response time:</strong> Within 30 days of receiving a complaint
+  </p>
+
+</div>
+{% endblock %}

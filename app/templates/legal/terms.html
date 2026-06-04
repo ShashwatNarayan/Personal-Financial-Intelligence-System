@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service — Arthalens{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Dark-theme variables (base.html / Bootstrap does not define these) */
+  :root {
+    --bg: #0d0f0d;
+    --card: #131a13;
+    --border: #1f2a1f;
+    --text-primary: #f0f0f0;
+    --text-secondary: #6b7280;
+    --accent: #4ade80;
+  }
+  body { background-color: var(--bg); color: var(--text-primary); }
+
+  .legal-doc h1 { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
+  .legal-doc h2 { font-size: 21px; font-weight: 600; margin: 32px 0 12px; }
+  .legal-doc h3 { font-size: 16px; font-weight: 600; margin: 22px 0 8px; }
+  .legal-doc p  { margin: 12px 0; }
+  .legal-doc ul { margin: 12px 0 12px 24px; }
+  .legal-doc li { margin: 6px 0; }
+  .legal-doc a  { color: var(--accent); }
+  .legal-doc code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  .legal-doc hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+  .legal-doc .muted { color: var(--text-secondary); }
+  .legal-doc table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  .legal-doc th, .legal-doc td {
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .legal-doc th { background: rgba(255,255,255,0.04); }
+  .legal-doc .warning-box {
+    background: rgba(251,191,36,0.1);
+    border-left: 3px solid #fbbf24;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 16px 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-doc" style="max-width: 800px; margin: 40px auto; padding: 0 24px; color: var(--text-primary); line-height: 1.8;">
+
+  <h1>Terms of Service</h1>
+  <p class="muted"><strong>Personal Financial Intelligence System</strong><br>Last updated: June 2026</p>
+
+  <hr>
+
+  <h2>1. Acceptance of Terms</h2>
+  <p>By registering for or using the Personal Financial Intelligence System ("the Platform"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.</p>
+  <p>These Terms constitute a legally binding agreement between you and <strong>Shashwat Narayan</strong>, the individual operator of this Platform, based in Jawahar Nagar, Shameerpet Mandal, Hyderabad, Telangana 500078, India.</p>
+
+  <hr>
+
+  <h2>2. What the Platform Does</h2>
+  <p>The Platform is a personal finance analytics tool that:</p>
+  <ul>
+    <li>Parses HDFC and SBI bank statements uploaded by you</li>
+    <li>Automatically categorizes your transactions using a rule-based ML pipeline</li>
+    <li>Provides spending insights, anomaly detection, subscription tracking, and trend analysis</li>
+    <li>Offers an AI-powered natural language query feature (powered by Google Gemini)</li>
+  </ul>
+  <p><strong>The Platform does not:</strong></p>
+  <ul>
+    <li>Access your bank account directly</li>
+    <li>Make any financial transactions on your behalf</li>
+    <li>Provide regulated financial advice, investment advice, or tax advice</li>
+    <li>Store your original bank statement file (it is deleted after parsing)</li>
+  </ul>
+
+  <hr>
+
+  <h2>3. Eligibility</h2>
+  <p>You must be:</p>
+  <ul>
+    <li>At least 18 years of age</li>
+    <li>A resident of India or accessing the Platform for personal use related to Indian bank accounts</li>
+    <li>Capable of entering into a legally binding contract under Indian law</li>
+  </ul>
+  <p>By using the Platform, you represent that you meet these requirements.</p>
+
+  <hr>
+
+  <h2>4. Your Account</h2>
+  <p><strong>Registration:</strong> You must provide a valid email address and a password of at least 8 characters. You are responsible for keeping your credentials confidential.</p>
+  <p><strong>One account per person:</strong> You may not create accounts on behalf of others or operate multiple accounts for the same individual.</p>
+  <p><strong>Accuracy:</strong> You are responsible for the accuracy of data you upload. The Platform's analysis is only as accurate as the statements you provide.</p>
+  <p><strong>Security:</strong> You must notify us immediately at <strong>shashwatn2802@gmail.com</strong> if you suspect unauthorized access to your account.</p>
+
+  <hr>
+
+  <h2>5. Acceptable Use</h2>
+  <p>You agree to use the Platform only for lawful personal finance management purposes. You must not:</p>
+  <ul>
+    <li>Upload bank statements belonging to another person without their explicit consent</li>
+    <li>Attempt to reverse-engineer, scrape, or extract data from the Platform in bulk</li>
+    <li>Use the Platform to process data for any commercial purpose without our written consent</li>
+    <li>Attempt to circumvent security measures, inject malicious code, or exploit vulnerabilities</li>
+    <li>Use the AI query feature to attempt to extract other users' data</li>
+    <li>Upload files that are not genuine bank statements in supported formats</li>
+  </ul>
+
+  <hr>
+
+  <h2>6. Financial Data and Disclaimer</h2>
+  <div class="warning-box">
+    <p style="margin:0"><strong>⚠️ IMPORTANT — NOT FINANCIAL ADVICE</strong></p>
+  </div>
+  <p>All analysis, categorization, spending summaries, and AI-generated responses provided by this Platform are for <strong>informational and personal reference purposes only</strong>. They do not constitute:</p>
+  <ul>
+    <li>Financial advice</li>
+    <li>Investment advice</li>
+    <li>Tax advice</li>
+    <li>Accounting services</li>
+    <li>Any regulated financial service under Indian law</li>
+  </ul>
+  <p>The Platform's categorization is automated and may be inaccurate. AI-generated responses about your spending are generated by a third-party AI model (Google Gemini) and may contain errors. <strong>Do not make financial decisions solely based on outputs from this Platform.</strong></p>
+  <p>We are not a registered financial advisor, investment advisor, or any other regulated financial professional under SEBI, RBI, or any other Indian regulatory body.</p>
+
+  <hr>
+
+  <h2>7. AI Feature — Your Consent</h2>
+  <p>By using the AI query feature, you explicitly acknowledge and consent to:</p>
+  <ul>
+    <li>Your transaction data (up to 20 rows per query, for specific data questions) being transmitted to Google's Gemini API servers</li>
+    <li>Google potentially using submitted data to improve their AI models under free-tier API terms</li>
+    <li>The limitations of AI-generated financial analysis as described in Section 6</li>
+  </ul>
+  <p>You may opt out of the AI feature entirely and continue using all other Platform features without restriction.</p>
+
+  <hr>
+
+  <h2>8. Data and Privacy</h2>
+  <p>Our collection, storage, and use of your personal and financial data is governed by our <strong><a href="/privacy">Privacy Policy</a></strong>, which is incorporated into these Terms by reference. Please read it carefully.</p>
+  <p>Key points:</p>
+  <ul>
+    <li>Your data is stored on servers in Singapore and the United States</li>
+    <li>Your uploaded bank statement file is deleted immediately after parsing</li>
+    <li>You may request deletion of all your data at any time by emailing us</li>
+  </ul>
+
+  <hr>
+
+  <h2>9. Intellectual Property</h2>
+  <p><strong>Our IP:</strong> The Platform's code, design, algorithms, and content are owned by Shashwat Narayan. You may not copy, reproduce, or distribute them without permission.</p>
+  <p><strong>Your data:</strong> You retain full ownership of your financial data. By uploading your bank statement, you grant us a limited, non-exclusive licence to process and store your data solely for the purpose of providing the service to you. We claim no ownership over your transaction data.</p>
+
+  <hr>
+
+  <h2>10. Limitation of Liability</h2>
+  <p>To the maximum extent permitted by Indian law:</p>
+  <ul>
+    <li>We provide the Platform <strong>"as is"</strong> without any warranty of accuracy, completeness, or fitness for a particular purpose</li>
+    <li>We are not liable for any financial loss, incorrect categorization, missed transactions, or decisions made based on Platform outputs</li>
+    <li>Our total liability to you for any claim arising from your use of the Platform shall not exceed <strong>₹0</strong> (zero), as this Platform is provided free of charge</li>
+    <li>We are not liable for data loss due to third-party infrastructure failure (Neon, Render)</li>
+    <li>We are not responsible for Google's use of data submitted via the Gemini API free tier</li>
+  </ul>
+
+  <hr>
+
+  <h2>11. Service Availability</h2>
+  <p>We do not guarantee uninterrupted availability. The Platform may be unavailable due to:</p>
+  <ul>
+    <li>Maintenance</li>
+    <li>Third-party infrastructure issues (Render, Neon)</li>
+    <li>Free-tier usage limits on AI services</li>
+    <li>Force majeure</li>
+  </ul>
+
+  <hr>
+
+  <h2>12. Account Termination</h2>
+  <p><strong>By you:</strong> You may request account deletion at any time by emailing <strong>shashwatn2802@gmail.com</strong>. We will delete your account and all associated data within 7 business days.</p>
+  <p><strong>By us:</strong> We reserve the right to suspend or terminate your account if you violate these Terms, without prior notice.</p>
+
+  <hr>
+
+  <h2>13. Governing Law and Disputes</h2>
+  <p>These Terms are governed by the laws of India. Any dispute arising from your use of the Platform shall be subject to the exclusive jurisdiction of the courts in <strong>Hyderabad, Telangana, India</strong>.</p>
+
+  <hr>
+
+  <h2>14. Changes to Terms</h2>
+  <p>We may update these Terms as the Platform evolves. Material changes will be communicated by updating the "Last updated" date. Continued use of the Platform after changes constitutes acceptance of the updated Terms.</p>
+
+  <hr>
+
+  <h2>15. Contact</h2>
+  <p>For any questions about these Terms:</p>
+  <p>
+    <strong>Shashwat Narayan</strong><br>
+    Email: <strong>shashwatn2802@gmail.com</strong><br>
+    Location: Jawahar Nagar, Shameerpet Mandal, Hyderabad, Telangana 500078, India
+  </p>
+
+</div>
+{% endblock %}

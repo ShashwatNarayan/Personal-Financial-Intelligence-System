@@ -1596,7 +1596,48 @@
                 // Show success message
                 showNotification(`✅ Updated! ${result.updated_count} transaction(s) recategorized.`);
 
-                // Reload dashboard after 1 second
+                // --- Instant, consistent visual update across all matching cards ---
+                // The .transaction-merchant text is rendered as "<icon> <merchant>",
+                // so strip the leading entity icon to get the bare merchant name.
+                const merchantText = el =>
+                    el?.querySelector('.transaction-merchant')?.textContent
+                        .replace(/^[👤🏢🏪]\s*/, '').trim() ?? null;
+
+                // 1. Find the merchant name from the edited transaction element in the DOM
+                const editedItem = document.querySelector(`[data-txn-id="${txnId}"]`);
+                const editedMerchant = merchantText(editedItem);
+
+                if (editedMerchant) {
+                    // 2 & 3. Loop through ALL rendered transaction cards and update the
+                    // category display of every card with the same merchant
+                    document.querySelectorAll('.transaction-item').forEach(item => {
+                        const merchant = merchantText(item);
+                        if (merchant === editedMerchant) {
+                            const categoryEl = item.querySelector('.transaction-category');
+                            if (categoryEl) {
+                                categoryEl.textContent = newCategory;
+                            }
+                            // Keep the inline edit button's category in sync too
+                            const editBtn = item.querySelector('.edit-btn');
+                            if (editBtn) {
+                                const itemId = item.getAttribute('data-txn-id');
+                                editBtn.setAttribute(
+                                    'onclick',
+                                    `editTransaction('${itemId}', '${newCategory}', '${editedMerchant}')`
+                                );
+                            }
+                        }
+                    });
+                }
+
+                // 4. Update the in-memory allTransactions array so drill-downs stay consistent
+                allTransactions.forEach(txn => {
+                    if (txn.merchant === editedMerchant || txn.entity_name === editedMerchant) {
+                        txn.category = newCategory;
+                    }
+                });
+
+                // 5. Reload dashboard after 1 second to confirm from DB
                 setTimeout(() => {
                     location.reload();
                 }, 1000);

@@ -17,32 +17,73 @@ class SmartCategorizer:
             'Food & Dining': [
                 'swiggy', 'zomato', 'dominos', 'pizza', 'restaurant',
                 'cafe', 'food', 'kfc', 'mcdonalds', 'subway', 'burger',
-                'biryani', 'dhaba', 'meal', 'lunch', 'dinner'
+                'biryani', 'dhaba', 'meal', 'lunch', 'dinner',
+                'bakery', 'juice', 'chai', 'thali', 'hotel', 'sweet',
+                'mithai', 'lassi', 'icecream', 'ice cream', 'tiffin', 'mess',
+                'canteen', 'eatery', 'snack', 'dine', 'grill', 'kitchen',
+                'dabba', 'paratha', 'rolls', 'shawarma', 'sushi', 'noodles',
+                'chinese', 'fast food', 'cloud kitchen' ,'Cinnabon'
             ],
             'Transport': [
                 'uber', 'ola', 'rapido', 'cab', 'taxi', 'petrol', 'fuel',
-                'parking', 'toll', 'fastag', 'metro', 'bus'
+                'parking', 'toll', 'fastag', 'metro', 'bus',
+                'irctc', 'railway', 'auto', 'rickshaw', 'flight', 'indigo',
+                'spicejet', 'air india', 'akasa', 'diesel', 'highway', 'nhai',
+                'redbus', 'abhibus', 'train', 'airways', 'aviation', 'airport',
+                'filling station', 'fuel station', 'service station', 'pump'
             ],
             'Shopping': [
                 'amazon', 'flipkart', 'myntra', 'ajio', 'shopping', 'mall',
-                'store', 'retail', 'fashion', 'clothes', 'electronics'
+                'store', 'retail', 'fashion', 'clothes', 'electronics',
+                'reliance', 'dmart', 'trader', 'mart', 'enterprise',
+                'hypermarket', 'nykaa', 'meesho', 'wholesale', 'general',
+                'kirana', 'bazaar', 'bazar', 'emporium', 'outlet', 'showroom',
+                'depot', 'suppliers', 'distributors', 'agencies', 'works',
+                'brothers', 'sons', 'co ', 'pvt', 'ltd','Medkart'
             ],
             'Utilities': [
                 'electricity', 'water', 'gas', 'lpg', 'airtel', 'jio',
-                'vodafone', 'vi', 'internet', 'broadband', 'mobile', 'recharge'
+                'vodafone', 'vi', 'internet', 'broadband', 'mobile', 'recharge',
+                'bescom', 'tsspdcl', 'apepdcl', 'msedcl', 'bsnl', 'act fibernet',
+                'hathway', 'dish tv', 'tata sky', 'tatasky', 'd2h', 'sun direct',
+                'videocon', 'tneb', 'cesc', 'adani electricity', 'torrent power',
+                'mahanagar gas', 'indane', 'hp gas', 'bharat gas', 'piped gas',
+                'water board', 'municipal', 'corporation tax', 'property tax',
+                'maintenance'
             ],
             'Entertainment': [
                 'netflix', 'spotify', 'prime', 'hotstar', 'movie', 'theatre',
-                'cinema', 'pvr', 'inox', 'book', 'music', 'game'
+                'cinema', 'pvr', 'inox', 'book', 'music', 'game',
+                'youtube', 'disney', 'zee5', 'sonyliv', 'voot', 'mxplayer',
+                'jiocinema', 'apple tv', 'bookmyshow', 'paytm movies',
+                'amusement', 'multiplex', 'imax', 'bowling', 'gaming', 'steam',
+                'playstation', 'xbox', 'concert', 'event', 'ticket', 'club',
+                'lounge'
             ],
             'Healthcare': [
                 'hospital', 'clinic', 'doctor', 'medical', 'pharmacy',
-                'medicine', 'apollo', 'health', 'dental', 'lab'
+                'medicine', 'apollo', 'health', 'dental', 'lab',
+                'polo', 'fortis', 'manipal', 'max hospital', 'medplus',
+                'netmeds', '1mg', 'nursing', 'diagnostic', 'scan', 'xray',
+                'x-ray', 'pathology', 'ayurveda', 'homeopathy', 'physiotherapy',
+                'optician', 'optical', 'spectacles', 'lens', 'vet',
+                'veterinary', 'care hospital', 'nursing home', 'dispensary',
+                'surgeon', 'ortho', 'cardio', 'neuro', 'dermat', 'skin clinic',
+                'eye care'
             ],
-            'Rent': ['rent', 'lease', 'housing', 'apartment'],
+            'Rent': [
+                'rent', 'lease', 'housing', 'apartment',
+                'pg ', 'paying guest', 'hostel', 'dormitory', 'accommodation',
+                'tenant', 'landlord', 'society', 'flat', 'room rent'
+            ],
             'Education': [
                 'school', 'college', 'university', 'course', 'tuition',
-                'education', 'books', 'fees', 'exam'
+                'education', 'books', 'fees', 'exam',
+                'byju', 'unacademy', 'vedantu', 'coaching', 'udemy', 'coursera',
+                'skillshare', 'linkedin learning', 'upgrad', 'simplilearn',
+                'testbook', 'gradeup', 'institute', 'academy', 'tutorial',
+                'classes', 'training', 'workshop', 'certification', 'library',
+                'stationery', 'notebook', 'pen '
             ],
             'ATM / Cash': ['atm', 'cash withdrawal', 'cdm'],
         }
@@ -83,7 +124,7 @@ class SmartCategorizer:
         # Step 3: Check shared JSON memory (heuristic cache)
         stored = self.memory.get(entity_name)
         if stored:
-            confidence = 'high' if stored.get('source') == 'user' else 'high'
+            confidence = 'high' if stored.get('source') == 'user' else 'medium'
             return stored['category'], entity_name, entity_type, confidence
 
         # Step 4: Entity-based category (platform/person detection)

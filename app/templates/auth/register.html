@@ -226,6 +226,21 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
         {{ form.confirm_password(class="al-input", placeholder="••••••••", autocomplete="new-password") }}
       </div>
 
+      <div style="margin: 16px 0;">
+        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
+          <input type="checkbox" name="terms_consent" id="terms_consent" required
+                 style="margin-top: 3px; accent-color: #00b8a3; flex-shrink: 0;">
+          <span>
+            I have read and agree to the
+            <a href="/terms" target="_blank" style="color: #00b8a3;">Terms of Service</a>
+            and
+            <a href="/privacy" target="_blank" style="color: #00b8a3;">Privacy Policy</a>,
+            including the disclosure that transaction data may be sent to Google's Gemini API
+            when using the AI query feature.
+          </span>
+        </label>
+      </div>
+
       {{ form.submit(class="al-submit") }}
     </form>
 
