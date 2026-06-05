@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}About — ArthaLens{% endblock %}
+
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── Dark-theme variables (match landing.html) ── */
+  :root {
+    --bg: #0d0f0d;
+    --bg-primary: #0d0f0d;
+    --bg-secondary: #131a13;
+    --card: #131a13;
+    --navbar: #0a0c0a;
+    --border: #1f2a1f;
+    --text-primary: #f0f0f0;
+    --text-secondary: #6b7280;
+    --accent: #4ade80;
+    --accent-green: #4ade80;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: Inter, system-ui, sans-serif;
+  }
+
+  /* ── Layout ── */
+  .about-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .about-section {
+    padding: 64px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .about-section:last-of-type { border-bottom: none; }
+
+  .about-section h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+  }
+  .about-section p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .about-section p:last-child { margin-bottom: 0; }
+
+  /* ── Hero ── */
+  .about-hero {
+    text-align: center;
+    padding: 100px 24px 80px;
+    background:
+      radial-gradient(900px 380px at 50% -10%, rgba(74,222,128,0.08), transparent 70%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .about-hero h1 {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--text-primary);
+    max-width: 720px;
+    margin: 0 auto 22px;
+  }
+  .about-hero p {
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ── Vision grid ── */
+  .about-section .vision-intro {
+    font-size: 17px;
+    color: var(--text-primary);
+    margin-bottom: 36px;
+  }
+  .vision-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .vision-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    transition: border-color 0.2s;
+  }
+  .vision-item:hover { border-color: var(--accent-green); }
+  .vision-item .v-icon { font-size: 26px; display: block; margin-bottom: 12px; }
+  .vision-item h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .vision-item p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  /* ── Callout (Why no bank linking) ── */
+  .about-callout {
+    background: rgba(74,222,128,0.06);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-green);
+    border-radius: 10px;
+    padding: 28px 32px;
+  }
+  .about-callout h2 { margin-bottom: 14px; }
+  .about-callout p { color: var(--text-secondary); margin: 0 0 14px; }
+  .about-callout p:last-child { margin-bottom: 0; }
+
+  /* ── Builder card ── */
+  .builder-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 36px;
+  }
+  .builder-card .b-name {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .builder-card .b-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent-green);
+    margin-bottom: 18px;
+  }
+  .builder-card .b-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.9;
+    margin-bottom: 22px;
+  }
+  .builder-card .b-meta a { color: var(--accent-green); }
+  .builder-card .b-meta a:hover { text-decoration: underline; }
+  .builder-card .b-quote {
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 22px;
+    margin: 0;
+  }
+
+  /* ── CTA ── */
+  .about-cta {
+    text-align: center;
+    padding: 80px 24px;
+  }
+  .about-cta p {
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-bottom: 28px;
+  }
+  .about-cta .btn-get-started {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 30px;
+    background: var(--accent-green);
+    color: #0d0f0d;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  .about-cta .btn-get-started:hover { opacity: 0.88; color: #0d0f0d; }
+  .about-cta .cta-secondary {
+    display: block;
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .about-cta .cta-secondary:hover { color: var(--accent-green); }
+
+  /* ── Responsive ── */
+  @media (max-width: 760px) {
+    .vision-grid { grid-template-columns: 1fr; }
+    .about-hero h1 { font-size: 32px; }
+    .about-hero { padding: 72px 20px 56px; }
+    .about-section h2 { font-size: 24px; }
+    .builder-card, .about-callout { padding: 24px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Section 1 — Hero -->
+<section class="about-hero">
+  <h1>Built out of frustration. Designed for clarity.</h1>
+  <p>ArthaLens started as one college student trying to understand where his money was going. It became something bigger.</p>
+</section>
+
+<div class="about-wrap">
+
+  <!-- Section 2 — The Problem -->
+  <section class="about-section">
+    <h2>The Problem</h2>
+    <p>Most Indians have no real visibility into their spending. You get a bank statement — a wall of UPI reference numbers, merchant codes, and cryptic descriptions. You download a finance app — it asks you to link your bank account, charges you a subscription, or simply doesn't understand that "SWIGGY*ORDER" is food, not shopping. The apps that exist are built for someone else. Not for a college student paying rent, splitting bills on UPI, and subscribed to three streaming services they forgot about.</p>
+  </section>
+
+  <!-- Section 3 — The Story -->
+  <section class="about-section">
+    <h2>The Story</h2>
+    <p>In December 2025, after trying yet another finance tracker that couldn't tell Swiggy from a shopping expense, Shashwat Narayan — a college student from Hyderabad — decided to build his own. Not as a resume project. As a tool he actually needed. The first version was simple: upload your HDFC statement, get a spending breakdown. But the more he built, the more he realized how deep the problem went. Subscriptions silently draining money every month. Reimbursements never tracked. No way to ask a simple question like "how much did I spend on food last month?" without manually scrolling through hundreds of rows. By June 2026, ArthaLens had become a full financial intelligence system — with smart categorization, anomaly detection, subscription auditing, and an AI assistant that answers questions about your spending in plain English.</p>
+  </section>
+
+  <!-- Section 4 — The Vision -->
+  <section class="about-section">
+    <h2>The Vision</h2>
+    <p class="vision-intro">ArthaLens is built for the 300 million Indians who bank digitally but have no real picture of their financial health. Here's where it's headed — features on the roadmap, not live yet:</p>
+    <div class="vision-grid">
+      <div class="vision-item">
+        <span class="v-icon">📊</span>
+        <h3>Live spending tracker</h3>
+        <p>Real-time, auto-syncing transaction monitoring</p>
+      </div>
+      <div class="vision-item">
+        <span class="v-icon">📈</span>
+        <h3>Investment portfolio</h3>
+        <p>Stocks, mutual funds, crypto</p>
+      </div>
+      <div class="vision-item">
+        <span class="v-icon">💳</span>
+        <h3>Credit card management</h3>
+        <p>Spend across all cards in one view</p>
+      </div>
+      <div class="vision-item">
+        <span class="v-icon">📱</span>
+        <h3>Mobile app</h3>
+        <p>Your finances, in your pocket</p>
+      </div>
+      <div class="vision-item">
+        <span class="v-icon">🏦</span>
+        <h3>All major Indian banks</h3>
+        <p>Beyond HDFC and SBI</p>
+      </div>
+      <div class="vision-item">
+        <span class="v-icon">🤖</span>
+        <h3>Smarter AI</h3>
+        <p>Proactive insights, not just answers</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5 — Why No Bank Linking -->
+  <section class="about-section">
+    <div class="about-callout">
+      <h2>Why No Bank Linking?</h2>
+      <p>ArthaLens works differently — you upload your bank statement directly. No third-party bank linking. No sharing your credentials with anyone. Your financial data stays yours.</p>
+      <p>And we don't keep the statement file itself. The moment it's parsed, the uploaded file is deleted — within seconds. We only retain the extracted transaction details we need to give you insights: the date, merchant, amount, and category. Nothing more. That's it.</p>
+    </div>
+  </section>
+
+  <!-- Section 6 — The Builder -->
+  <section class="about-section">
+    <h2>The Builder</h2>
+    <div class="builder-card">
+      <div class="b-name">Shashwat Narayan</div>
+      <div class="b-title">Student · Developer · Builder</div>
+      <div class="b-meta">
+        📍 Hyderabad, Telangana<br>
+        🔗 <a href="https://github.com/ShashwatNarayan" target="_blank" rel="noopener">github.com/ShashwatNarayan</a>
+      </div>
+      <p class="b-quote">"I built the tool I wished existed. I'm building the product I think India needs."</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- Section 7 — CTA -->
+<section class="about-cta">
+  <p>ArthaLens is free. No credit card. No bank linking.</p>
+  <a href="{{ url_for('auth.register') }}" class="btn-get-started">Get Started →</a>
+  <a href="https://github.com/ShashwatNarayan/Personal-Financial-Intelligence-System" target="_blank" rel="noopener" class="cta-secondary">View on GitHub →</a>
+</section>
+
+{% endblock %}

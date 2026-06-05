@@ -1,106 +1,77 @@
-# Personal Financial Intelligence System
+# Personal Financial Intelligence System — *ArthaLens*
 
-AI-powered transaction categorization and spending analytics for HDFC and SBI bank statements.
+> **Turn a raw bank statement into a categorized, queryable, insight-rich view of your money — in seconds.**
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg) ![Flask](https://img.shields.io/badge/Flask-3.0.0-black.svg) ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-
----
-
-## Overview
-
-A local web application that parses HDFC and SBI bank statements and automatically categorizes transactions using entity resolution and pattern matching. Upload a statement and get a breakdown of spending by category, month-over-month trends, anomaly detection, and subscription auditing — all processed on your machine with no data sent externally.
-
-Tested on **1,188 transactions over 12 months** with **100% high-confidence categorization**.
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.1-000000?logo=flask&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql&logoColor=white)
+![Gemini](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-8E75B2?logo=googlegemini&logoColor=white)
+![Deploy](https://img.shields.io/badge/Deployed%20on-Render-46E3B7?logo=render&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ---
 
+## Live Demo
 
-## Features
-
-**Categorization**
-- Entity resolution pipeline distinguishes between known platforms (Swiggy, Netflix), persons (UPI peer transfers), and local merchants
-- Three-tier confidence scoring: high (known entity or user-verified), medium (pattern match), low (fallback)
-- Persistent memory that learns from user corrections and applies them across all matching transactions
-
-**Analytics**
-- Monthly average spend, fixed vs. variable expense split, and month-over-month drift
-- Spending acceleration detection using a trailing average threshold
-- Statistical anomaly detection per category using z-score analysis (requires 3+ months of history)
-- Recurring subscription detection with cost trend tracking
-
-**Interface**
-- Category drill-down modal showing individual transactions with inline recategorization
-- Interactive pie chart (Plotly) with click-through to transaction list
-- Collapsible dashboard sections for trends, anomalies, and subscriptions
-
-**Bank Support**
-- **HDFC Bank** statements in `.xls` (legacy) and `.xlsx` formats
-- **SBI Bank** statements — multi-format support with auto-detection
-- Auto-detects bank from statement signals before parsing
-- Multi-engine fallback: tries `openpyxl`, then `xlrd`, then CSV parsing
-- Handles bank-specific header row offsets, separator rows, and multiple column naming conventions
+**[Add your Render URL here]**
 
 ---
 
-## Accuracy
+## Project Overview
 
-| Transaction Type | Accuracy | Sample Size |
-|---|---|---|
-| Known platforms (Swiggy, Amazon, Netflix) | 99.2% | 214 |
-| Person-to-person transfers | 100% | 609 |
-| Local merchants (keyword match) | 89.5% | 118 |
-| **Overall (high confidence)** | **100% high-conf** | **941** |
+**ArthaLens** is a full-stack personal finance platform that ingests raw HDFC and SBI bank statements, automatically categorizes every transaction through a multi-stage intelligence pipeline, and surfaces the results as an interactive analytics dashboard. Beyond static charts, it detects spending anomalies, audits recurring subscriptions, matches reimbursements, and lets users ask plain-English questions ("how much did I spend on food last month?") that are answered by an AI layer with strict guardrails. Crucially, it *learns* — every correction a user makes is remembered and applied to all future transactions from that entity.
 
-Entity breakdown: 214 platforms, 609 persons, 118 merchants.  
-Confidence distribution: **100% high**, 0% medium, 0% low.
+It is built for anyone who wants to understand where their money actually goes without manually tagging hundreds of transactions — students, young professionals, and anyone tired of spreadsheet bookkeeping.
 
 ---
 
-## Real-World Run Stats
+## Key Features
 
-From a 12-month HDFC statement (Jan 2025 – Jan 2026):
-
-| Metric | Value |
-|---|---|
-| Total transactions parsed | 1,188 |
-| Expense transactions | 941 |
-| Credit transactions | 247 |
-| Total spend | ₹1,89,656 |
-| Average monthly spend | ₹15,860 |
-| Subscriptions detected | 6 |
-| Estimated monthly subscription cost | ₹799 |
-| Anomalies flagged | 1 |
-| Fastest growing category | Shopping |
+- **Bank statement parsing (HDFC + SBI)** — Auto-detects the source bank from statement signals, then dispatches to a bank-specific parser. Handles legacy `.xls`, modern `.xlsx`, header-row offsets, separator rows, and differing column naming conventions via a multi-engine fallback (`openpyxl` → `xlrd` → CSV).
+- **Smart categorization pipeline (5-step priority system)** — Resolves each transaction through user-confirmed DB memory, a shared heuristic cache, entity/platform detection, and keyword matching, with a graceful fallback — each stage carrying a confidence level (`high` / `medium` / `low`).
+- **Anomaly detection (z-score based)** — Aggregates spend per category per month and flags statistically significant spikes or drops (configurable z-score threshold, requires ≥ 3 months of history), tagged by severity (`moderate` / `high` / `critical`).
+- **Subscription auditing** — Detects recurring debits across monthly / quarterly / yearly cadences — including *intermittent* subscriptions with skipped months — tracks cost trends, and flags "zombie" long-running and high-cost subscriptions.
+- **Reimbursement detection** — Matches credits back to prior debits within a rolling window so reimbursed expenses don't distort your real spend (`net_amount`).
+- **Feedback memory loop** — User corrections are persisted to a per-user `entity_memory` table *and* a shared JSON cache, so the categorizer gets smarter with every edit and applies fixes across all matching transactions.
+- **AI-powered natural language query (Gemini + intent routing)** — A keyword pre-classifier routes each question to the cheapest correct handler (subscription / opinion / SQL), minimizing LLM calls. SQL questions are translated to a sandboxed, validated `SELECT` and executed on a read-only database role.
+- **Interactive Plotly dashboard** — Category breakdown rendered as a clickable pie chart with drill-down into individual transactions, plus collapsible trend, anomaly, and subscription panels and inline recategorization.
+- **Deduplication (SHA-256 + MD5)** — A SHA-256 hash of each uploaded file blocks duplicate uploads; an MD5 per-transaction fingerprint enforces row-level uniqueness, so re-uploading an overlapping statement never double-counts.
 
 ---
 
-## Quick Start
+## System Architecture
 
-**Prerequisites:** Python 3.8+
-
-```bash
-git clone https://github.com/yourusername/Personal-Financial-Intelligence-System.git
-cd Personal-Financial-Intelligence-System
-
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-pip install -r requirements.txt
-python flask_app.py
+```
+┌──────────┐   ┌─────────┐   ┌──────────────┐   ┌────────┐   ┌──────────┐   ┌────────────┐   ┌────────┐
+│  UPLOAD  │──▶│  PARSE  │──▶│  CATEGORIZE  │──▶│ STORE  │──▶│ ANALYZE  │──▶│ VISUALIZE  │──▶│ QUERY  │
+└──────────┘   └─────────┘   └──────────────┘   └────────┘   └──────────┘   └────────────┘   └────────┘
+  .xls/.xlsx   bank detect    5-step priority    Postgres     anomalies/      Plotly         NL → AI
+  + SHA-256    HDFC / SBI     + confidence       (Neon)       subscriptions   dashboard      (Gemini)
+  dedup        parser         + MD5 fingerprint               reimbursements  drill-down     intent-routed
 ```
 
-Open `http://localhost:5000` in your browser.
+**Application design.** The backend follows the **Flask application-factory pattern** (`create_app()` in `app/__init__.py`), with functionality split across **blueprints** — `api` (data + processing), `auth` (login/register), `main` (page routes), and `ai` (natural-language query). Cross-cutting concerns (SQLAlchemy, Migrate, Login, Limiter, CSRF) are registered as extensions on the factory, keeping the app testable and import-cycle-free.
+
+**Split deployment: Render + Neon.** The application server and the database are deliberately separated:
+
+- **Render** hosts the Flask web service (run under **Gunicorn** via `wsgi.py`), handling HTTP, parsing, and analytics compute.
+- **Neon** provides serverless **PostgreSQL** as a managed, autoscaling data layer.
+
+This separation of compute and storage means the stateless web tier can restart or scale without touching the data, and Neon's connection pooling and cold-start behavior are handled explicitly in the engine config (`pool_pre_ping`, `pool_recycle=300`, connection + statement timeouts) so the app survives idle-timeout reconnects cleanly. The AI query path connects to the *same* Neon database through a **separate read-only role** (`AI_DB_URL`), enforcing least privilege at the database level.
 
 ---
 
-## Usage
+## Tech Stack
 
-1. Go to the Upload tab and select your HDFC or SBI Excel statement (`.xls` or `.xlsx`)
-2. The system auto-detects the bank from the statement before parsing
-3. Processing takes 2–5 seconds for a typical statement
-4. The Dashboard tab shows metrics, category breakdown, and collapsible insight sections
-5. Click any category in the table or pie chart to view individual transactions
-6. Use the inline edit button on any transaction to correct its category — the system updates all transactions from the same entity and saves the mapping to persistent memory
+| Layer | Technologies |
+|---|---|
+| **Backend** | Python 3.11+, Flask 3.1, Flask-SQLAlchemy 3.1, Flask-Migrate 4.1, Flask-Login 0.6, Flask-WTF (CSRF), Flask-Limiter 4.1, Flask-CORS |
+| **Database** | PostgreSQL (Neon, serverless) via SQLAlchemy 2.0 + `psycopg2-binary` |
+| **AI / ML** | Google Gemini 2.5 Flash (`google-generativeai` 0.8), pandas 2.3, NumPy 2.4, scikit-learn 1.8, SciPy 1.17 |
+| **Parsing** | `openpyxl` 3.1, `xlrd` 2.0 (multi-engine Excel fallback) |
+| **Frontend** | Server-rendered Jinja2 templates, vanilla JavaScript, Plotly.js, HTML5 / CSS3 |
+| **Security** | Werkzeug password hashing, `bcrypt`, CSRF protection, read-only DB role, rate limiting |
+| **Deployment** | Render (Gunicorn 26) + Neon PostgreSQL; Sentry SDK for error monitoring |
 
 ---
 
@@ -108,60 +79,173 @@ Open `http://localhost:5000` in your browser.
 
 ```
 Personal-Financial-Intelligence-System/
-├── src/
-│   ├── bank_statement_parser.py     # HDFC & SBI statement parser, multi-format support
-│   ├── bank_detector.py             # Auto-detects bank from statement signals
-│   ├── entity_resolver.py           # Entity extraction and type classification
-│   ├── categorization.py            # Categorizer with memory integration
-│   ├── entity_memory.py             # JSON-backed persistent entity store
-│   ├── anomaly_detector.py          # Z-score anomaly detection per category
-│   ├── reimbursement_detector.py    # Credit matching within rolling window
-│   ├── subscription_auditor.py      # Recurring transaction pattern detection
-│   └── temporal_insights.py         # MoM changes, growth, acceleration flags
-├── templates/
-│   ├── landing.html
-│   └── dashboard.html
+├── app/
+│   ├── __init__.py                # App factory: extensions + blueprint registration
+│   ├── models.py                  # SQLAlchemy models (5 tables)
+│   ├── cli.py                     # Custom CLI commands (deduplicate, clear-data)
+│   ├── api/                       # Blueprint: upload, transactions, insights endpoints
+│   ├── auth/                      # Blueprint: registration, login, session handling
+│   ├── main/                      # Blueprint: landing + dashboard page routes
+│   ├── ai/
+│   │   └── query_engine.py        # NL → intent routing → SQL/opinion/subscription
+│   ├── analytics/
+│   │   ├── bank_detector.py       # Auto-detects bank, dispatches to the right parser
+│   │   ├── bank_statement_parser.py  # HDFC statement parser (multi-format)
+│   │   ├── sbi_parser.py          # SBI statement parser
+│   │   ├── categorization.py      # SmartCategorizer — the 5-step priority pipeline
+│   │   ├── entity_resolver.py     # Entity extraction + platform/person/merchant typing
+│   │   ├── entity_memory.py       # JSON-backed heuristic memory cache
+│   │   ├── anomaly_detector.py    # Z-score anomaly detection per category/month
+│   │   ├── subscription_auditor.py# Recurring-payment detection + cost-trend flags
+│   │   ├── reimbursement_detector.py # Credit-to-debit matching within a window
+│   │   └── temporal_insights.py   # MoM trends, growth, spending acceleration
+│   ├── templates/                 # Jinja2 templates (auth, dashboard, legal, base)
+│   └── static/                    # CSS, JS, images, legal documents
+├── migrations/                    # Alembic migration history (flask db upgrade)
 ├── data/
-│   ├── entity_memory.json           # Persisted entity-category mappings
-│   └── sample_transactions.csv
-├── flask_app.py                     # Flask app and API routes
+│   └── entity_memory.json         # Shared heuristic entity → category cache
+├── config.py                      # Config object (env-driven)
+├── flask_app.py                   # Local dev entry point (app.run)
+├── wsgi.py                        # Production entry point (gunicorn wsgi:app)
 └── requirements.txt
 ```
 
 ---
 
-## API Endpoints
+## Setup & Installation
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/upload-excel` | POST | Upload and process HDFC or SBI statement |
-| `/api/transactions/classified` | GET | All categorized transactions |
-| `/api/transactions/needs-review` | GET | Low-confidence transactions |
-| `/api/transactions/correct` | POST | Submit category correction |
-| `/api/insights/temporal` | GET | MoM trends and acceleration flags |
-| `/api/anomalies/report` | GET | Anomaly detection report |
-| `/api/subscriptions/audit` | GET | Recurring subscription audit |
-| `/api/reimbursements/report` | GET | Reimbursement matching report |
+### Prerequisites
+
+- Python **3.11+**
+- A PostgreSQL database (a free [Neon](https://neon.tech) project works perfectly)
+- A free [Google AI Studio](https://aistudio.google.com) API key for Gemini
+
+### 1. Clone and create a virtual environment
+
+```bash
+git clone https://github.com/ShashwatNarayan/Personal-Financial-Intelligence-System.git
+cd Personal-Financial-Intelligence-System
+
+python -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Configure environment variables
+
+Create a `.env` file in the project root (values shown are placeholders — never commit real secrets):
+
+```env
+DATABASE_URL=postgresql://<user>:<password>@<host>/<db>      # full-access app role
+AI_DB_URL=postgresql://<readonly_user>:<password>@<host>/<db> # read-only role for the AI query engine
+SECRET_KEY=<a-long-random-string>
+GEMINI_API_KEY=<your-google-ai-studio-key>
+```
+
+### 4. Apply database migrations
+
+```bash
+flask db upgrade
+```
+
+### 5. Run the app
+
+```bash
+python flask_app.py
+```
+
+Open **http://localhost:5000** in your browser.
+
+> For a production-style run, use the WSGI entry point: `gunicorn wsgi:app`
 
 ---
 
-## Tech Stack
+## How It Works — Pipeline Deep Dive
 
-**Backend:** Flask 3.0, pandas, NumPy, openpyxl, xlrd, Flask-CORS
+### 1. The 5-step categorization priority
 
-**Frontend:** Vanilla JS, Plotly.js, HTML5/CSS3
+When a transaction is processed, `SmartCategorizer` (`app/analytics/categorization.py`) walks an ordered priority chain and stops at the first confident match — strongest signal first:
+
+1. **DB entity memory (user corrections)** → If this user has previously corrected this entity and the stored confidence is ≥ 0.9, that category wins with **high** confidence. This is the feedback loop paying off.
+2. **Shared JSON cache** → A cross-run heuristic store (`data/entity_memory.json`); a `user`-sourced hit is **high** confidence, otherwise **medium**.
+3. **Entity-based categorization** → The resolver classifies the entity as a *platform* (e.g. Swiggy, Netflix → high confidence), *person* (UPI peer → medium), or *merchant*, and maps known platforms directly.
+4. **Keyword matching** → A curated, category-keyword dictionary (Food & Dining, Transport, Shopping, Utilities, Entertainment, Healthcare, Rent, Education, ATM/Cash) provides a **medium**-confidence fallback.
+5. **Default** → Anything unmatched is labelled **Other** at **low** confidence and queued for user review.
+
+Every resolved mapping is written back to memory, so the system improves continuously.
+
+### 2. AI query intent routing
+
+Rather than sending every question to the LLM, `query_engine.py` runs a cheap keyword pre-classifier (`_detect_intent`) that routes to the lowest-cost correct handler:
+
+- **`subscription`** → Answered directly by the `SubscriptionAuditor` — **no LLM call**.
+- **`opinion`** → Summary statistics (totals, monthly average, top categories) are computed locally, then a **single** Gemini call turns them into a budgeting-aware narrative answer.
+- **`sql`** → Gemini translates the question into a PostgreSQL `SELECT`, which is then validated, scoped to the user, executed read-only, and a second Gemini call renders the rows into a friendly answer.
+
+This keeps the system fast, cheap, and resilient to API rate limits — two of the three intents never touch the LLM quota at all.
+
+### 3. The feedback loop
+
+When a user edits a category in the dashboard:
+
+1. The correction is logged to the `corrections` table (audit trail of `old → new`).
+2. The mapping is upserted into the per-user `entity_memory` table with elevated confidence.
+3. **All** existing transactions from the same entity are re-labelled.
+4. Future uploads hit step 1 of the categorization chain and inherit the correction automatically.
+
+The model isn't retrained — it *remembers*, which is faster, fully explainable, and per-user private.
 
 ---
 
-## Known Limitations
+## Database Schema
 
-- Statements with more than 10,000 transactions may take noticeably longer to process
-- Anomaly detection and temporal insights require at least 3 months of data to be meaningful
-- Subscription detection requires a minimum of 3 occurrences with consistent amounts and regular intervals
-- Date format edge cases for some regional HDFC/SBI export variants may require manual adjustment
+Five tables, all user-scoped with cascading deletes and unique constraints for idempotent ingestion:
+
+| Table | Description |
+|---|---|
+| **`users`** | Account records — email, hashed password, timestamps; root of all per-user data. |
+| **`transactions`** | Every parsed transaction — date, entity, amount, category, type, confidence, reimbursement flag, and an MD5 `fingerprint` enforcing per-user row uniqueness. |
+| **`entity_memory`** | Per-user learned entity → category mappings with confidence and correction counts (powers step 1 of categorization). |
+| **`corrections`** | Immutable audit log of every user recategorization (`old_category → new_category`). |
+| **`uploads_log`** | One row per uploaded statement — filename, detected bank, row count, and a SHA-256 `file_hash` that blocks duplicate uploads. |
+
+---
+
+## Security
+
+- **Password hashing** — Credentials are stored as salted Werkzeug/`bcrypt` hashes; plaintext passwords are never persisted.
+- **Read-only AI database role** — The AI query engine connects through a dedicated least-privilege `AI_DB_URL` role, so a generated query physically *cannot* mutate data.
+- **Automatic `user_id` injection** — Every AI-generated SQL query is rewritten server-side to force `user_id = <current_user>`, guaranteeing strict data isolation between accounts regardless of what the LLM produces.
+- **CSRF protection** — All state-changing form submissions are guarded by Flask-WTF CSRF tokens.
+- **Forbidden SQL keywords + table allow-listing** — Generated SQL must be a single `SELECT`; any `DROP / DELETE / INSERT / UPDATE / ALTER / TRUNCATE / GRANT / REVOKE` keyword or access to sensitive tables (e.g. `users`) is rejected before execution. An automatic `LIMIT` caps result size.
+- **Rate limiting** — Flask-Limiter throttles requests to protect the API and the LLM quota.
+
+---
+
+## AI Attribution
+
+> The frontend UI was designed with AI assistance (**Google Stitch + Claude**). All backend logic, the analytics pipeline, and the system architecture are **original** work.
+
+---
+
+## Legal
+
+A **Privacy Policy** and **Terms of Service** are available in-app at **`/privacy`** and **`/terms`**.
+
+---
+
+## Author
+
+**Shashwat Narayan**
+GitHub: [ShashwatNarayan/Personal-Financial-Intelligence-System](https://github.com/ShashwatNarayan/Personal-Financial-Intelligence-System)
 
 ---
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+Released under the **MIT License** — see [LICENSE](LICENSE) for details.

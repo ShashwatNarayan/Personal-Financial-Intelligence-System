@@ -24,6 +24,11 @@ def upload():
     return render_template('dashboard/upload.html')
 
 
+@main_bp.route('/about')
+def about():
+    return render_template('about.html')
+
+
 @main_bp.route('/privacy')
 def privacy():
     return render_template('legal/privacy.html')
