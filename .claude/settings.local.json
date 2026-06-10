@@ -41,7 +41,11 @@
       "PowerShell($envExists = Test-Path .env; \"`.env exists: $envExists\"; if \\($envExists\\) { \\(Get-Content .env | ForEach-Object { \\($_ -split '='\\)[0] }\\) -join ', ' }; \"---\"; \"DATABASE_URL set in shell: \" + [bool]$env:DATABASE_URL; \"AI_DB_URL set in shell: \" + [bool]$env:AI_DB_URL; \"GEMINI_API_KEY set in shell: \" + [bool]$env:GEMINI_API_KEY)",
       "PowerShell(python -m py_compile app/ai/query_engine.py; if \\($?\\) { \"OK: compiles\" })",
       "Bash(ls -la Procfile railway.* render.* Dockerfile)",
-      "Bash(grep -iE \"wsgi|flask_app|gunicorn|FLASK_APP\" .env)"
+      "Bash(grep -iE \"wsgi|flask_app|gunicorn|FLASK_APP\" .env)",
+      "Bash(./venv/Scripts/python.exe -m pip install Flask-Mail)",
+      "Bash(ls -1 migrations/versions/*.py)",
+      "Bash(ls -1 Procfile render.yaml runtime.txt .python-version Aptfile)",
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('app/api/routes.py',encoding='utf-8'\\).read\\(\\)\\); print\\('routes.py parses OK'\\)\")"
     ]
   }
 }

@@ -1,9 +1,14 @@
 from datetime import datetime
 
+from flask import current_app
 from flask_login import UserMixin
+from itsdangerous import URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
+
+# Namespace so reset tokens can't be reused as some other signed payload.
+_RESET_TOKEN_SALT = 'password-reset'
 
 
 class User(UserMixin, db.Model):
@@ -25,6 +30,21 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def get_reset_token(self):
+        """Stateless, signed password-reset token (no DB storage)."""
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        return s.dumps({'user_id': self.id}, salt=_RESET_TOKEN_SALT)
+
+    @staticmethod
+    def verify_reset_token(token, max_age=1800):
+        """Return the User for a valid, unexpired token, else None. Default TTL 30 min."""
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token, salt=_RESET_TOKEN_SALT, max_age=max_age)
+        except Exception:
+            return None
+        return User.query.get(data.get('user_id'))
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -113,3 +133,20 @@ class Correction(db.Model):
 
     def __repr__(self):
         return f'<Correction {self.entity_name}: {self.old_category} → {self.new_category}>'
+
+
+class GlobalEntityMemory(db.Model):
+    __tablename__ = 'global_entity_memory'
+
+    id = db.Column(db.Integer, primary_key=True)
+    entity_name = db.Column(db.String(200), nullable=False, unique=True)
+    category = db.Column(db.String(50), nullable=False)
+    contributed_by_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True,
+    )
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<GlobalEntityMemory {self.entity_name} → {self.category}>'

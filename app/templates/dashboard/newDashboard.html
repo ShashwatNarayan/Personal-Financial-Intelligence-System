@@ -259,12 +259,12 @@
   }
   .sub-badge {
     display: inline-block;
+    background-color: #dc2626;
+    color: white;
+    border-radius: 9999px;
     font-size: 11px;
-    color: #a78bfa;
-    background: rgba(167, 139, 250, 0.12);
-    border: 1px solid rgba(167, 139, 250, 0.3);
-    border-radius: 4px;
-    padding: 2px 7px;
+    padding: 2px 8px;
+    font-weight: 500;
     margin-top: 4px;
   }
 </style>
@@ -675,6 +675,26 @@ const CAT_COLORS = {
   'Other':          { bg: 'rgba(120,113,108,0.12)', text: '#a8a29e' },
 };
 
+// Category icons — lime-green stroke (18x18, no fill), shown before the category name
+const CAT_ICONS = {
+  'Food & Dining':  '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  'Shopping':       '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  'Transport':      '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  'Utilities':      '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
+  'Entertainment':  '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>',
+  'Healthcare':     '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  'Transfer / P2P': '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  'Rent':           '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'Education':      '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  'ATM / Cash':     '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  'Other':          '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="17" r="0.5" fill="#a3e635"/>',
+};
+
+function catIcon(cat) {
+  const paths = CAT_ICONS[cat] || CAT_ICONS['Other'];
+  return `<span style="display:inline-flex;align-items:center;vertical-align:middle;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3e635" stroke-width="1.5">${paths}</svg></span>`;
+}
+
 // Change 2: Donut colour gradient — dark-to-bright green
 const DONUT_COLORS = [
   '#4ade80','#3bc26b','#2da855','#1f8e40','#14742e','#0a5a1f','#063d14','#041f0a'
@@ -708,7 +728,7 @@ function fmtDate(s) {
 
 function catPill(cat) {
   const c = CAT_COLORS[cat] || CAT_COLORS['Other'];
-  return `<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style="background:${c.bg};color:${c.text}">${escHtml(cat)}</span>`;
+  return `<span style="display:flex;align-items:center;gap:6px;white-space:nowrap">${catIcon(cat)}<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style="background:${c.bg};color:${c.text};white-space:nowrap">${escHtml(cat)}</span></span>`;
 }
 
 function emptyState(msg) {

@@ -6,17 +6,21 @@ from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
+from flask_mail import Mail
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day"])
 csrf = CSRFProtect()
+mail = Mail()
 
 
 def create_app(config_object='config.Config'):
     app = Flask(__name__, template_folder='templates')
     app.config.from_object(config_object)
+
+    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB upload limit
 
     # pool_pre_ping handles Neon cold-start reconnects; recycle aligns with Neon's idle timeout
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -35,6 +39,7 @@ def create_app(config_object='config.Config'):
     login_manager.init_app(app)
     limiter.init_app(app)
     csrf.init_app(app)
+    mail.init_app(app)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'warning'
@@ -56,13 +61,18 @@ def create_app(config_object='config.Config'):
     from app.ai import ai_bp
     app.register_blueprint(ai_bp)
 
-    from app.cli import deduplicate_cmd, clear_data_cmd
+    from app.cli import deduplicate_cmd, clear_data_cmd, backfill_global_memory_cmd
     app.cli.add_command(deduplicate_cmd)
     app.cli.add_command(clear_data_cmd)
+    app.cli.add_command(backfill_global_memory_cmd)
 
     @app.errorhandler(404)
     def not_found(e):
         return jsonify({'status': 'error', 'message': 'Endpoint not found'}), 404
+
+    @app.errorhandler(413)
+    def request_entity_too_large(e):
+        return {'status': 'error', 'message': 'File too large. Maximum upload size is 10 MB.'}, 413
 
     @app.errorhandler(500)
     def server_error(e):

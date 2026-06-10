@@ -14,6 +14,7 @@ _GEMINI_MODEL = 'gemini-2.5-flash'  # free tier (gemini-1.5-flash retired; 2.0-f
 FORBIDDEN_KEYWORDS = {
     'DROP', 'DELETE', 'INSERT', 'UPDATE', 'CREATE',
     'ALTER', 'TRUNCATE', 'GRANT', 'REVOKE',
+    'UNION', 'EXCEPT', 'INTERSECT',
 }
 FORBIDDEN_TABLES = {
     'users', 'entity_memory', 'corrections', 'uploads', 'uploads_log',
@@ -236,6 +237,10 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     if not sql or sql.upper() == 'INVALID':
         return False, 'Question cannot be answered from transaction data'
 
+    # Block stacked statements — a semicolon can chain a second, unfiltered query
+    if ';' in sql:
+        return False, 'Stacked statements are not permitted'
+
     # Must start with SELECT (allow leading whitespace or a single open-paren for subqueries)
     cleaned = sql.strip().lstrip('(').lstrip()
     if not cleaned.upper().startswith('SELECT'):
@@ -288,6 +293,11 @@ def inject_user_id(sql: str, user_id: int) -> str:
     if not re.search(r'\bLIMIT\b', sql, re.IGNORECASE):
         sql += ' LIMIT 500'
 
+    # Post-injection guard: set operations can smuggle a second, unfiltered query
+    # past the single-clause regex rewrite above. Reject if any survived.
+    if re.search(r'\b(UNION|EXCEPT|INTERSECT)\b', sql, re.IGNORECASE):
+        raise ValueError('Query contains forbidden set operation after injection')
+
     return sql
 
 
@@ -300,10 +310,39 @@ def execute_query(sql: str) -> list[dict]:
         return [dict(zip(columns, row)) for row in result.fetchall()]
 
 
+def _sanitize_for_prompt(value):
+    """Strip prompt-injection attempts from DB values before LLM interpolation."""
+    text = str(value)
+    # Truncate long values
+    if len(text) > 200:
+        text = text[:200] + '...'
+    # Remove instruction-like patterns (case-insensitive)
+    injection_patterns = [
+        r'ignore\s+(all\s+)?(previous|prior|above)\s+instructions?',
+        r'forget\s+(all\s+)?(previous|prior|above)',
+        r'you\s+are\s+now',
+        r'new\s+instructions?:',
+        r'system\s*:',
+        r'assistant\s*:',
+        r'<\s*/?system\s*>',
+        r'<\s*/?prompt\s*>',
+    ]
+    for pattern in injection_patterns:
+        text = re.sub(pattern, '[FILTERED]', text, flags=re.IGNORECASE)
+    return text
+
+
 def generate_answer(question: str, query_result: list[dict], sql: str) -> str:
     """LLM Call 2 — converts raw query rows into a friendly 1-3 sentence answer."""
     rows_preview = query_result[:20]
-    result_text = '\n'.join(str(r) for r in rows_preview)
+    sanitized_rows = []
+    for row in rows_preview:
+        if isinstance(row, dict):
+            sanitized_row = {k: _sanitize_for_prompt(v) for k, v in row.items()}
+        else:
+            sanitized_row = _sanitize_for_prompt(row)
+        sanitized_rows.append(sanitized_row)
+    result_text = '\n'.join(str(r) for r in sanitized_rows)
     if len(query_result) > 20:
         result_text += f'\n... ({len(query_result)} rows total)'
 
@@ -355,7 +394,11 @@ def run_query_pipeline(question: str, user_id: int) -> dict:
         if not is_valid:
             return {'status': 'error', 'message': reason}
 
-        safe_sql = inject_user_id(raw_sql, user_id)
+        try:
+            safe_sql = inject_user_id(raw_sql, user_id)
+        except ValueError as e:
+            return {'status': 'error', 'message': str(e)}
+
         rows = execute_query(safe_sql)
         answer = generate_answer(question, rows, safe_sql)
 

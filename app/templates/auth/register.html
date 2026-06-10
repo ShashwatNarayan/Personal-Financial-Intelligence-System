@@ -52,7 +52,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoTNYSiY3dXzyq8DZ6JiqT9MWnyODBB5ThGbKo0vd49mFviwbGaMtHcfDKshEHA18eGLYeOKN5EJl5a1C4ERXTC5QCdBT7venh3IhwI2YTTX4DSmqlG0Wi_9MPSUyiYa_Bk-H7xd9DjlibPzqa_ToeYLUdNs0gqM3JgbKH0He4SLCtBkGZFCd6zjOqmyGfkWqZvedlNMzltvCdC3DP0BEZXrXKLK6K2h0dcNPLhPSApfdzcjCNTM9_jSAUh7iTwjS8VFHq9pon_hM');
+  background-image: url("{{ url_for('static', filename='images/notes.png') }}");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -74,6 +74,7 @@ body {
   border-radius: 12px;
   padding: 40px;
   position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
   transition: background 0.25s, border-color 0.25s;
 }
 
@@ -240,6 +241,10 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
           </span>
         </label>
       </div>
+
+      <!-- reCAPTCHA disabled until keys are configured — keep for future use
+      <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
+      -->
 
       {{ form.submit(class="al-submit") }}
     </form>

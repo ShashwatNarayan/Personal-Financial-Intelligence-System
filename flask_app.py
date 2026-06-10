@@ -15,6 +15,8 @@ if __name__ == '__main__':
     print(" Starting Flask server...")
     print(" Dashboard: http://localhost:5000")
 
+    # Development only — Render production uses: gunicorn wsgi:app
+    # Never run this file directly in production.
     app.run(
         debug=True,
         host='localhost',

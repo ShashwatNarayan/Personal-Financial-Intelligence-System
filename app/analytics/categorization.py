@@ -7,7 +7,8 @@ class SmartCategorizer:
 
     def __init__(self, user_id=None):
         self.entity_resolver = EntityResolver()
-        self.memory = EntityMemory()
+        # H5-disabled: self.memory = EntityMemory()
+        self.memory = None  # H5-disabled: global JSON memory removed (privacy leak)
         self.user_id = user_id
         self._db_cache = {}
         if user_id is not None:
@@ -105,6 +106,22 @@ class SmartCategorizer:
             return result  # (category, confidence)
         return None, None
 
+    def get_global_category(self, entity_name):
+        """Stage 2b: Check global entity memory (cross-user corrections)."""
+        # Global memory is seeded by any user's corrections (in practice
+        # owner-seeded — only the base account writes; see api/routes.py).
+        # The most-corrected/accurate user naturally dominates the global
+        # store over time via the upsert logic.
+        from app import db
+        from app.models import GlobalEntityMemory
+        if not entity_name:
+            return None
+        record = GlobalEntityMemory.query.filter(
+            db.func.lower(GlobalEntityMemory.entity_name) ==
+            entity_name.lower().strip()
+        ).first()
+        return record.category if record else None
+
     def categorize_transaction(self, merchant, description):
         """
         Categorize with DB memory priority + confidence level.
@@ -121,11 +138,16 @@ class SmartCategorizer:
             if db_category is not None and db_confidence >= 0.9:
                 return db_category, entity_name, entity_type, 'high'
 
+        # Step 2b: Global entity memory (cross-user, owner-seeded corrections)
+        global_cat = self.get_global_category(entity_name)
+        if global_cat:
+            return global_cat, entity_name, entity_type, 'high'
+
         # Step 3: Check shared JSON memory (heuristic cache)
-        stored = self.memory.get(entity_name)
-        if stored:
-            confidence = 'high' if stored.get('source') == 'user' else 'medium'
-            return stored['category'], entity_name, entity_type, confidence
+        # H5-disabled: stored = self.memory.get(entity_name)
+        # H5-disabled: if stored:
+        # H5-disabled:     confidence = 'high' if stored.get('source') == 'user' else 'medium'
+        # H5-disabled:     return stored['category'], entity_name, entity_type, confidence
 
         # Step 4: Entity-based category (platform/person detection)
         entity_category = self.entity_resolver.categorize_by_entity(entity_name, entity_type)
@@ -134,18 +156,18 @@ class SmartCategorizer:
                 confidence = 'high'
             else:
                 confidence = 'medium'
-            self.memory.store(entity_name, entity_category, entity_type)
+            # H5-disabled: self.memory.store(entity_name, entity_category, entity_type)
             return entity_category, entity_name, entity_type, confidence
 
         # Step 5: Keyword matching (fallback)
         text = f"{merchant} {description}".lower()
         for category, keywords in self.category_keywords.items():
             if any(keyword in text for keyword in keywords):
-                self.memory.store(entity_name, category, entity_type)
+                # H5-disabled: self.memory.store(entity_name, category, entity_type)
                 return category, entity_name, entity_type, 'medium'
 
         # Default: Other (low confidence)
-        self.memory.store(entity_name, 'Other', entity_type)
+        # H5-disabled: self.memory.store(entity_name, 'Other', entity_type)
         return 'Other', entity_name, entity_type, 'low'
 
     def categorize_dataframe(self, df):
@@ -178,7 +200,8 @@ class SmartCategorizer:
         total = len(df)
         categorized = len(df[df['category'] != 'Other'])
 
-        stats = self.memory.get_stats()
+        # H5-disabled: stats = self.memory.get_stats()
+        stats = {}  # H5-disabled: global JSON memory removed (privacy leak)
 
         confidence_counts = df['confidence_level'].value_counts().to_dict()
 

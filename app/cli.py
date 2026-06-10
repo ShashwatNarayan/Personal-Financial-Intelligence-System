@@ -169,3 +169,52 @@ def clear_data_cmd(yes):
     click.echo(f'✓ {n_mem:>6,}  entity memory entries deleted')
     click.echo()
     click.echo('Done. User accounts are intact.')
+
+
+@click.command('backfill-global-memory')
+@with_appcontext
+def backfill_global_memory_cmd():
+    """Backfill the owner's per-user EntityMemory into GlobalEntityMemory.
+
+    One-time seed so cross-user Stage 2b serves the owner's existing
+    corrections (which were made before the global-write code existed).
+    """
+    import os
+    from app import db
+    from app.models import EntityMemory, GlobalEntityMemory, User
+
+    owner_email = os.environ.get('OWNER_EMAIL', 'snn@example.com').strip().lower()
+    owner = User.query.filter(db.func.lower(User.email) == owner_email).first()
+    if not owner:
+        click.echo(f'Owner {owner_email} not found.')
+        return
+
+    owner_memory = EntityMemory.query.filter_by(user_id=owner.id).all()
+
+    added = 0
+    updated = 0
+    for record in owner_memory:
+        norm_name = (record.entity_name or '').lower().strip()
+        if not norm_name:
+            continue
+        existing = GlobalEntityMemory.query.filter(
+            db.func.lower(GlobalEntityMemory.entity_name) == norm_name
+        ).first()
+        if existing:
+            existing.category = record.category
+            existing.contributed_by_user_id = owner.id
+            updated += 1
+        else:
+            db.session.add(GlobalEntityMemory(
+                entity_name=norm_name,
+                category=record.category,
+                contributed_by_user_id=owner.id,
+            ))
+            added += 1
+
+    db.session.commit()
+    click.echo(
+        f'Done. Owner: {owner_email} (user_id={owner.id}). '
+        f'Added: {added}, Updated: {updated}, '
+        f'Owner memory rows processed: {len(owner_memory)}'
+    )

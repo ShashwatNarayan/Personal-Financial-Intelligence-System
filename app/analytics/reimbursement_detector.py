@@ -1,49 +1,52 @@
 """
 Reimbursement detection for transaction data.
 
-Matching strategy (v3 — amount-proximity, no entity-name requirement):
+Matching strategy (v4 — strict exact match):
   ─────────────────────────────────────────────────────────────────────
-  Indian bank refunds almost never arrive under the same entity name as
-  the original debit.  A Nike purchase via UPI returns as "RAZORPAY
-  SETTLEMENTS", "NEFT CR", "PAYTM REFUND", or a plain bank credit with
-  no recognisable merchant.  Matching on entity name therefore misses
-  virtually all real refunds.
+  A credit is treated as a refund for a debit only when ALL of the
+  following hold:
 
-  Instead, we match purely on amount proximity within a 60-day forward
-  window, subject to four guard-rails that suppress false positives:
+    1. Credit amount == debit amount, within ₹1 (_HIGH_CONF_RUPEES).
+    2. Same entity — normalized entity_name/merchant/description match.
+    3. The debit's category is 'Shopping' (refunds = retail returns).
+    4. The credit falls within a 60-day forward window of the debit.
+    5. One-to-one — each credit offsets at most one debit.
 
-    1. The credit must fall within 60 days of the debit (forward only).
-    2. The credit amount must be within 5% of the debit amount.
-    3. Each credit can offset at most one debit (one-to-one).
-    4. Credits where entity_type == 'person' are excluded — salary
-       credits and peer-to-peer transfers must not be treated as refunds.
-    5. Debits >= ₹1,00,000 are excluded — large transfers are almost
-       certainly not retail refunds.
-
-  When multiple credits qualify for a debit the closest one in time is
-  preferred.  Confidence is 'high' when credit ≈ debit within ₹1,
-  otherwise 'medium'.
+  This is deliberately conservative: it trades recall (refunds that
+  return under a different name are missed) for precision (no false
+  positives from salary, P2P, interest, or unrelated credits — the
+  problem the earlier amount-proximity matcher caused). Because criterion
+  3 needs a 'category' column, the debit rows fed to the detector must be
+  the categorized rows (see app/api/routes.py).
 
 Expected input columns:
-  Required : date, amount
-  Optional : transaction_type (debit/credit), entity_type,
-             entity_name / merchant / description
+  Required        : date, amount, transaction_type (debit/credit)
+  For criterion 3 : category (on debit rows)
+  For criterion 2 : entity_name / merchant / description
 """
 
 import pandas as pd
 
-_MAX_DEBIT_AMOUNT   = 100_000.0   # ₹ — skip amounts this large
-_TOLERANCE_PCT      = 0.05        # 5 % proximity band
-_HIGH_CONF_RUPEES   = 1.0         # ≤ ₹1 difference → high confidence
+_MAX_DEBIT_AMOUNT   = 100_000.0   # ₹ — retained constant; not used by the strict matcher
+_HIGH_CONF_RUPEES   = 1.0         # ≤ ₹1 difference → exact-amount tolerance
+
+
+def _normalize_entity(row):
+    """Lowercased, stripped best-available entity name for a row."""
+    for col in ('entity_name', 'merchant', 'description'):
+        val = str(row.get(col, '')).strip().lower()
+        if val and val not in ('', 'nan', 'none'):
+            return val
+    return ''
 
 
 class ReimbursementDetector:
     """
     Detect refund/reimbursement credits for debit transactions.
 
-    Matching is based entirely on amount proximity within a rolling
-    forward window.  Entity names are never compared — see module
-    docstring for full rationale.
+    Strict exact matching: same entity, exact amount (±₹1), debit
+    category 'Shopping', 60-day forward window, one-to-one — see the
+    module docstring for full rationale.
     """
 
     def __init__(self, df, window_days=60):
@@ -99,11 +102,6 @@ class ReimbursementDetector:
         return 'Unknown'
 
     @staticmethod
-    def _is_person_credit(row):
-        """Return True if the credit looks like a P2P/salary transfer."""
-        return str(row.get('entity_type', '')).lower() == 'person'
-
-    @staticmethod
     def _confidence(debit_amount, credit_amount):
         """'high' if amounts match within ₹1, else 'medium'."""
         return 'high' if abs(debit_amount - credit_amount) <= _HIGH_CONF_RUPEES else 'medium'
@@ -134,27 +132,30 @@ class ReimbursementDetector:
         matched_pairs: list      = []
 
         for debit_idx, debit in debits_df.iterrows():
-            debit_date   = debit['date']
-            debit_amount = float(debit['amount'])
-
-            # Guard-rail 5: skip very large debits
-            if pd.isna(debit_date) or debit_amount <= 0 or debit_amount >= _MAX_DEBIT_AMOUNT:
+            # Criterion 3: only Shopping-category debits are eligible
+            if str(debit.get('category', '')) != 'Shopping':
                 continue
 
-            window_end = debit_date + pd.Timedelta(days=self.window_days)
-            tolerance  = debit_amount * _TOLERANCE_PCT
+            debit_date   = debit['date']
+            debit_amount = float(debit['amount'])
+            debit_entity = _normalize_entity(debit)
 
-            # Build candidate mask — amount proximity + date window
+            if pd.isna(debit_date) or debit_amount <= 0 or not debit_entity:
+                continue
+
+            window_end = debit_date + pd.Timedelta(days=60)
+
+            # Strict candidate mask: unmatched + forward window + exact amount + same entity
             avail_mask   = ~credits_df.index.isin(matched_credit_idxs)
             date_mask    = (credits_df['date'] >= debit_date) & (credits_df['date'] <= window_end)
-            amount_mask  = abs(credits_df['amount'] - debit_amount) <= tolerance
+            amount_mask  = abs(credits_df['amount'] - debit_amount) <= _HIGH_CONF_RUPEES
+            entity_mask  = credits_df.apply(
+                lambda r: _normalize_entity(r) == debit_entity, axis=1
+            )
 
-            candidates = credits_df[avail_mask & date_mask & amount_mask].sort_values('date')
-
-            # Guard-rail 4: skip person credits (salary, P2P)
-            candidates = candidates[
-                ~candidates.apply(self._is_person_credit, axis=1)
-            ]
+            candidates = credits_df[
+                avail_mask & date_mask & amount_mask & entity_mask
+            ].sort_values('date')
 
             if candidates.empty:
                 continue
@@ -225,9 +226,9 @@ class ReimbursementDetector:
 
         report = self._build_summary()
         report['config'] = {
-            'window_days':          self.window_days,
-            'amount_tolerance_pct': int(_TOLERANCE_PCT * 100),
-            'max_debit_amount':     _MAX_DEBIT_AMOUNT,
+            'window_days':         self.window_days,
+            'match_strategy':      'exact-amount + same-entity + Shopping',
+            'amount_tolerance_rs': _HIGH_CONF_RUPEES,
         }
         report['matched_pairs'] = matched_pairs
         return report

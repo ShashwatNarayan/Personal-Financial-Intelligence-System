@@ -1,5 +1,7 @@
 import hashlib
+import logging
 import os
+import tempfile
 import time
 import pandas as pd
 from datetime import datetime
@@ -12,7 +14,16 @@ from app import db
 from app.api import api_bp
 from app.analytics.bank_detector import detect_bank, get_parser
 from app.analytics.categorization import SmartCategorizer
-from app.models import Correction, EntityMemory, Transaction, UploadLog
+from app.models import Correction, EntityMemory, GlobalEntityMemory, Transaction, UploadLog
+
+logger = logging.getLogger(__name__)
+
+def _owner_email():
+    """Owner-seeded global memory gate. Only this account's corrections propagate
+    to the shared GlobalEntityMemory store (cross-user). Read at request time so
+    it reflects the current env regardless of import order; if unset, no global
+    writes happen (safe default)."""
+    return os.environ.get('OWNER_EMAIL', '').strip().lower()
 
 
 def compute_fingerprint(user_id, date, description, amount):
@@ -38,7 +49,7 @@ def get_user_transactions_df(user_id, months=None):
     if not rows:
         return pd.DataFrame(columns=[
             'id', 'date', 'description', 'merchant', 'entity_name', 'amount',
-            'net_amount', 'transaction_type', 'category', 'entity_type',
+            'net_amount', 'reimbursed_amount', 'transaction_type', 'category', 'entity_type',
             'confidence_level', 'is_reimbursed', 'upload_id',
         ])
     return pd.DataFrame([{
@@ -48,7 +59,8 @@ def get_user_transactions_df(user_id, months=None):
         'merchant': t.entity_name or '',
         'entity_name': t.entity_name or '',
         'amount': float(t.amount) if t.amount else 0.0,
-        'net_amount': float(t.amount) if t.amount else 0.0,
+        'net_amount': 0.0 if bool(t.is_reimbursed) else (float(t.amount) if t.amount else 0.0),
+        'reimbursed_amount': float(t.amount) if bool(t.is_reimbursed) else 0.0,
         'transaction_type': t.transaction_type or '',
         'category': t.category or '',
         'entity_type': t.entity_type or '',
@@ -61,6 +73,7 @@ def get_user_transactions_df(user_id, months=None):
 @api_bp.route('/upload-excel', methods=['POST'])
 @login_required
 def upload_excel():
+    temp_path = None
     try:
         t_total_start = time.time()
         if 'file' not in request.files:
@@ -73,7 +86,9 @@ def upload_excel():
         if not file.filename.lower().endswith(('.xlsx', '.xls')):
             return jsonify({'status': 'error', 'message': 'Please upload an Excel file'}), 400
 
-        temp_path = 'temp_upload.xlsx'
+        tmp = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+        temp_path = tmp.name
+        tmp.close()
         file.save(temp_path)
         print(f"\n  Uploaded: {file.filename}")
 
@@ -86,7 +101,6 @@ def upload_excel():
             file_hash=file_hash,
         ).first()
         if existing_upload:
-            os.remove(temp_path)
             return jsonify({
                 'status': 'error',
                 'message': (
@@ -117,6 +131,14 @@ def upload_excel():
         df_expenses = df[df['transaction_type'] == 'debit'].copy()
         print(f"   Found {len(df_expenses)} expense transactions")
 
+        if df_expenses.empty:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return jsonify({
+                'status': 'error',
+                'message': 'No debit transactions found in this statement. Please check the file and try again.'
+            }), 400
+
         # S-3: Categorize
         print("Step 3: Categorizing transactions...")
         t3 = time.time()
@@ -134,12 +156,38 @@ def upload_excel():
             f"Low={stats['low_confidence_count']}"
         )
 
-        # Detect reimbursements
+        # Detect reimbursements — run on the FULL df so credit rows are available
+        # to match against debits (credits are filtered out of df_expenses below).
         print("Detecting reimbursements...")
         from app.analytics.reimbursement_detector import ReimbursementDetector
-        detector = ReimbursementDetector(df_expenses, window_days=60)
+        # The strict matcher needs the debit 'category' (Shopping-only rule), which
+        # only exists on the CATEGORIZED debits. Feed it df_expenses (categorized
+        # debits) plus the raw credit rows from df so credits remain matchable.
+        credits_for_detection = df[df['transaction_type'] == 'credit']
+        df_for_detection = pd.concat([df_expenses, credits_for_detection])
+        detector = ReimbursementDetector(df_for_detection, window_days=60)
         reimbursement_report = detector.generate_full_report()
-        df_expenses = detector.df
+        reimbursed_df = detector.df  # full df with is_reimbursed / reimbursed_amount set
+
+        # Carry the debit-row flags back into df_expenses (only debits are stored).
+        # df_expenses was sliced from df, so their indexes align on the debit rows.
+        debit_flags = reimbursed_df[
+            reimbursed_df['transaction_type'] == 'debit'
+        ][['is_reimbursed', 'reimbursed_amount', 'net_amount']].copy()
+        df_expenses['is_reimbursed'] = debit_flags['is_reimbursed'].reindex(
+            df_expenses.index, fill_value=False
+        )
+        df_expenses['reimbursed_amount'] = debit_flags['reimbursed_amount'].reindex(
+            df_expenses.index, fill_value=0.0
+        )
+        df_expenses['net_amount'] = debit_flags['net_amount'].reindex(
+            df_expenses.index, fill_value=None
+        )
+        # Fill any nulls with the original amount (unmatched debits)
+        df_expenses['net_amount'] = df_expenses['net_amount'].fillna(
+            df_expenses['amount']
+        )
+
         print(f"      Total reimbursed: Rs.{reimbursement_report['summary']['total_reimbursed']:,.0f}")
         print(f"      Reimbursed transactions: {reimbursement_report['reimbursements']['reimbursed_transactions']}")
         print(f"      Full: {reimbursement_report['reimbursements']['full_reimbursements']}, "
@@ -148,6 +196,9 @@ def upload_excel():
         # Detect anomalies
         print("  Detecting spending anomalies...")
         from app.analytics.anomaly_detector import AnomalyDetector
+        # Defensive: AnomalyDetector requires net_amount — guarantee it exists.
+        if 'net_amount' not in df_expenses.columns:
+            df_expenses['net_amount'] = df_expenses['amount']
         anomaly_detector = AnomalyDetector(df_expenses, threshold=2.0, min_months=3)
         anomaly_report = anomaly_detector.generate_report()
         if anomaly_report['summary']['total_anomalies'] > 0:
@@ -313,9 +364,6 @@ def upload_excel():
         print(f"     Total: Rs.{total_spent:,.0f} over {months:.1f} months")
         print(f"     Average monthly: Rs.{avg_monthly:,.0f}")
 
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-
         skip_note = f' ({skipped_count} duplicates skipped)' if skipped_count else ''
         print(f"[PERF] Total upload: {time.time()-t_total_start:.2f}s")
         return jsonify({
@@ -370,13 +418,12 @@ def upload_excel():
         })
 
     except Exception as e:
-        print(f" Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        if os.path.exists('temp_upload.xlsx'):
-            os.remove('temp_upload.xlsx')
+        logger.error("Upload processing failed: %s", e, exc_info=True)
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': f'Error processing file: {str(e)}'}), 400
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 @api_bp.route('/transactions/classified', methods=['GET'])
@@ -406,21 +453,26 @@ def get_transactions():
         transactions = []
         for _, row in df.iterrows():
             entity_name = str(row.get('entity_name', row.get('merchant', 'Unknown')))
+            amount = float(row['amount'])
+            is_reimbursed = bool(row.get('is_reimbursed', False))
+            # M9: a fully reimbursed transaction has net cost 0 — compute at serialization time
+            reimbursed_amount = amount if is_reimbursed else 0.0
+            net_amount = 0.0 if is_reimbursed else amount
             transactions.append({
                 'txn_id': str(int(row['id'])),
                 'date': str(row['date'])[:10],
                 'merchant': entity_name,
                 'description': str(row.get('description', ''))[:60],
-                'amount': float(row['amount']),
-                'net_amount': float(row.get('net_amount', row['amount'])),
+                'amount': amount,
+                'net_amount': net_amount,
                 'category': str(row['category']),
                 'entity_type': str(row.get('entity_type', 'unknown')),
                 'confidence_level': str(row.get('confidence_level', 'medium')),
                 'transaction_type': 'debit',
                 'confidence': 1.0,
-                'is_reimbursement': bool(row.get('is_reimbursed', False)),
-                'is_reimbursed': bool(row.get('is_reimbursed', False)),
-                'reimbursed_amount': 0.0,
+                'is_reimbursement': is_reimbursed,
+                'is_reimbursed': is_reimbursed,
+                'reimbursed_amount': reimbursed_amount,
                 'is_reimbursement_credit': False,
                 'needs_review': False,
                 'is_subscription': entity_name.lower() in subscription_entities,
@@ -434,10 +486,8 @@ def get_transactions():
         })
 
     except Exception as e:
-        print(f" Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': f'Error: {str(e)}'}), 500
+        logger.error("Failed to serialize classified transactions: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/transactions/needs-review', methods=['GET'])
@@ -468,7 +518,7 @@ def get_needs_review():
                 'confidence': 1.0,
                 'is_reimbursement': bool(row.get('is_reimbursed', False)),
                 'is_reimbursed': bool(row.get('is_reimbursed', False)),
-                'reimbursed_amount': 0.0,
+                'reimbursed_amount': float(row.get('reimbursed_amount', 0.0)),
                 'is_reimbursement_credit': False,
                 'needs_review': True,
             })
@@ -481,7 +531,8 @@ def get_needs_review():
         })
 
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        logger.error("Failed to load needs-review transactions: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/transactions/correct', methods=['POST'])
@@ -495,6 +546,17 @@ def correct_transaction():
 
         if not txn_id or not new_category:
             return jsonify({'status': 'error', 'message': 'Missing transaction_id or new_category'}), 400
+
+        VALID_CATEGORIES = {
+            'Food & Dining', 'Transport', 'Shopping', 'Utilities',
+            'Entertainment', 'Healthcare', 'Transfer / P2P', 'Rent',
+            'Education', 'ATM / Cash', 'Investment', 'Other',
+        }
+        if new_category not in VALID_CATEGORIES:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid category.'
+            }), 400
 
         txn = Transaction.query.filter_by(
             id=int(txn_id),
@@ -543,6 +605,26 @@ def correct_transaction():
             )
             db.session.add(mem)
 
+        # Owner-seeded global memory: only the base account's corrections are
+        # written to the cross-user GlobalEntityMemory store (upsert).
+        owner_email = _owner_email()
+        norm_name = (entity_name or '').lower().strip()
+        if owner_email and norm_name and (current_user.email or '').strip().lower() == owner_email:
+            global_record = GlobalEntityMemory.query.filter(
+                db.func.lower(GlobalEntityMemory.entity_name) == norm_name
+            ).first()
+            if global_record:
+                global_record.category = new_category
+                global_record.contributed_by_user_id = current_user.id
+            else:
+                global_record = GlobalEntityMemory(
+                    entity_name=norm_name,
+                    category=new_category,
+                    contributed_by_user_id=current_user.id,
+                )
+                db.session.add(global_record)
+        # Committed together with the per-user correction
+
         db.session.commit()
 
         print(f"   User correction: {entity_name} -> {new_category}")
@@ -575,10 +657,8 @@ def correct_transaction():
 
     except Exception as e:
         db.session.rollback()
-        print(f" Correction error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': f'Error: {str(e)}'}), 500
+        logger.error("Transaction correction failed: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/insights/temporal', methods=['GET'])
@@ -605,10 +685,8 @@ def get_temporal_insights():
         return jsonify({'status': 'success', 'insights': report})
 
     except Exception as e:
-        print(f" Temporal insights error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': f'Error generating insights: {str(e)}'}), 500
+        logger.error("Temporal insights generation failed: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/reimbursements/report', methods=['GET'])
@@ -631,10 +709,8 @@ def get_reimbursement_report():
         return jsonify({'status': 'success', 'report': report})
 
     except Exception as e:
-        print(f"  Reimbursement error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        logger.error("Reimbursement report generation failed: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/anomalies/report', methods=['GET'])
@@ -657,10 +733,8 @@ def get_anomaly_report():
         return jsonify({'status': 'success', 'report': report})
 
     except Exception as e:
-        print(f"  Anomaly detection error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        logger.error("Anomaly report generation failed: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/subscriptions/audit', methods=['GET'])
@@ -682,10 +756,8 @@ def get_subscription_audit():
         return jsonify({'status': 'success', 'report': report})
 
     except Exception as e:
-        print(f"  Subscription audit error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        logger.error("Subscription audit failed: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
 
 
 @api_bp.route('/corrections/summary', methods=['GET'])
@@ -717,7 +789,5 @@ def get_corrections_summary():
         })
 
     except Exception as e:
-        print(f"  Corrections summary error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        logger.error("Corrections summary failed: %s", e, exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Something went wrong. Please try again.'}), 500
