@@ -129,6 +129,7 @@
     <li>Your transaction data (up to 20 rows per query, for specific data questions) being transmitted to Google's Gemini API servers</li>
     <li>Google potentially using submitted data to improve their AI models under free-tier API terms</li>
     <li>The limitations of AI-generated financial analysis as described in Section 6</li>
+    <li>AI queries running through a separate <strong>read-only</strong> database connection — the AI can read your data to answer questions but can never modify, add, or delete it</li>
   </ul>
   <p>You may opt out of the AI feature entirely and continue using all other Platform features without restriction.</p>
 
@@ -140,6 +141,8 @@
   <ul>
     <li>Your data is stored on servers in Singapore and the United States</li>
     <li>Your uploaded bank statement file is deleted immediately after parsing</li>
+    <li>Category corrections made by the operator/owner account are saved to a shared store that can improve categorization for all users; your own corrections stay private to your account (see the Privacy Policy)</li>
+    <li>The AI query feature uses a read-only database connection — it can read your data but never modify it</li>
     <li>You may request deletion of all your data at any time by emailing us</li>
   </ul>
 

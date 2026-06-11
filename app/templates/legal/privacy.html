@@ -126,10 +126,15 @@
       <tr><td>Preventing duplicate uploads</td><td>SHA-256 file hash</td><td>Legitimate interest</td></tr>
       <tr><td>Security and fraud prevention</td><td>Session data, login timestamps</td><td>Legitimate interest</td></tr>
       <tr><td>Debugging and error resolution</td><td>Server logs</td><td>Legitimate interest</td></tr>
-      <tr><td>Improving categorization accuracy per user</td><td>Entity memory (merchant→category mappings)</td><td>Consent</td></tr>
+      <tr><td>Improving categorization accuracy for your account</td><td>Per-user entity memory (your merchant→category corrections — private to your account)</td><td>Consent</td></tr>
+      <tr><td>Improving categorization accuracy for everyone (shared learning)</td><td>Category corrections made by the operator/owner account (see note below)</td><td>Consent / legitimate interest</td></tr>
     </tbody>
   </table>
   <p>We do <strong>not</strong> use your data for advertising, profiling for third parties, or any purpose not listed above.</p>
+
+  <h3>Shared category learning (Global Entity Memory)</h3>
+  <p>To improve accuracy for everyone, category corrections made by the <strong>operator/owner account</strong> are saved to a <strong>shared categorization store</strong> in our database. These shared "merchant/payee name → category" mappings can influence how transactions are automatically categorized for <strong>all users</strong>, including statements you upload in the future. The shared store holds only the entity name and its category — <strong>not</strong> your amounts, dates, or any account identifiers.</p>
+  <p><strong>Your own corrections stay private to your account</strong> and are not shared with other users. We may expand this shared learning in future to include corrections from all users; if we do, we will update this policy first.</p>
 
   <hr>
 
@@ -157,6 +162,8 @@
     <p style="margin:0 0 8px"><strong>⚠️ Critical disclosure — Free Tier Terms:</strong></p>
     <p style="margin:0">We currently use Google's free tier Gemini API. Under Google's free tier terms, prompts and responses submitted to the API <strong>may be used by Google to improve their products and machine learning models</strong>, and may be subject to human review by Google. This means transaction data included in AI queries (see table above) <strong>may be seen or used by Google</strong>.</p>
   </div>
+
+  <p><strong>How the AI reads your data:</strong> AI queries run against your data through a <strong>separate, read-only database connection</strong>. The AI can only <strong>read</strong> your transactions to answer your question — it can never change, add, or delete your data.</p>
 
   <p>If this is unacceptable to you, <strong>do not use the AI query feature</strong>. All other features of the Platform (categorization, charts, subscriptions, anomaly detection) operate entirely on our servers and do not send your data to Google.</p>
   <p>We plan to upgrade to a paid Gemini API tier in the future, which eliminates Google's use of data for model training.</p>

@@ -60,7 +60,7 @@ class EntityResolver:
 
                         # Check if it's a known platform (substring match)
                         for platform in self.platforms:
-                            if platform in actual_merchant:
+                            if re.search(rf'\b{re.escape(platform)}\b', actual_merchant):
                                 return platform.title(), 'platform'
 
                         # Check if human name
@@ -80,7 +80,7 @@ class EntityResolver:
             # Check if it's a platform (substring match for "SWIGGY LIMITED" → "SWIGGY")
             name_upper = name.upper()
             for platform in self.platforms:
-                if platform in name_upper:
+                if re.search(rf'\b{re.escape(platform)}\b', name_upper):
                     return platform.title(), 'platform'
 
             # Check if it's a human name
@@ -92,7 +92,7 @@ class EntityResolver:
 
         # Check for known platforms in full text (substring match)
         for platform in self.platforms:
-            if platform in text_upper:
+            if re.search(rf'\b{re.escape(platform)}\b', text_upper):
                 return platform.title(), 'platform'
 
         # Check for local merchant keywords

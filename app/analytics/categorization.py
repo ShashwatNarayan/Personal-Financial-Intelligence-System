@@ -44,7 +44,7 @@ class SmartCategorizer:
             ],
             'Utilities': [
                 'electricity', 'water', 'gas', 'lpg', 'airtel', 'jio',
-                'vodafone', 'vi', 'internet', 'broadband', 'mobile', 'recharge',
+                'vodafone', 'vodafone vi', ' vi ', 'internet', 'broadband', 'mobile', 'recharge',
                 'bescom', 'tsspdcl', 'apepdcl', 'msedcl', 'bsnl', 'act fibernet',
                 'hathway', 'dish tv', 'tata sky', 'tatasky', 'd2h', 'sun direct',
                 'videocon', 'tneb', 'cesc', 'adani electricity', 'torrent power',

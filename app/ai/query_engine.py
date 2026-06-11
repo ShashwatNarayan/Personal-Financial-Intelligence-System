@@ -1,9 +1,11 @@
 import os
 import re
+import time
 
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 
 # ── Lazy singletons ──────────────────────────────────────────────────────────
 _ro_engine = None
@@ -63,8 +65,16 @@ def get_ro_engine():
         _ro_engine = create_engine(
             url,
             pool_pre_ping=True,
-            pool_size=3,
+            pool_size=2,
             pool_recycle=300,
+            connect_args={
+                'connect_timeout': 10,
+                'options': '-c statement_timeout=30000',
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5,
+            },
         )
     return _ro_engine
 
@@ -225,7 +235,7 @@ def _handle_opinion_question(question: str, user_id: int, gemini_model) -> str:
 
 def generate_sql(question: str) -> str:
     """LLM Call 1 — converts a natural language question to a SQL SELECT.
-    Returns the raw SQL string, or the literal string 'INVALID'."""
+    Returns the raw SQL string or the literal string 'INVALID'."""
     model = _get_model()
     response = model.generate_content(SCHEMA_CONTEXT + "\n\n" + question)
     return response.text.strip()
@@ -302,12 +312,24 @@ def inject_user_id(sql: str, user_id: int) -> str:
 
 
 def execute_query(sql: str) -> list[dict]:
-    """Run SQL on the read-only engine. Returns a list of row dicts."""
+    """Run SQL on the read-only engine. Returns a list of row dicts.
+
+    Retries once on OperationalError after a short sleep — covers Neon
+    cold-start resets that pool_pre_ping detects but does not auto-retry."""
     engine = get_ro_engine()
-    with engine.connect() as conn:
-        result = conn.execute(text(sql))
-        columns = list(result.keys())
-        return [dict(zip(columns, row)) for row in result.fetchall()]
+    last_err = None
+    for attempt in range(2):
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text(sql))
+                columns = list(result.keys())
+                return [dict(zip(columns, row)) for row in result.fetchall()]
+        except OperationalError as e:
+            last_err = e
+            if attempt == 0:
+                time.sleep(1)
+            continue
+    raise last_err
 
 
 def _sanitize_for_prompt(value):
