@@ -6,7 +6,20 @@
 > Updated 2026-06-10: reimbursement matcher v4 (strict exact-match), cross-user
 > GlobalEntityMemory (owner-seeded Stage 2b) + backfill CLI, AI prompt-injection
 > sanitization, correction-route category validation, `OWNER_EMAIL` env var,
-> migration head → `463ffe6f87a6`.
+> migration head → `463ffe6f87a6`, and the "Vi"/`VIA` whole-word
+> categorization fix.
+> Updated 2026-06-11: Neon cold-start resilience on the AI read-only engine
+> (keepalives/connect_timeout + `execute_query` retry), Privacy/Terms updated
+> for GlobalEntityMemory + read-only AI DB, and a pre-deployment checklist
+> (see §14). Deployment is the immediate next step.
+> Updated 2026-06-13: **SBI ingestion overhaul** — Email-Statement header format
+> (Format 4: `Date | Details`), two-pattern UPI entity resolution (SBI
+> `UPI/DR|CR|DRC/<rrn>/<merchant>` vs HDFC name-first `UPI-<merchant>-…`),
+> single-word P2P recovery + VPA-based merchant/person disambiguation, SBI
+> transaction-prefix classification (SWEEP kept as **Internal Transfer**, CEMTEX
+> dropped), non-UPI prefix routing (ATM / DIRECT DR / credit-card), and
+> **internal-transfer exclusion from spend at all three layers** (dashboard,
+> analytics routes, AI query engine) via `entity_type != 'internal'`. See **§18**.
 
 ---
 
@@ -21,7 +34,9 @@ language AI query feature.
 
 - **Built by:** Shashwat Narayan (solo developer), Hyderabad, Telangana, India.
 - **Status:** Feature-complete through dashboard + AI + auth + password reset.
-  Deployment-ready (render.yaml + .python-version present). Pre-launch.
+  Pre-deployment checklist completed (2026-06-11, see §14) — **deployment to
+  Render + Neon is the immediate next step.** `render.yaml` + `.python-version`
+  present. Pre-launch.
 - **GitHub repo:** `https://github.com/ShashwatNarayan/Personal-Financial-Intelligence-System.git`
 
 ### Tech stack
@@ -293,12 +308,12 @@ Step by step inside `upload_excel()` (`app/api/routes.py`):
 
 | Stage | Logic | Confidence assigned |
 |---|---|---|
-| **1. Entity resolution** | `EntityResolver.resolve(description, merchant)` → `(entity_name, entity_type)`. Parses UPI/POS/NEFT patterns, known platforms, human-name detection. `entity_type` ∈ {platform, person, merchant, unknown}. | (no category yet) |
+| **1. Entity resolution** | `EntityResolver.resolve(description, merchant)` → `(entity_name, entity_type)`. Parses UPI/POS/NEFT patterns, known platforms, human-name detection. `entity_type` ∈ {platform, person, merchant, unknown}. **Platform matching is whole-word** (`re.search(rf'\b{re.escape(platform)}\b', …)`) at all 3 sites in `entity_resolver.py` — fixed 2026-06-10 so short tokens like `'VI'` no longer match inside `'VIA'` (see §15). | (no category yet) |
 | **2. DB entity memory** | If `user_id` set, look up `entity_name` in per-user `EntityMemory` cache (loaded once at init). If found and `confidence >= 0.9` → return that category. | **high** |
 | **2b. Global entity memory** | `get_global_category(entity_name)` — case-insensitive lookup in the cross-user `GlobalEntityMemory` table. Runs for **all** users (ungated). If a row exists → return that category. This is how the owner's corrections propagate to everyone. | **high** |
 | **3. JSON shared memory** | **H5-DISABLED** — `self.memory = None`; all `self.memory.*` calls commented out (the old *file-based* global JSON cache; superseded by the DB-backed Stage 2b above). | n/a |
 | **4. Entity-based category** | `EntityResolver.categorize_by_entity(entity_name, entity_type)`. Persons → `Transfer / P2P`; platforms mapped to category sets; merchants by keyword. | platform → **high**, else **medium** |
-| **5. Keyword matching** | Substring match of `"{merchant} {description}".lower()` against `category_keywords` dict (Food & Dining, Transport, Shopping, Utilities, Entertainment, Healthcare, Rent, Education, ATM / Cash). | **medium** |
+| **5. Keyword matching** | Substring match of `"{merchant} {description}".lower()` against `category_keywords` dict (Food & Dining, Transport, Shopping, Utilities, Entertainment, Healthcare, Rent, Education, ATM / Cash). Substring matching is intentional for noisy bank strings; the one exception is the Utilities `vi` token, which was changed to `'vodafone vi'` + `' vi '` (space-padded) so it only matches standalone, not inside `'VIA'`/`'INVOICE'` (2026-06-10, see §15). | **medium** |
 | **Fallthrough** | No match. | `Other`, **low** |
 
 > **Quirk:** `categorize_by_entity` can return `'Investment'` (Groww/Zerodha/
@@ -316,6 +331,18 @@ Step by step inside `upload_excel()` (`app/api/routes.py`):
 Model: **`gemini-2.5-flash`** (free tier). Two lazy singletons: read-only SQL
 engine (`AI_DB_URL`) and the configured Gemini client (`GEMINI_API_KEY`). Both
 raise `RuntimeError` if their env var is missing (lazy, only when AI is used).
+
+### Read-only engine resilience — Neon cold start (2026-06-11)
+`get_ro_engine()` now mirrors the main engine's connection hardening:
+`pool_pre_ping=True`, `pool_recycle=300`, `pool_size=2`, and `connect_args` with
+`connect_timeout=10`, `options='-c statement_timeout=30000'`, plus TCP keepalives
+(`keepalives=1`, `keepalives_idle=30`, `keepalives_interval=10`, `keepalives_count=5`).
+On top of that, **`execute_query()` retries once** on `sqlalchemy.exc.OperationalError`
+(1s sleep, then re-raise on the 2nd failure) — because Neon's serverless Postgres
+auto-suspends and the *first* request after suspend can hit a reset connection
+(`SSL SYSCALL error: Connection reset by peer`) that `pool_pre_ping` alone doesn't
+fully cover. (Engine is a lazy singleton — a server restart is needed to pick up
+the config.)
 
 ### Intent detection — `_detect_intent(question)` (pure keyword match, no LLM)
 Returns one of three intents:
@@ -449,6 +476,8 @@ Dashboard JS hits: `/api/transactions/classified`, `/api/transactions/needs-revi
 - **Uploaded bank statement file:** *"Deleted immediately after parsing (within seconds). Not stored permanently."*
 - **Logs** may incidentally contain transaction data / filenames (which may contain account numbers).
 - **Gemini disclosure (§5):** specific data queries send the question + up to 20 transaction rows; opinion queries send aggregated summary only; subscription queries send **nothing** to Google. Critical free-tier disclosure: prompts/responses **may be used by Google to improve models and may be human-reviewed**.
+- **Shared category learning (§4, added 2026-06-11):** discloses that category corrections made by the **operator/owner account** are saved to a shared store that can influence categorization for **all** users (your own corrections stay private); states it may expand to all users in future, with policy update first. Matches the owner-seeded `GlobalEntityMemory` code.
+- **Read-only AI DB (§5, added 2026-06-11):** discloses that AI queries run through a separate **read-only** database connection — the AI can only read, never modify/add/delete. (§9 Data Security already listed the read-only role.)
 - **Third parties:** Neon (Singapore), Render (US), Google Gemini (US/global), Google Fonts / Plotly / Bootstrap / Tailwind CDNs.
 - **User rights:** access, correction, erasure, grievance, withdraw consent, nominate. Email to exercise; deletion within 7 business days (no self-service delete button yet).
 - Known limitation noted: session cookies not flagged `Secure`.
@@ -457,7 +486,7 @@ Dashboard JS hits: `/api/transactions/classified`, `/api/transactions/needs-revi
 - States the platform parses HDFC/SBI statements, categorizes, provides insights + AI query.
 - Explicitly: **does NOT** access bank accounts, make transactions, give regulated financial advice, or **store the original bank statement file** ("deleted after parsing").
 - Not financial/investment/tax advice; "as is"; liability capped at ₹0 (free service); governed by Indian law, Hyderabad jurisdiction.
-- AI consent section mirrors the privacy Gemini disclosure.
+- AI consent section mirrors the privacy Gemini disclosure; also (2026-06-11) discloses the **read-only AI DB connection** (§7) and **operator-seeded shared category learning** (§8).
 
 ---
 
@@ -508,6 +537,23 @@ services:
 > bytecode as CPython 3.14 — pinned deps may resolve different wheels on Render
 > than were tested locally. Smoke-test on 3.11 before relying on it.
 
+### Pre-deployment checklist (run 2026-06-11) — 7 PASS / 1 PARTIAL / 1 caveat / 2 FAIL
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `requirements.txt` has all key deps | ✅ PASS (13/13) |
+| 2 | `Procfile` present | ❌ FAIL — **no Procfile**; `render.yaml` `startCommand: gunicorn wsgi:app` covers it |
+| 3 | All env vars referenced in `config.py` | ⚠️ PARTIAL — `AI_DB_URL` & `GEMINI_API_KEY` read in `query_engine.py`, not `config.py` |
+| 4 | `SECRET_KEY` fail-fast | ⚠️ PASS w/ caveat — fails fast via `sys.exit(1)`, not `RuntimeError` |
+| 5 | `DATABASE_URL` handles `postgres://`→`postgresql://` | ❌ FAIL — no normalization; OK only because Neon emits `postgresql://` |
+| 6 | Static via `url_for` | ✅ PASS |
+| 7 | No `debug=True` in prod path | ✅ PASS (gunicorn `wsgi:app`) |
+| 8 | `migrations/` ≥1 revision | ✅ PASS (2 revisions; folder gitignored — H6) |
+| 9 | `.gitignore` has `.env` | ✅ PASS |
+| 10 | `pool_pre_ping` + `connect_timeout` on both engines | ✅ PASS |
+
+Neither FAIL blocks the current **Neon + Render-via-`render.yaml`** path. **Pre-deploy fixes to consider before a platform change:** add a `Procfile` (portability) and a `postgres://`→`postgresql://` shim in `config.py` (portability to Heroku/Render-Postgres).
+
 ---
 
 ## 15. Known Decisions & Tech Debt
@@ -527,6 +573,9 @@ services:
 - **Credit Card Payment category deliberately excluded** — not part of the taxonomy. (Category lists are not fully unified: the correction enum `VALID_CATEGORIES` has **12** incl. `Investment`; the AI `SCHEMA_CONTEXT` lists **11** (no `Investment`); Stage-5 `category_keywords` has fewer still.)
 - **Reimbursement matcher evolution** — v3 was amount-proximity (5% band, person-credit guard). v2 hardening (5%→2%, ₹25k credit cap, salary-keyword guard) was **superseded** by **v4 (strict exact-match, 2026-06-10)**: see §16. v4 dropped `_TOLERANCE_PCT`, `_is_person_credit`, the salary-keyword set, and the `RETAIL_REFUND_MAX` cap entirely, replacing them with exact-amount + same-entity + Shopping-only matching.
 - **v4 reimbursement precision/recall tradeoff** — requiring same-entity + exact amount + `category == 'Shopping'` is deliberately conservative: it eliminates the salary/interest/P2P false positives but **misses** refunds that return under a different name or for non-Shopping debits. The Shopping gate depends on the detector receiving **categorized** debits (wired via `pd.concat([df_expenses, credits])` in `api/routes.py`); on the raw uncategorized `df` it would match nothing.
+- **Neon cold-start resilience on the AI engine (2026-06-11)** — `get_ro_engine()` gained `connect_args` (connect_timeout + TCP keepalives) and `pool_size` 3→2; `execute_query()` now retries once on `OperationalError` after a 1s sleep. Addresses `SSL SYSCALL error: Connection reset by peer` on the first AI query after Neon auto-suspend. The engine is a lazy singleton, so a **server restart is required** to apply. See §8.
+- **Privacy/Terms updated for two architectural facts (2026-06-11)** — Privacy §4 + a new "Shared category learning" note and Terms §8 now disclose the **operator-seeded `GlobalEntityMemory`** cross-user propagation (with "may expand" clause); Privacy §5 + Terms §7 now state AI queries use a **read-only DB connection**. Wording matches the owner-gated code (not "any user"). "Last updated: June 2026" date on the pages was left unchanged.
+- **"Vi" false-positive categorization fix (2026-06-10)** — descriptions like `"…YATRA FLIGHT VIA SMART"` were mis-resolved to entity `'Vi'` (Vodafone Idea) → `Utilities`, because `'VI'` substring-matched `'VIA'`. Two fixes: (1) `entity_resolver.py` — **all 3** platform checks (`name_upper`, `text_upper`, and the UPI payment-app `actual_merchant` sub-branch) switched from `platform in X` to whole-word `re.search(rf'\b{re.escape(platform)}\b', X)`; (2) `categorization.py` — the Utilities keyword `'vi'` replaced with `'vodafone vi'` + space-padded `' vi '` so it only matches standalone (not inside `VIA`/`INVOICE`/`AVIA`). Other Stage-5 keywords keep intentional substring matching. With the fix, the example now falls through to the Stage-5 `'flight'` keyword → correctly **Transport**. Legit standalone `"VI"` (e.g. `UPI-VI-RECHARGE`) still resolves to the telecom platform.
 - **Latent items:** `get_user_transactions_df` uses `t.transaction_type or ''` (a NULL type would silently drop a row from detection); `/transactions/classified` and `/needs-review` hardcode `'transaction_type': 'debit'` in their serialized output. Credits receive no `entity_type` at detector time (v4 no longer relies on it). The `_owner_email()` gate writes nothing if `OWNER_EMAIL` is unset.
 
 ---
@@ -612,6 +661,159 @@ stroke SVG icon (`CAT_ICONS`) in `dashboard/newDashboard.html`.
 > so it renders with the `Other` fallback styling. (The dashboard table above lists
 > the 11 icon-mapped categories; the AI `SCHEMA_CONTEXT` also lists 11, omitting
 > `Investment`.)
+
+---
+
+## 18. SBI Multi-Format Parsing, VPA Resolution & Internal-Transfer Handling (2026-06-13)
+
+This session hardened SBI ingestion end-to-end. Changes are confined to
+`app/analytics/sbi_parser.py`, `app/analytics/entity_resolver.py`,
+`app/api/routes.py`, `app/ai/query_engine.py`, and
+`templates/dashboard/newDashboard.html`. `categorization.py` and the HDFC parser
+were **not** changed; the HDFC path is structurally unaffected throughout.
+
+### 18.1 SBI parser — two header formats (`sbi_parser.py`)
+SBI exports now parse in two layouts:
+- **Net Banking / YONO:** `Txn Date | … | Description | Ref No./Cheque No. | Debit | Credit | Balance`.
+- **Email Statement (NEW — "Format 4"):** `Date | Details | Ref No/Cheque No | Debit | Credit | Balance`.
+
+`find_header_row()` now also accepts a cell that is exactly `"DATE"` (alongside
+`TXN DATE`/`TRANSACTION DATE`) and exactly `"DETAILS"` (alongside
+`DESCRIPTION`/`NARRATION`); exact-match guards keep metadata rows like
+`"Date of Statement : …"` from false-triggering. `COLUMN_MAPPINGS` gained a 4th
+entry mapping `Date→date, Details→description, Ref No/Cheque No→reference,
+Debit→debit, Credit→credit, Balance→balance`. Date format `DD/MM/YYYY` was
+already covered. (Detection in `bank_detector.py` already scored these as SBI.)
+
+### 18.2 Entity resolver — two UPI patterns (`entity_resolver.py`)
+The single loose `upi_pattern` (which captured the `DR`/`CR` indicator as the
+"merchant" → `"Dr"` for almost every SBI row) was replaced by two:
+- **`upi_sbi_pattern`** = `UPI[/-](?:CR|DR|DRC)[/-]\d+[/-]([A-Z][A-Z0-9\s\.\-]{2,30}?)(?:[/-]|$)`
+  — consumes the indicator + RRN, then captures the real payee (SBI).
+- **`upi_hdfc_pattern`** = `UPI[-/]([A-Z][A-Z\s\.\-]{2,29}?)[-@]` — name-first (HDFC).
+
+`resolve()` tries **SBI first, then HDFC** (`from_sbi = upi_sbi_pattern matched`).
+This fixed both the SBI `"Dr"` bug and a regression where the single broken
+pattern mis-grabbed HDFC names (e.g. `Ishan Ghosh`→`Unknown`, `Kiit Hospitality`→`Upi`).
+Verified against 20 real HDFC UPI rows: 0 regressions.
+
+### 18.3 SBI single-word P2P recovery (`entity_resolver.py`)
+**Root constraint:** SBI hard-truncates the UPI payee-name field to **~8 chars**
+at source (see §18.7). Many names collapse to a single token (`SHASHWAT`,
+`CHAURASI`), which fails `is_human_name()`'s **≥2-word** gate, so they were typed
+`merchant` → `categorize_by_entity` returns nothing → Stage-5 no keyword →
+**`Other`**. (Multi-word truncations like `B SWAMY` already worked.)
+
+Fix: in the SBI-format branch, a **single-word** name that is not a payment app
+or known platform resolves to **`entity_type='person'`** (→ `Transfer / P2P`).
+Cross-tab evidence: of 275 `merchant→Other` rows, **274 were single-word**, and
+**all** `person`-typed rows were multi-word. Simulation: ~**234 of 274** previously-
+`Other` rows recover to `person` (the rest are genuine non-persons / VPA-overridden
+to merchant — see §18.4). HDFC is untouched: `upi_sbi_pattern` never matches HDFC
+strings, so `from_sbi` is always False there (HDFC `Ishan Ghosh` etc. still `person`
+via `is_human_name`).
+
+### 18.4 VPA-based merchant/person disambiguation (`entity_resolver.py` + `sbi_parser.py`)
+The VPA (6th segment of the SBI narration: `UPI/DR/<rrn>/<name>/<bank>/<VPA>/<type>`)
+is the strongest secondary signal after the (truncated) name.
+- `sbi_parser._extract_merchants()` now extracts a **`vpa`** column (regex
+  `vpa_pattern`) plus a `txn_prefix` column; `vpa` is added to the parser's
+  output `final_cols`.
+- `resolve(description, merchant=None, vpa=None)` **self-extracts the VPA** from
+  the description when none is passed — important because `categorization.py`
+  (unchanged) calls `resolve(description, merchant)` without a `vpa`, so the
+  signal still works end-to-end.
+- **`_classify_vpa(vpa) → 'merchant' | 'person' | None`:**
+  - **Processor/QR aggregators → `None`** (no signal): `paytmqr`, `bharatpe`,
+    `pinelabs`, `phonepe`, `gpay`, `amazonpay`, `razorpay`, `billdesk`.
+  - **Business keyword → `merchant`**: `store, mart, shop, hotel, cafe, foods,
+    pay, qr, pos`.
+  - **Structural heuristic:** dotted handle with numeric/short (≤2-char) suffix
+    → `merchant` (`toyworld.6`, `isthara.p`, `indigo2.pa`); dotted with longer
+    alpha suffix → `person` (`piyush.kha`); no dot → `person` (`shashwatn2`).
+- In the single-word SBI branch (§18.3), `_classify_vpa()=='merchant'` **overrides**
+  the person default → `merchant`; otherwise the person default holds.
+- **Known false-positive risk:** `pay`/`qr` correctly flag merchant *collection*
+  handles (Paytm soundbox, getepay, vyapar) but can sweep bare `paytm-NN` personal
+  handles to merchant; trailing-dot handles (`lakshmi.`) yield an empty suffix →
+  merchant. Minor; left as-is.
+
+### 18.5 SBI transaction-prefix classification (`sbi_parser.py`)
+New `_classify_txn_prefix()` adds a **`txn_prefix`** column from the leading token:
+`SWEEP`, `ATM`, `INB`, `DIRECT_DR`, `CEMTEX`, `UPI_DR`, `UPI_CR`, else `OTHER`
+(`SWEEP`/`ATM`/`INB`/`DIRECT`/`CEMTEX` matched by `startswith` before the
+`UPI/DR`/`UPI/CR` substring checks, so `CEMTEX … UPI/DRC` is correctly `CEMTEX`).
+`_remove_internal_rows()` now drops **only `CEMTEX`** (UPI reversals/refunds —
+credits, not real debits). **`SWEEP` rows are KEPT** so the stored debit total
+reconciles with the bank statement (see §18.8).
+
+### 18.6 Non-UPI SBI routing in `resolve()` (`entity_resolver.py`)
+Before UPI matching, the description prefix is routed (returns are 2-tuples;
+`resolve()` signature stays `(entity_name, entity_type)` — the caller is unchanged):
+- `startswith('SWEEP')` → `('Internal Transfer', 'internal')`
+- `startswith('ATM')` → `('ATM Withdrawal', 'atm')` — Stage-5 keyword `atm` → `ATM / Cash`
+- `startswith('DIRECT DR'|'DIRECT DEBIT')` → `('Direct Debit', 'direct_debit')`
+- contains `'HDFC BANK CREDIT CARD'` or `'INB HDFC'` → `('HDFC Credit Card', 'merchant')`
+- contains `'SBICARD'`/`'SBI CARD'` → `('SBI Card', 'merchant')`
+
+### 18.7 Known SBI limitation — bank-side name truncation (~8 chars)
+**SBI hard-truncates UPI beneficiary names to ~8 characters in the narration
+field.** This is a bank-side constraint with **no technical workaround** — the
+characters are simply absent from the data the regex receives (`avg entity_name
+length on a real SBI upload ≈ 7.8 chars`; the resolver's `{2,30}` cap is never
+the limiter). `"Shashwat Narayan"` arrives as `SHASHWAT`.
+**Impact:** first-upload categorization accuracy for truncated merchants is low
+(~60–70%). **Architectural mitigation:** the per-user **EntityMemory** feedback
+loop (§3, §7 Stage 2) — the user corrects an entity once and the corrected
+category fires on all future uploads of that entity (and, owner-seeded, the
+cross-user `GlobalEntityMemory` at Stage 2b). *Interview framing:* a real-world
+data-quality constraint was identified, and the system's existing feedback loop
+is the designed mitigation rather than a brittle parser hack.
+
+### 18.8 SWEEP / statement reconciliation & internal-transfer exclusion
+**Problem found:** the dashboard showed ~₹34 L spend while the statement's
+bottom-line total debit was ~₹44 L — the ~₹10 L gap was SBI **auto-sweep FD
+movements** (`SWEEP TFR DR`), which are debits in the ledger total but **not real
+spend**. They had been dropped entirely, breaking reconciliation.
+
+**Resolution:** SWEEP rows are now **kept** and tagged `entity_name='Internal
+Transfer'`, `entity_type='internal'` (their category still resolves to `Other`
+via the categorizer, which was not changed). The dashboard total reconciles with
+the statement, while spend analytics **exclude** them. The exclusion is applied
+at **all three layers** via an `entity_type != 'internal'` filter:
+1. **Dashboard** (`newDashboard.html`): `_spendTransactions = _allTransactions.filter(t => t.entity_type !== 'internal')`
+   feeds `renderKpis` + `renderCategoryDonut`; the transaction **list** and date
+   range still use `_allTransactions` (internal rows stay visible as "Internal
+   Transfer"); a subtle reconciliation note (`Excl. ₹X internal transfers`) sits
+   under the Avg-Monthly-Spend KPI.
+2. **Analytics routes** (`api/routes.py`): the shared helper
+   `get_user_transactions_df(user_id, months=None, exclude_internal=False)` gained
+   the flag; passed `True` by `/insights/temporal`, `/reimbursements/report`,
+   `/anomalies/report`, `/subscriptions/audit`, and the post-correction
+   aggregate in `/transactions/correct`. **`/transactions/classified` and
+   `/transactions/needs-review` keep the default `False`** (lists must show
+   internal rows).
+3. **AI query engine** (`query_engine.py`): `inject_user_id()` appends
+   `AND entity_type != 'internal'` alongside the `user_id = {uid}` filter in all
+   four injection branches (after `validate_sql`, before the set-op guard); the
+   direct-fetch subscription/opinion handlers add
+   `.filter(Transaction.entity_type != 'internal')`.
+
+**Caveats / tech debt:**
+- **`DIRECT DR` (12 rows) and credit-card rows still land in `Other`.** Routing
+  them to a `Finance` category would need `categorization.py` changes (no
+  `Finance` category exists today; "Credit Card Payment" is deliberately excluded
+  from the taxonomy — §15). They are at least labeled `Direct Debit` /
+  `HDFC Credit Card` / `SBI Card`.
+- **NULL-safety:** the filter `entity_type != 'internal'` would also drop rows
+  where `entity_type IS NULL` (SQL three-valued logic). There are **0** such rows
+  today, so it is safe; **if NULL `entity_type` rows are ever introduced, switch
+  to `Transaction.entity_type.is_distinct_from('internal')`** (and the equivalent
+  `OR entity_type IS NULL` in the AI SQL injection) to avoid silently dropping
+  them from analytics.
+- **Effect is upload-time:** rows stored before this session carry no
+  `entity_type='internal'`; a **re-upload** is required for SWEEP rows to be
+  tagged and for the reconciliation/exclusion to take effect.
 
 ---
 

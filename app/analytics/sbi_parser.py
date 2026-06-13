@@ -59,6 +59,15 @@ class SBIStatementParser:
             'Credit':             'credit',
             'Balance':            'balance',
         },
+        # Format 4: SBI Email Statement export
+        {
+            'Date':               'date',
+            'Details':            'description',
+            'Ref No/Cheque No':   'reference',
+            'Debit':              'debit',
+            'Credit':             'credit',
+            'Balance':            'balance',
+        },
     ]
 
     def __init__(self):
@@ -114,8 +123,10 @@ class SBIStatementParser:
                 continue
 
             has_txn_date   = any('TXN DATE' in v.upper() or 'TRANSACTION DATE' in v.upper()
+                                  or v.strip().upper() == 'DATE'
                                   for v in row_values)
             has_description = any('DESCRIPTION' in v.upper() or 'NARRATION' in v.upper()
+                                   or v.strip().upper() == 'DETAILS'
                                    for v in row_values)
             has_balance     = any('BALANCE' in v.upper() for v in row_values)
             has_debit       = any('DEBIT' in v.upper() for v in row_values)
@@ -166,14 +177,17 @@ class SBIStatementParser:
         # Step 8: Clean descriptions
         df = self._clean_descriptions(df)
 
-        # Step 9: Extract merchants
+        # Step 9: Extract merchants (also adds `vpa` + `txn_prefix` columns)
         df = self._extract_merchants(df)
+
+        # Step 9b: Drop SBI-internal rows (auto-sweep FD moves, UPI reversals)
+        df = self._remove_internal_rows(df)
 
         # Step 10: Remove invalid rows
         df = self._remove_invalid_rows(df)
 
-        # Step 11: Final column selection (matches HDFC parser output exactly)
-        final_cols = ['date', 'description', 'merchant', 'amount', 'transaction_type', 'balance']
+        # Step 11: Final column selection (matches HDFC parser output + vpa signal)
+        final_cols = ['date', 'description', 'merchant', 'vpa', 'amount', 'transaction_type', 'balance']
         df = df[[c for c in final_cols if c in df.columns]].copy()
 
         if 'balance' not in df.columns:
@@ -411,7 +425,56 @@ class SBIStatementParser:
             return words[0].title()[:20] if words else 'UNKNOWN'
 
         df['merchant'] = df['description'].apply(extract_merchant_name)
+
+        # Extract the UPI VPA / handle — the 6th segment of the SBI UPI narration
+        # (WDL TFR  UPI/DR/<RRN>/<NAME>/<BANK>/<VPA>/<TYPE>). Strongest secondary
+        # signal after the (often truncated) name. None where there is no match.
+        vpa_pattern = r'UPI[/-](?:CR|DR|DRC)[/-]\d+[/-][^/]+[/-][^/]+[/-]([^/\s]+)'
+        df['vpa'] = df['description'].str.extract(vpa_pattern, flags=re.IGNORECASE, expand=False)
+        df['vpa'] = df['vpa'].where(df['vpa'].notna(), None)
+
+        # Leading transaction-type token, used to drop internal/reversal rows
+        df['txn_prefix'] = df['description'].apply(self._classify_txn_prefix)
         return df
+
+    @staticmethod
+    def _classify_txn_prefix(description) -> str:
+        """Classify the SBI transaction-type token from the description prefix."""
+        d = str(description).upper().strip()
+        if d.startswith('SWEEP'):
+            return 'SWEEP'
+        if d.startswith('ATM'):
+            return 'ATM'
+        if d.startswith('INB'):
+            return 'INB'
+        if d.startswith('DIRECT DR') or d.startswith('DIRECT DEBIT'):
+            return 'DIRECT_DR'
+        if d.startswith('CEMTEX'):
+            return 'CEMTEX'
+        if 'UPI/DR' in d:
+            return 'UPI_DR'
+        if 'UPI/CR' in d:
+            return 'UPI_CR'
+        return 'OTHER'
+
+    def _remove_internal_rows(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Drop only CEMTEX rows (UPI reversals/refunds — credits, not real debits).
+
+        SWEEP rows (auto-sweep FD movements) are intentionally KEPT so the stored
+        debit total reconciles with the bank statement's bottom-line total debit.
+        They are tagged 'Internal Transfer' / entity_type 'internal' downstream
+        (see entity_resolver.resolve) so spend analytics can exclude them by
+        category/type without losing them from the ledger total.
+        """
+        if 'txn_prefix' not in df.columns:
+            return df
+        initial = len(df)
+        df = df[df['txn_prefix'] != 'CEMTEX']
+        removed = initial - len(df)
+        if removed > 0:
+            print(f"   [SBI] Removed {removed} reversal rows (CEMTEX)")
+        return df.reset_index(drop=True)
 
     def _remove_invalid_rows(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove rows with invalid dates or zero amounts."""

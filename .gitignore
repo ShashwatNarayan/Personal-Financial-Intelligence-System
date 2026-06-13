@@ -5,4 +5,3 @@ instance/
 temp_upload.xlsx
 .DS_Store
 *.pyc
-/migrations/

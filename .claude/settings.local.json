@@ -45,7 +45,15 @@
       "Bash(./venv/Scripts/python.exe -m pip install Flask-Mail)",
       "Bash(ls -1 migrations/versions/*.py)",
       "Bash(ls -1 Procfile render.yaml runtime.txt .python-version Aptfile)",
-      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('app/api/routes.py',encoding='utf-8'\\).read\\(\\)\\); print\\('routes.py parses OK'\\)\")"
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('app/api/routes.py',encoding='utf-8'\\).read\\(\\)\\); print\\('routes.py parses OK'\\)\")",
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('app/ai/query_engine.py', encoding='utf-8'\\).read\\(\\)\\); print\\('query_engine.py parses OK'\\)\")",
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('app/ai/query_engine.py', encoding='utf-8'\\).read\\(\\)\\); print\\('parses OK'\\)\")",
+      "Bash(./venv/Scripts/python.exe -c \"from sqlalchemy.exc import OperationalError; print\\('OperationalError import OK'\\)\")",
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('app/analytics/entity_resolver.py', encoding='utf-8'\\).read\\(\\)\\); print\\('parses OK'\\)\")",
+      "Bash(ls -1 Procfile runtime.txt wsgi.py render.yaml .python-version)",
+      "Bash(cat Procfile)",
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('config.py',encoding='utf-8'\\).read\\(\\)\\); print\\('config.py parses OK'\\)\")",
+      "Bash(git check-ignore *)"
     ]
   }
 }

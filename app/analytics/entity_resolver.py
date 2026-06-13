@@ -11,8 +11,27 @@ class EntityResolver:
     """Resolve transaction descriptions to canonical entity names"""
 
     def __init__(self):
-        # Common UPI patterns - extract merchant name, not payment app
-        self.upi_pattern = re.compile(r'UPI[/-]([A-Z\s]+?)[-/@]', re.IGNORECASE)
+        # Common UPI patterns - extract merchant name, not payment app.
+        # Two formats are supported (tried SBI-first in resolve()):
+
+        # SBI format: UPI/DR|CR|DRC/<digits>/<merchant>
+        self.upi_sbi_pattern = re.compile(
+            r'UPI[/-](?:CR|DR|DRC)[/-]\d+[/-]([A-Z][A-Z0-9\s\.\-]{2,30}?)(?:[/-]|$)',
+            re.IGNORECASE
+        )
+
+        # HDFC format: UPI-<merchant>-<vpa or ref>
+        self.upi_hdfc_pattern = re.compile(
+            r'UPI[-/]([A-Z][A-Z\s\.\-]{2,29}?)[-@]',
+            re.IGNORECASE
+        )
+
+        # SBI UPI VPA / handle — 6th segment of UPI/DR|CR/<rrn>/<name>/<bank>/<VPA>/...
+        # Used as a secondary merchant/person signal when the name is ambiguous.
+        self.vpa_pattern = re.compile(
+            r'UPI[/-](?:CR|DR|DRC)[/-]\d+[/-][^/]+[/-][^/]+[/-]([^/\s]+)',
+            re.IGNORECASE
+        )
 
         # Payment apps to ignore (extract what comes AFTER these)
         self.payment_apps = {'PAYTM', 'GPAY', 'GOOGLEPAY', 'PHONEPE', 'BHIM'}
@@ -34,18 +53,45 @@ class EntityResolver:
         # Human name indicators
         self.name_pattern = re.compile(r'^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$')
 
-    def resolve(self, description, merchant):
+    def resolve(self, description, merchant=None, vpa=None):
         """
         Extract canonical entity name from transaction description
 
         Returns: (entity_name, entity_type)
-        entity_type: 'platform', 'person', 'merchant', 'unknown'
+        entity_type: 'platform', 'person', 'merchant', 'atm', 'direct_debit', 'unknown'
+
+        `vpa` is an optional secondary signal (the SBI UPI handle). When not
+        supplied it is self-extracted from `description`, so callers that only
+        pass (description, merchant) still benefit from VPA-based tie-breaking.
         """
         # Check for known platforms first (but NOT payment apps in UPI context)
         text_upper = f"{description} {merchant}".upper()
 
-        # Extract from UPI pattern FIRST (before platform check)
-        upi_match = self.upi_pattern.search(description)
+        # Non-UPI SBI transaction types: no UPI name to extract, but a known
+        # entity/type can be assigned straight from the description prefix.
+        desc_upper = str(description).upper().strip()
+        if desc_upper.startswith('SWEEP'):
+            return 'Internal Transfer', 'internal'
+        if desc_upper.startswith('ATM'):
+            return 'ATM Withdrawal', 'atm'
+        if desc_upper.startswith('DIRECT DR') or desc_upper.startswith('DIRECT DEBIT'):
+            return 'Direct Debit', 'direct_debit'
+        if 'HDFC BANK CREDIT CARD' in desc_upper or 'INB HDFC' in desc_upper:
+            return 'HDFC Credit Card', 'merchant'
+        if 'SBICARD' in desc_upper or 'SBI CARD' in desc_upper:
+            return 'SBI Card', 'merchant'
+
+        # Self-extract the SBI UPI VPA when the caller did not pass one.
+        if vpa is None:
+            vpa_m = self.vpa_pattern.search(description)
+            vpa = vpa_m.group(1) if vpa_m else None
+
+        # Extract from UPI pattern FIRST (before platform check).
+        # Try SBI format (indicator + ref precede name), then HDFC (name first).
+        upi_match = self.upi_sbi_pattern.search(description)
+        from_sbi = upi_match is not None  # SBI format (/DR|CR|DRC/<digits>/); HDFC never matches this
+        if not upi_match:
+            upi_match = self.upi_hdfc_pattern.search(description)
         if upi_match:
             name = upi_match.group(1).strip()
 
@@ -82,6 +128,22 @@ class EntityResolver:
             for platform in self.platforms:
                 if re.search(rf'\b{re.escape(platform)}\b', name_upper):
                     return platform.title(), 'platform'
+
+            # SBI single-word truncated payee names: SBI caps the UPI name field
+            # at ~8 chars, collapsing many person names to one token (e.g.
+            # "Shashwat Narayan" → "SHASHWAT"), which fails is_human_name()'s
+            # ≥2-word gate and lands them in "Other". For SBI-format matches only,
+            # treat a single-word name that is not a payment app or known platform
+            # as a person (→ Transfer / P2P). HDFC strings never reach here via
+            # upi_sbi_pattern, so the HDFC path is structurally unaffected.
+            if from_sbi and ' ' not in name and name_upper not in self.payment_apps:
+                # platforms already returned above, so name is not a known platform.
+                # Break the tie with the VPA: a merchant-looking handle (toyworld.6,
+                # isthara.p) overrides to merchant; a person-looking or processor/
+                # unknown handle keeps the person default (recovers truncated P2P).
+                if self._classify_vpa(vpa) == 'merchant':
+                    return self.normalize_name(name), 'merchant'
+                return self.normalize_name(name), 'person'
 
             # Check if it's a human name
             if self.is_human_name(name):
@@ -137,6 +199,41 @@ class EntityResolver:
             return clean_merchant, 'merchant'
 
         return 'Unknown', 'unknown'
+
+    def _classify_vpa(self, vpa):
+        """
+        Classify a UPI VPA/handle as a secondary signal.
+
+        Returns 'merchant', 'person', or None (no usable signal).
+        """
+        if not vpa:
+            return None
+        v = str(vpa).lower().strip()
+
+        # Payment processors / QR aggregators — carry no merchant/person signal
+        processors = ('paytmqr', 'bharatpe', 'pinelabs', 'phonepe', 'gpay',
+                      'amazonpay', 'razorpay', 'billdesk')
+        if any(p in v for p in processors):
+            return None
+
+        # Explicit business keywords → merchant
+        business_kw = ('store', 'mart', 'shop', 'hotel', 'cafe', 'foods',
+                       'pay', 'qr', 'pos')
+        if any(k in v for k in business_kw):
+            return 'merchant'
+
+        # Structural heuristic on the handle. SBI merchant handles tend to be
+        # <business>.<short/numeric bank-or-QR tag> (toyworld.6, isthara.p,
+        # indigo2.pa); personal handles are either a single token with digits
+        # (shashwatn2, kasoju1978) or <name>.<name-fragment> (piyush.kha).
+        if '.' in v:
+            suffix = v.rsplit('.', 1)[1]
+            if suffix.isdigit() or len(suffix) <= 2:
+                return 'merchant'
+            return 'person'
+
+        # No dot → firstname+digits / single token → person
+        return 'person'
 
     def is_human_name(self, name):
         """Check if name looks like a person (2-3 capitalized words)"""

@@ -142,7 +142,9 @@ def _handle_subscription_question(user_id: int, db_session) -> str:
         from app.models import Transaction
         import pandas as pd
 
-        txns = Transaction.query.filter_by(user_id=user_id).all()
+        txns = Transaction.query.filter_by(user_id=user_id).filter(
+            Transaction.entity_type != 'internal'
+        ).all()
         if not txns:
             return "No transaction data found to detect subscriptions."
 
@@ -184,7 +186,7 @@ def _handle_opinion_question(question: str, user_id: int, gemini_model) -> str:
 
         txns = Transaction.query.filter_by(
             user_id=user_id, transaction_type='debit'
-        ).all()
+        ).filter(Transaction.entity_type != 'internal').all()
 
         if not txns:
             return "No transaction data found to analyse."
@@ -277,18 +279,22 @@ def inject_user_id(sql: str, user_id: int) -> str:
     uid = int(user_id)
     sql = sql.strip().rstrip(';').strip()
 
+    # Injected alongside user_id so internal transfers (SWEEP, entity_type
+    # 'internal') never enter AI spend results — same isolation point.
+    excl = "entity_type != 'internal'"
+
     # Replace an existing (possibly wrong) user_id filter
     if re.search(r'\buser_id\s*=\s*\S+', sql, re.IGNORECASE):
         sql = re.sub(
             r'\buser_id\s*=\s*\S+',
-            f'user_id = {uid}',
+            f'user_id = {uid} AND {excl}',
             sql, count=1, flags=re.IGNORECASE,
         )
     elif re.search(r'\bWHERE\b', sql, re.IGNORECASE):
         # Prepend as first condition in the existing WHERE clause
         sql = re.sub(
             r'\bWHERE\b',
-            f'WHERE user_id = {uid} AND',
+            f'WHERE user_id = {uid} AND {excl} AND',
             sql, count=1, flags=re.IGNORECASE,
         )
     else:
@@ -296,9 +302,9 @@ def inject_user_id(sql: str, user_id: int) -> str:
         m = re.search(r'\b(GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT)\b', sql, re.IGNORECASE)
         if m:
             pos = m.start()
-            sql = sql[:pos].rstrip() + f' WHERE user_id = {uid} ' + sql[pos:]
+            sql = sql[:pos].rstrip() + f' WHERE user_id = {uid} AND {excl} ' + sql[pos:]
         else:
-            sql = sql + f' WHERE user_id = {uid}'
+            sql = sql + f' WHERE user_id = {uid} AND {excl}'
 
     if not re.search(r'\bLIMIT\b', sql, re.IGNORECASE):
         sql += ' LIMIT 500'

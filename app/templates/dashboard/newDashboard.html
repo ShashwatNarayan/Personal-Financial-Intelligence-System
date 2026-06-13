@@ -350,6 +350,8 @@
       <div class="font-data-mono text-2xl text-white mt-2" id="kpi-avg-monthly">
         <div class="shimmer h-8 w-32 rounded"></div>
       </div>
+      <!-- CLAUDE CODE: reconciliation note — internal (SWEEP) transfers excluded from spend -->
+      <div class="text-secondary text-[10px] mt-1 leading-tight relative z-10" id="kpi-internal-excl"></div>
       <div class="absolute bottom-0 left-0 w-full h-12 opacity-30 group-hover:opacity-50 transition-opacity">
         <svg class="w-full h-full text-accent stroke-current fill-none" preserveAspectRatio="none" stroke-width="2" viewBox="0 0 100 30">
           <path d="M0,20 L20,25 L40,15 L60,20 L80,5 L100,10"></path>
@@ -701,6 +703,7 @@ const DONUT_COLORS = [
 ];
 
 let _allTransactions = [];
+let _spendTransactions = []; // _allTransactions minus internal transfers (SWEEP), for spend KPIs
 let _subsReport = null;
 let _allMonthlyTotals = []; // stores full monthly_totals for trend toggle
 let sortAscending = false;  // Change 6: default newest-first (descending)
@@ -1485,10 +1488,21 @@ async function loadDashboard() {
     // CLAUDE CODE: Wire /api/transactions/classified → table + KPIs + donut
     if (txnData.status === 'success') {
       _allTransactions = txnData.transactions;
-      renderTransactions(_allTransactions);
-      renderKpis(_allTransactions);
-      renderCategoryDonut(_allTransactions);
-      updateDateRange(_allTransactions); // Change 6: update date range badge
+      // Internal transfers (SWEEP → entity_type 'internal') are kept in the ledger/list
+      // and reconciliation total, but excluded from spend aggregations (KPIs, donut).
+      _spendTransactions = _allTransactions.filter(t => t.entity_type !== 'internal');
+      renderTransactions(_allTransactions);       // list shows all, incl. Internal Transfer
+      renderKpis(_spendTransactions);             // spend KPIs exclude internal transfers
+      renderCategoryDonut(_spendTransactions);    // category breakdown excludes internal transfers
+      updateDateRange(_allTransactions); // Change 6: update date range badge (full ledger span)
+
+      // Reconciliation note: how much internal-transfer volume was excluded from spend
+      const internalSum = _allTransactions
+        .filter(t => t.entity_type === 'internal')
+        .reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+      const exclEl = document.getElementById('kpi-internal-excl');
+      if (exclEl) exclEl.textContent = internalSum > 0
+        ? `Excl. ${fmtAmt(internalSum)} internal transfers` : '';
     } else {
       const tbody = document.getElementById('txn-tbody');
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState()}</td></tr>`;

@@ -24,4 +24,4 @@ services:
       - key: RECAPTCHA_SECRET_KEY
         sync: false
       - key: OWNER_EMAIL
-        value: snn@example.com
+        value: shashwatn2802@gmail.com

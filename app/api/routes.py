@@ -35,12 +35,18 @@ def compute_fingerprint(user_id, date, description, amount):
     return hashlib.md5(key.encode('utf-8')).hexdigest()
 
 
-def get_user_transactions_df(user_id, months=None):
+def get_user_transactions_df(user_id, months=None, exclude_internal=False):
     """
     Single source of truth: load a user's transactions from DB into a DataFrame.
     Returns empty DataFrame with correct columns if no data.
+
+    exclude_internal=True drops internal-transfer rows (SWEEP, entity_type
+    'internal') so they never enter spend analytics. The transaction LIST
+    endpoints leave this False so internal rows stay visible to the user.
     """
     query = Transaction.query.filter_by(user_id=user_id)
+    if exclude_internal:
+        query = query.filter(Transaction.entity_type != 'internal')
     if months:
         from dateutil.relativedelta import relativedelta
         cutoff = datetime.now() - relativedelta(months=months)
@@ -630,8 +636,8 @@ def correct_transaction():
         print(f"   User correction: {entity_name} -> {new_category}")
         print(f"   Updated {updated_count} transactions")
 
-        # Recalculate aggregates from DB for response
-        df = get_user_transactions_df(current_user.id)
+        # Recalculate aggregates from DB for response (spend analytics — exclude internal transfers)
+        df = get_user_transactions_df(current_user.id, exclude_internal=True)
         total_spent = df['amount'].sum()
         category_spend = df.groupby('category')['amount'].sum().sort_values(ascending=False)
         min_date = df['date'].min()
@@ -664,7 +670,7 @@ def correct_transaction():
 @api_bp.route('/insights/temporal', methods=['GET'])
 @login_required
 def get_temporal_insights():
-    df = get_user_transactions_df(current_user.id)
+    df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
         return jsonify({
             'status': 'error',
@@ -692,7 +698,7 @@ def get_temporal_insights():
 @api_bp.route('/reimbursements/report', methods=['GET'])
 @login_required
 def get_reimbursement_report():
-    df = get_user_transactions_df(current_user.id)
+    df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
         return jsonify({'status': 'error', 'message': 'No data'}), 400
 
@@ -716,7 +722,7 @@ def get_reimbursement_report():
 @api_bp.route('/anomalies/report', methods=['GET'])
 @login_required
 def get_anomaly_report():
-    df = get_user_transactions_df(current_user.id)
+    df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
         return jsonify({'status': 'error', 'message': 'No data'}), 400
 
@@ -740,7 +746,7 @@ def get_anomaly_report():
 @api_bp.route('/subscriptions/audit', methods=['GET'])
 @login_required
 def get_subscription_audit():
-    df = get_user_transactions_df(current_user.id)
+    df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
         return jsonify({'status': 'error', 'message': 'No data'}), 400
 
