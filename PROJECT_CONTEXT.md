@@ -20,6 +20,12 @@
 > dropped), non-UPI prefix routing (ATM / DIRECT DR / credit-card), and
 > **internal-transfer exclusion from spend at all three layers** (dashboard,
 > analytics routes, AI query engine) via `entity_type != 'internal'`. See **§18**.
+> Updated 2026-06-14: **Deployed live at https://arthalens.onrender.com/**.
+> `render.yaml` buildCommand now automates `flask db upgrade` (no longer a manual
+> post-deploy step). `Procfile` added (`web: gunicorn wsgi:app`) — resolves
+> pre-deploy checklist item #2. `postgres://`→`postgresql://` normalization added
+> to `config.py` — resolves checklist item #5. `OWNER_EMAIL` env var value in
+> `render.yaml` updated from placeholder `snn@example.com` to the real owner email.
 
 ---
 
@@ -33,10 +39,10 @@ anomalies, and recurring subscriptions, and exposes a dashboard plus a natural
 language AI query feature.
 
 - **Built by:** Shashwat Narayan (solo developer), Hyderabad, Telangana, India.
-- **Status:** Feature-complete through dashboard + AI + auth + password reset.
-  Pre-deployment checklist completed (2026-06-11, see §14) — **deployment to
-  Render + Neon is the immediate next step.** `render.yaml` + `.python-version`
-  present. Pre-launch.
+- **Status:** Feature-complete. **Deployed and live at https://arthalens.onrender.com/**.
+  Pre-deployment checklist completed (2026-06-11, see §14); two previously-failing
+  items (Procfile, `postgres://` normalization) were fixed post-checklist and are
+  now PASS. `render.yaml` + `.python-version` + `Procfile` present.
 - **GitHub repo:** `https://github.com/ShashwatNarayan/Personal-Financial-Intelligence-System.git`
 
 ### Tech stack
@@ -214,7 +220,7 @@ Audit trail of every manual category correction.
 | updated_at | DateTime | default `utcnow`, onupdate `utcnow` |
 
 Cross-user shared merchant→category store. **Only the owner account (gated by
-`OWNER_EMAIL`, currently `snn@example.com`) writes to it**; every user reads it at
+`OWNER_EMAIL`, set in `render.yaml` to `shashwatn2802@gmail.com`) writes to it**; every user reads it at
 Stage 2b of categorization. Added in migration `463ffe6f87a6`. Seeded once via the
 `flask backfill-global-memory` CLI command (614 rows from the owner's per-user
 `EntityMemory`). See §7, §15. **Privacy note:** because the owner's `EntityMemory`
@@ -505,7 +511,7 @@ Dashboard JS hits: `/api/transactions/classified`, `/api/transactions/needs-revi
 | `MAIL_USE_TLS` | `config.py` | Optional | defaults `true` | `true` |
 | `RECAPTCHA_SITE_KEY` | `config.py`, templates | Optional (unused — disabled) | nothing (reCAPTCHA off) | `6Lc...` |
 | `RECAPTCHA_SECRET_KEY` | `config.py`, `_verify_recaptcha` | Optional (unused — disabled) | nothing (reCAPTCHA off) | `6Lc...` |
-| `OWNER_EMAIL` | `api/routes.py` `_owner_email()` (read at request time) + `cli.py` backfill | Optional | **no global-memory writes happen** (safe no-op default) | `snn@example.com` |
+| `OWNER_EMAIL` | `api/routes.py` `_owner_email()` (read at request time) + `cli.py` backfill | Optional | **no global-memory writes happen** (safe no-op default) | `shashwatn2802@gmail.com` (set in `render.yaml`) |
 | `FLASK_ENV` / `SENTRY_DSN` | environment / Sentry | Optional | no Sentry / default env | — |
 
 ---
@@ -520,17 +526,17 @@ services:
     runtime: python
     region: singapore
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && FLASK_APP=wsgi:app flask db upgrade
     startCommand: gunicorn wsgi:app
     envVars:   # all sync:false (set in dashboard) EXCEPT OWNER_EMAIL (literal value)
       - SECRET_KEY, DATABASE_URL, AI_DB_URL, GEMINI_API_KEY,
         MAIL_USERNAME, MAIL_PASSWORD, RECAPTCHA_SITE_KEY, RECAPTCHA_SECRET_KEY
-      - OWNER_EMAIL: snn@example.com   # has `value:` (not sync:false)
+      - OWNER_EMAIL: shashwatn2802@gmail.com   # has `value:` (not sync:false)
 ```
 - **`.python-version`** = `3.11.9` (pins Python on Render).
 - **Build:** `pip install -r requirements.txt`.
 - **Start:** `gunicorn wsgi:app`.
-- **Post-deploy (manual / release step):** run **`flask db upgrade`** once against the fresh Neon DB to create tables (migration head `463ffe6f87a6`). Then optionally **`flask backfill-global-memory`** once to seed `GlobalEntityMemory` from the owner's per-user corrections. `render.yaml` has no preDeploy/release command, so both are manual.
+- **DB migration is now automated** — the `buildCommand` in `render.yaml` runs `flask db upgrade` as part of the build step, so the schema is applied automatically on every deploy. **No manual post-deploy migration step is required.** Optionally, run **`flask backfill-global-memory`** once manually to (re-)seed `GlobalEntityMemory` from the owner's per-user corrections.
 - **Neon connection pooling** (`app/__init__.py`): `pool_pre_ping=True` (handles Neon cold-start drops), `pool_size=5`, `pool_recycle=300` (aligns with Neon idle timeout), `connect_timeout=10`, `statement_timeout=30000`.
 
 > **Caveat:** `.python-version` pins 3.11.9, but the local dev venv compiled
@@ -542,17 +548,17 @@ services:
 | # | Check | Result |
 |---|---|---|
 | 1 | `requirements.txt` has all key deps | ✅ PASS (13/13) |
-| 2 | `Procfile` present | ❌ FAIL — **no Procfile**; `render.yaml` `startCommand: gunicorn wsgi:app` covers it |
+| 2 | `Procfile` present | ✅ PASS — **Procfile added** post-checklist (`web: gunicorn wsgi:app`) |
 | 3 | All env vars referenced in `config.py` | ⚠️ PARTIAL — `AI_DB_URL` & `GEMINI_API_KEY` read in `query_engine.py`, not `config.py` |
 | 4 | `SECRET_KEY` fail-fast | ⚠️ PASS w/ caveat — fails fast via `sys.exit(1)`, not `RuntimeError` |
-| 5 | `DATABASE_URL` handles `postgres://`→`postgresql://` | ❌ FAIL — no normalization; OK only because Neon emits `postgresql://` |
+| 5 | `DATABASE_URL` handles `postgres://`→`postgresql://` | ✅ PASS — **normalization added** post-checklist in `config.py` (`_db_url.replace('postgres://', 'postgresql://', 1)`) |
 | 6 | Static via `url_for` | ✅ PASS |
 | 7 | No `debug=True` in prod path | ✅ PASS (gunicorn `wsgi:app`) |
 | 8 | `migrations/` ≥1 revision | ✅ PASS (2 revisions; folder gitignored — H6) |
 | 9 | `.gitignore` has `.env` | ✅ PASS |
 | 10 | `pool_pre_ping` + `connect_timeout` on both engines | ✅ PASS |
 
-Neither FAIL blocks the current **Neon + Render-via-`render.yaml`** path. **Pre-deploy fixes to consider before a platform change:** add a `Procfile` (portability) and a `postgres://`→`postgresql://` shim in `config.py` (portability to Heroku/Render-Postgres).
+**Both previously-failing items were fixed post-checklist.** The remaining PARTIAL (item 3) does not block operation — `AI_DB_URL` and `GEMINI_API_KEY` are lazily validated at the point of use in `query_engine.py`, and either failure raises a `RuntimeError` with a clear message.
 
 ---
 
@@ -562,7 +568,7 @@ Neither FAIL blocks the current **Neon + Render-via-`render.yaml`** path. **Pre-
 - **Reimbursement "Option B"** — detector runs on the **full df** (so credits can match debits), but **credits are NOT persisted** to the DB; only debit rows + their `is_reimbursed` flag are stored. Keeps the schema debit-centric.
 - **reCAPTCHA disabled** — v3 integration is fully coded but `_verify_recaptcha` returns `True` and template hooks are commented out, because site/secret keys aren't configured yet.
 - **H5: file-based JSON entity memory disabled** — the global `data/entity_memory.json` cache is off (`self.memory = None`); the JSON-backed `EntityMemory` class in `app/analytics/entity_memory.py` is dormant. ⚠️ **However, cross-user category sharing was deliberately RE-INTRODUCED** in a different form — see the GlobalEntityMemory decision below — so H5's original privacy property no longer holds.
-- **Cross-user GlobalEntityMemory (owner-seeded) — reverses H5's isolation, by request (2026-06-10).** A new `global_entity_memory` table + Stage 2b lookup propagate one account's corrections to **all** users. Gated to **owner-only writes** via `OWNER_EMAIL` (`snn@example.com`); everyone reads. `_owner_email()` reads the env at **request time** (not import time) after an import-order bug froze it to `''`. **Accepted privacy tradeoff:** the owner's corrections include person names (`entity_type == 'person'` → `Transfer / P2P`), which now appear in a cross-tenant table; ~70% of the 614 backfilled rows are P2P. A `person`-exclusion filter was offered but not applied.
+- **Cross-user GlobalEntityMemory (owner-seeded) — reverses H5's isolation, by request (2026-06-10).** A new `global_entity_memory` table + Stage 2b lookup propagate one account's corrections to **all** users. Gated to **owner-only writes** via `OWNER_EMAIL` (set to `shashwatn2802@gmail.com` in `render.yaml`); everyone reads. `_owner_email()` reads the env at **request time** (not import time) after an import-order bug froze it to `''`. **Accepted privacy tradeoff:** the owner's corrections include person names (`entity_type == 'person'` → `Transfer / P2P`), which now appear in a cross-tenant table; ~70% of the 614 backfilled rows are P2P. A `person`-exclusion filter was offered but not applied.
 - **Global-memory backfill** — `flask backfill-global-memory` (in `cli.py`, registered in `__init__.py`) one-time-seeded 614 rows from the owner's per-user `EntityMemory` into `GlobalEntityMemory` (the owner's 60 historical corrections predated the global-write code, so the table was empty until backfilled). Upsert-based, so idempotent.
 - **AI prompt-injection sanitization (C3) is a denylist** — `_sanitize_for_prompt` filters known instruction phrases; novel phrasings can slip through. Bounded impact (Call 2 returns text only).
 - **`VALID_CATEGORIES` duplicated** — the 12-value enum lives inline in `api/routes.py` (`correct_transaction`) and overlaps the categorizer's `category_keywords` keys in `categorization.py` (plus `Investment` from the resolver). Currently consistent but duplicated; a shared constant would prevent drift.

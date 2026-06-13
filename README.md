@@ -13,7 +13,9 @@
 
 ## Live Demo
 
-**Deployment-ready — live demo coming soon.**
+**[https://arthalens.onrender.com/](https://arthalens.onrender.com/)**
+
+> Hosted on Render (free tier) + Neon Postgres. Cold starts may add a few seconds on the first load.
 
 ---
 
@@ -177,6 +179,8 @@ python flask_app.py
 Open **http://localhost:5000** in your browser.
 
 > For a production-style run, use the WSGI entry point: `gunicorn wsgi:app`
+
+The production deployment at **[arthalens.onrender.com](https://arthalens.onrender.com/)** runs on Render with `gunicorn wsgi:app` and the database migration (`flask db upgrade`) runs automatically as part of the build step.
 
 ---
 
