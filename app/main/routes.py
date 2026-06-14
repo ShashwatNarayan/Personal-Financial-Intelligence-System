@@ -18,6 +18,12 @@ def dashboard():
     return render_template('dashboard/newDashboard.html')
 
 
+@main_bp.route('/transactions')
+@login_required
+def transactions():
+    return render_template('dashboard/transactions.html')
+
+
 @main_bp.route('/upload')
 @login_required
 def upload():

@@ -34,77 +34,76 @@ class AnomalyDetector:
 
     def detect_anomalies(self):
         """
-        Detect anomalies using z-score method
+        Detect anomalies using a rolling-window z-score method.
+
+        Every month (from the ROLLING_WINDOW-th onward) is tested against the
+        immediately-preceding ROLLING_WINDOW months as its baseline, so
+        historical anomalies are detected and a long history no longer inflates
+        the baseline std. Multiple flagged months in the same category are all
+        kept — they are genuinely distinct events.
+
         Returns: List of anomaly dictionaries
         """
+        ROLLING_WINDOW = 3  # months of prior history to use as baseline
+
         anomalies = []
 
         for category in self.monthly['category'].unique():
-            cat_data = self.monthly[self.monthly['category'] == category].sort_values('year_month')
+            cat_data = (
+                self.monthly[self.monthly['category'] == category]
+                .sort_values('year_month')
+                .reset_index(drop=True)
+            )
 
             # Skip if insufficient history
             if len(cat_data) < self.min_months:
                 continue
 
-            # Get current (most recent) month
-            current_month = cat_data.iloc[-1]
-            current_spend = current_month['spend']
-            current_ym = current_month['year_month']
+            # Test each month starting from index ROLLING_WINDOW onward
+            for i in range(ROLLING_WINDOW, len(cat_data)):
+                current_row = cat_data.iloc[i]
+                baseline = cat_data.iloc[max(0, i - ROLLING_WINDOW):i]['spend']
 
-            # Get baseline (all previous months)
-            if len(cat_data) == self.min_months:
-                # If exactly min_months, use all but current
-                baseline = cat_data.iloc[:-1]['spend']
-            else:
-                # Use all previous months
-                baseline = cat_data.iloc[:-1]['spend']
+                # Skip if baseline too small
+                if len(baseline) < 2:
+                    continue
 
-            # Skip if baseline too small
-            if len(baseline) < 2:
-                continue
+                baseline_mean = baseline.mean()
+                baseline_std = baseline.std()
 
-            # Calculate baseline statistics
-            baseline_mean = baseline.mean()
-            baseline_std = baseline.std()
+                # Skip if no variation (std = 0)
+                if baseline_std == 0:
+                    continue
 
-            # Skip if no variation (std = 0)
-            if baseline_std == 0:
-                continue
+                z_score = (current_row['spend'] - baseline_mean) / baseline_std
 
-            # Calculate z-score
-            z_score = (current_spend - baseline_mean) / baseline_std
+                # Ignore statistically significant but financially trivial
+                # anomalies (e.g. a category that doubled from ₹50 to ₹100).
+                MIN_ABSOLUTE_DIFF = 1000  # ₹
+                abs_diff = abs(current_row['spend'] - baseline_mean)
+                if abs_diff < MIN_ABSOLUTE_DIFF:
+                    continue
 
-            # Flag if exceeds threshold
-            if abs(z_score) >= self.threshold:
-                # Determine type
-                if z_score > 0:
-                    anomaly_type = 'spike'
-                    direction = 'higher'
-                else:
-                    anomaly_type = 'drop'
-                    direction = 'lower'
-
-                # Calculate deviation percentage
-                deviation_pct = ((current_spend - baseline_mean) / baseline_mean) * 100
-
-                # Generate explanation
-                explanation = self._generate_explanation(
-                    category, current_spend, baseline_mean,
-                    deviation_pct, direction, z_score
-                )
-
-                anomalies.append({
-                    'category': category,
-                    'month': current_ym,
-                    'current_spend': float(current_spend),
-                    'baseline_mean': float(baseline_mean),
-                    'baseline_std': float(baseline_std),
-                    'z_score': float(z_score),
-                    'deviation_percent': float(deviation_pct),
-                    'anomaly_type': anomaly_type,
-                    'severity': self._get_severity(abs(z_score)),
-                    'explanation': explanation
-                })
+                # Flag if exceeds threshold
+                if abs(z_score) >= self.threshold:
+                    anomalies.append({
+                        'category': category,
+                        'month': current_row['year_month'],
+                        'actual_spend': float(current_row['spend']),
+                        'expected_spend': float(baseline_mean),
+                        'z_score': float(z_score),
+                        'anomaly_type': 'spike' if z_score > 0 else 'drop',
+                        'severity': 'critical' if abs(z_score) >= 3.0
+                                    else 'high' if abs(z_score) >= 2.5
+                                    else 'moderate',
+                        'explanation': (
+                            f"{category} spending ₹{current_row['spend']:,.0f} in "
+                            f"{current_row['year_month']} was "
+                            f"{'above' if z_score > 0 else 'below'} normal "
+                            f"(3-month avg: ₹{baseline_mean:,.0f}, "
+                            f"z={z_score:.1f})"
+                        )
+                    })
 
         # Sort by absolute z-score (most significant first)
         anomalies.sort(key=lambda x: abs(x['z_score']), reverse=True)

@@ -205,7 +205,7 @@ def upload_excel():
         # Defensive: AnomalyDetector requires net_amount — guarantee it exists.
         if 'net_amount' not in df_expenses.columns:
             df_expenses['net_amount'] = df_expenses['amount']
-        anomaly_detector = AnomalyDetector(df_expenses, threshold=2.0, min_months=3)
+        anomaly_detector = AnomalyDetector(df_expenses, threshold=2.5, min_months=3)
         anomaly_report = anomaly_detector.generate_report()
         if anomaly_report['summary']['total_anomalies'] > 0:
             print(f"   [WARN] {anomaly_report['summary']['total_anomalies']} anomalies detected")
@@ -728,7 +728,7 @@ def get_anomaly_report():
 
     try:
         from app.analytics.anomaly_detector import AnomalyDetector
-        detector = AnomalyDetector(df, threshold=2.0, min_months=3)
+        detector = AnomalyDetector(df, threshold=2.5, min_months=3)
         report = detector.generate_report()
 
         print(f"   Anomaly report generated:")

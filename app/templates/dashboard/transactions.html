@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<!-- Init theme from localStorage before render to prevent flash -->
+<script>if(localStorage.getItem('arthalens-theme')==='light')document.documentElement.classList.add('light-mode');</script>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<!-- CSRF token for POST requests -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>ArthaLens — Transactions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "secondary": "#88d899",
+                "background": "#101510",
+                "secondary-container": "#01602e",
+                "inverse-surface": "#dfe4dc",
+                "tertiary-fixed": "#ffd9e0",
+                "inverse-on-surface": "#2d322c",
+                "primary-container": "#5bae6d",
+                "tertiary": "#ffb1c3",
+                "surface-variant": "#313631",
+                "error": "#ffb4ab",
+                "on-primary": "#003916",
+                "outline-variant": "#3f493f",
+                "on-error-container": "#ffdad6",
+                "error-container": "#93000a",
+                "surface-bright": "#363a35",
+                "primary-fixed": "#a0f6ae",
+                "on-tertiary": "#5e112e",
+                "primary-fixed-dim": "#84d993",
+                "on-primary-container": "#003e19",
+                "surface-container-high": "#262b26",
+                "on-secondary": "#003918",
+                "on-primary-fixed": "#00210a",
+                "tertiary-container": "#e57d99",
+                "tertiary-fixed-dim": "#ffb1c3",
+                "surface-container-highest": "#313631",
+                "secondary-fixed-dim": "#88d899",
+                "surface-container": "#1c211c",
+                "on-tertiary-container": "#641632",
+                "on-surface-variant": "#bfc9bc",
+                "on-background": "#dfe4dc",
+                "surface-tint": "#84d993",
+                "primary": "#84d993",
+                "on-secondary-fixed-variant": "#005226",
+                "surface-container-low": "#181d18",
+                "outline": "#899488",
+                "on-secondary-fixed": "#00210c",
+                "surface-container-lowest": "#0b0f0b",
+                "on-surface": "#dfe4dc",
+                "on-secondary-container": "#87d899",
+                "surface": "#101510",
+                "on-tertiary-fixed-variant": "#7b2944",
+                "on-error": "#690005",
+                "on-tertiary-fixed": "#3f0019",
+                "surface-dim": "#101510",
+                "secondary-fixed": "#a3f5b3",
+                "inverse-primary": "#126d34",
+                "on-primary-fixed-variant": "#005323"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "margin-mobile": "16px",
+                "gutter": "16px",
+                "lg": "24px",
+                "md": "16px",
+                "max-width": "1280px",
+                "sm": "8px",
+                "xl": "40px",
+                "base": "4px",
+                "xs": "4px",
+                "margin-desktop": "32px"
+        },
+        "fontFamily": {
+                "headline-lg-mobile": ["Inter"],
+                "data-mono": ["JetBrains Mono"],
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-caps": ["Inter"],
+                "headline-lg": ["Inter"],
+                "headline-md": ["Inter"]
+        },
+        "fontSize": {
+                "headline-lg-mobile": ["24px", {"lineHeight":"1.2","letterSpacing":"-0.01em","fontWeight":"600"}],
+                "data-mono": ["14px", {"lineHeight":"1.5","letterSpacing":"-0.01em","fontWeight":"400"}],
+                "body-md": ["14px", {"lineHeight":"1.5","letterSpacing":"0","fontWeight":"400"}],
+                "body-lg": ["16px", {"lineHeight":"1.6","letterSpacing":"0","fontWeight":"400"}],
+                "label-caps": ["12px", {"lineHeight":"1","letterSpacing":"0.05em","fontWeight":"600"}],
+                "headline-lg": ["32px", {"lineHeight":"1.2","letterSpacing":"-0.02em","fontWeight":"600"}],
+                "headline-md": ["20px", {"lineHeight":"1.4","letterSpacing":"-0.01em","fontWeight":"500"}]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  /* ── CSS Variables ── */
+  :root {
+    --bg: #0d0f0d;
+    --card: #131a13;
+    --navbar: #0a0c0a;
+    --border: #1f2a1f;
+    --text-primary: #f0f0f0;
+    --text-secondary: #6b7280;
+    --accent: #4ade80;
+    --row-hover: #1c241c;
+  }
+  html.light-mode {
+    --bg: #f5f7f5;
+    --card: #ffffff;
+    --navbar: #ffffff;
+    --border: #e2e8e2;
+    --text-primary: #0d0f0d;
+    --text-secondary: #4b5563;
+    --accent: #4ade80;
+    --row-hover: #f0f7f0;
+  }
+  /* ── Light-mode overrides ── */
+  html.light-mode body { background-color: var(--bg) !important; color: var(--text-primary); }
+  html.light-mode .card { background-color: var(--card) !important; border-color: var(--border) !important; }
+  html.light-mode nav  { background-color: var(--navbar) !important; border-bottom-color: var(--border) !important; }
+  html.light-mode .text-white { color: var(--text-primary) !important; }
+  html.light-mode .text-secondary { color: var(--text-secondary) !important; }
+  html.light-mode .bg-\[#131a13\] { background-color: var(--card) !important; }
+  html.light-mode .border-\[#1f2a1f\] { border-color: var(--border) !important; }
+  html.light-mode .bg-\[#0a0c0a\] { background-color: var(--navbar) !important; }
+  /* Search input */
+  html.light-mode #txn-search { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  /* Category dropdown */
+  html.light-mode #cat-filter { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  html.light-mode #sort-select { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  /* Table header row */
+  html.light-mode table thead tr { background-color: var(--navbar) !important; }
+  html.light-mode table thead th { color: var(--text-secondary) !important; border-color: var(--border) !important; }
+  html.light-mode tbody tr { border-color: var(--border) !important; }
+  /* Avatar button */
+  html.light-mode #avatar-btn { background-color: var(--border) !important; border-color: var(--border) !important; }
+  /* Profile dropdown */
+  html.light-mode #profile-dropdown { background: var(--card) !important; border-color: var(--border) !important; }
+  /* Inline edit select */
+  html.light-mode .inline-edit-select { background: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+  /* Shimmer in light mode */
+  html.light-mode .shimmer { background: linear-gradient(90deg, #f0f0f0 0%, #e2e8e2 50%, #f0f0f0 100%); }
+  html.light-mode .bg-\[#1f2a1f\] { background-color: var(--border) !important; }
+  /* Transaction row hover — theme-aware */
+  .transaction-row:hover { background-color: var(--row-hover) !important; }
+  /* Table row dividers via border */
+  #txn-tbody tr { border-bottom: 1px solid var(--border); }
+  /* Theme toggle pill */
+  .theme-toggle-pill {
+    width: 48px; height: 24px;
+    border-radius: 12px;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+  }
+  .theme-toggle-pill-circle {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform 0.25s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+  }
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    transition: border-color 0.2s, background-color 0.25s;
+  }
+  .text-accent { color: #4ade80; }
+  .bg-accent { background-color: #4ade80; color: #0d0f0d; }
+  .border-accent { border-color: #4ade80; }
+  .text-secondary { color: #6b7280; }
+  .shimmer {
+    background: linear-gradient(90deg, #131a13 0%, #1f2a1f 50%, #131a13 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .inline-edit-select {
+    background: var(--border);
+    border: 1px solid #3f493f;
+    color: var(--text-primary);
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+  .sub-badge {
+    display: inline-block;
+    background-color: #dc2626;
+    color: white;
+    border-radius: 9999px;
+    font-size: 11px;
+    padding: 2px 8px;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body class="font-body-md min-h-screen overflow-x-hidden">
+
+<!-- Top Navigation -->
+<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
+  <div class="flex items-center">
+    <img src="{{ url_for('static', filename='images/logo.png') }}"
+         alt="ArthaLens"
+         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+  </div>
+  <div class="hidden md:flex items-center h-full">
+    <!-- Dashboard link: NOT active -->
+    <a class="h-full px-4 flex items-center text-sm font-medium transition-colors"
+       style="color:var(--text-secondary)"
+       onmouseenter="this.style.color='var(--text-primary)'"
+       onmouseleave="this.style.color='var(--text-secondary)'"
+       href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <!-- Transactions link: active -->
+    <a class="h-full px-4 flex items-center border-b-2 border-accent text-white font-medium"
+       href="{{ url_for('main.transactions') }}">Transactions</a>
+  </div>
+  <div class="flex items-center gap-4">
+    <!-- Theme toggle -->
+    <button class="theme-toggle-pill" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+      <div class="theme-toggle-pill-circle" id="theme-circle">
+        <span id="theme-icon">☾</span>
+      </div>
+    </button>
+    <!-- Upload button -->
+    <a href="{{ url_for('main.upload') }}" class="bg-accent hover:bg-[#3bc26b] text-[#0d0f0d] font-medium px-4 py-2 rounded-[8px] transition-colors hidden sm:flex items-center gap-2 no-underline">
+      <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
+    </a>
+    <!-- Profile dropdown avatar -->
+    <div style="position:relative" id="avatar-wrapper">
+      <button id="avatar-btn"
+        class="w-8 h-8 rounded-full flex items-center justify-center text-secondary text-xs font-bold cursor-pointer transition-colors"
+        style="background:var(--border);border:1px solid var(--border)"
+        onmouseenter="this.style.borderColor='#4ade80'" onmouseleave="this.style.borderColor='var(--border)'"
+        onclick="toggleProfileDropdown(event)"
+        aria-label="User profile menu">
+        <span class="material-symbols-outlined text-[20px]">person</span>
+      </button>
+      <div id="profile-dropdown"
+        style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--card);border:1px solid var(--border);border-radius:8px;min-width:180px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:200">
+        <div style="font-weight:600;color:var(--text-primary);font-size:13px;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          {{ current_user.email }}
+        </div>
+        <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+        <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;padding:0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+            style="width:100%;text-align:left;background:none;border:none;color:var(--text-primary);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-family:inherit"
+            onmouseenter="this.style.color='#4ade80'"
+            onmouseleave="this.style.color='var(--text-primary)'">
+            <span class="material-symbols-outlined" style="font-size:16px">logout</span>
+            Logout
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="pt-[56px]">
+  <div class="max-w-[1280px] mx-auto px-6 py-8">
+
+    <!-- Page header -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="font-headline-lg font-semibold" style="color:var(--text-primary)">Transactions</h1>
+        <p class="text-sm mt-1" style="color:var(--text-secondary)" id="page-subtitle">All your transactions</p>
+      </div>
+    </div>
+
+    <!-- Active filter banner (hidden by default, shown when URL params are present) -->
+    <div id="active-filter-banner" class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg" style="display:none;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2)">
+      <span class="material-symbols-outlined" style="font-size:18px;color:#4ade80">filter_alt</span>
+      <span id="active-filter-label" class="text-sm font-medium" style="color:#4ade80"></span>
+      <button onclick="clearAllFilters()" class="ml-auto text-sm px-3 py-1 rounded-lg transition-colors" style="color:#4ade80;border:1px solid rgba(74,222,128,0.3);background:none;cursor:pointer">
+        Clear filter
+      </button>
+    </div>
+
+    <!-- Controls row -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      <div id="txn-count-label" class="text-sm" style="color:var(--text-secondary)">Loading...</div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Search -->
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:16px;color:var(--text-secondary)">search</span>
+          <input id="txn-search" type="text" placeholder="Search transactions…"
+            class="rounded-lg text-sm pl-8 pr-3 py-2 focus:outline-none w-48"
+            style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);caret-color:#4ade80"
+            oninput="filterTransactions()"
+            onfocus="this.style.borderColor='#4ade80'"
+            onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <!-- Category filter -->
+        <div class="relative">
+          <select id="cat-filter" class="appearance-none rounded-lg text-sm pl-3 pr-8 py-2 focus:ring-0"
+            style="background:var(--card);border:1px solid var(--border);color:var(--text-secondary)"
+            onchange="filterTransactions()">
+            <option value="">All Categories</option>
+            <option>Food &amp; Dining</option>
+            <option>Shopping</option>
+            <option>Transport</option>
+            <option>Utilities</option>
+            <option>Entertainment</option>
+            <option>Healthcare</option>
+            <option>Transfer / P2P</option>
+            <option>Rent</option>
+            <option>Education</option>
+            <option>ATM / Cash</option>
+            <option>Other</option>
+          </select>
+          <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[18px]" style="color:var(--text-secondary)">expand_more</span>
+        </div>
+        <!-- Sort -->
+        <div class="relative">
+          <select id="sort-select" class="appearance-none rounded-lg text-sm pl-3 pr-8 py-2 focus:ring-0"
+            style="background:var(--card);border:1px solid var(--border);color:var(--text-secondary)"
+            onchange="filterTransactions()">
+            <option value="date_desc">Date: Newest first</option>
+            <option value="date_asc">Date: Oldest first</option>
+            <option value="amount_desc">Amount: High to Low</option>
+            <option value="amount_asc">Amount: Low to High</option>
+          </select>
+          <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[18px]" style="color:var(--text-secondary)">expand_more</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions table card -->
+    <div class="card p-0 overflow-hidden flex flex-col" style="border-color:var(--border)">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr style="background:var(--navbar);border-bottom:1px solid var(--border)">
+              <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest w-[100px]" style="color:var(--text-secondary)">Date</th>
+              <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-secondary)">Merchant</th>
+              <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest w-[150px]" style="color:var(--text-secondary)">Category</th>
+              <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-right w-[120px]" style="color:var(--text-secondary)">Amount</th>
+              <th class="px-6 py-4 w-[40px]"></th>
+            </tr>
+          </thead>
+          <tbody id="txn-tbody" style="border-color:var(--border)">
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
+            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-6 py-4 flex justify-center" style="border-top:1px solid var(--border)">
+        <button id="load-more-btn" onclick="loadMoreTransactions()"
+          class="px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+          style="background:var(--border);color:var(--text-primary);display:none">
+          Load More
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Transactions page — self-contained
+// ============================================================
+
+const CATEGORIES = [
+  'Food & Dining','Shopping','Transport','Utilities','Entertainment',
+  'Healthcare','Transfer / P2P','Rent','Education','ATM / Cash','Other'
+];
+
+const CAT_COLORS = {
+  'Food & Dining':  { bg: 'rgba(249,115,22,0.12)', text: '#fb923c' },
+  'Shopping':       { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa' },
+  'Transport':      { bg: 'rgba(14,165,233,0.12)',  text: '#38bdf8' },
+  'Utilities':      { bg: 'rgba(34,197,94,0.12)',   text: '#4ade80' },
+  'Entertainment':  { bg: 'rgba(168,85,247,0.12)',  text: '#c084fc' },
+  'Healthcare':     { bg: 'rgba(239,68,68,0.12)',   text: '#f87171' },
+  'Transfer / P2P': { bg: 'rgba(234,179,8,0.12)',   text: '#facc15' },
+  'Rent':           { bg: 'rgba(236,72,153,0.12)',  text: '#f472b6' },
+  'Education':      { bg: 'rgba(99,102,241,0.12)',  text: '#818cf8' },
+  'ATM / Cash':     { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' },
+  'Other':          { bg: 'rgba(120,113,108,0.12)', text: '#a8a29e' },
+};
+
+// Category icons — lime-green stroke (18x18, no fill), shown before the category name
+const CAT_ICONS = {
+  'Food & Dining':  '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  'Shopping':       '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  'Transport':      '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  'Utilities':      '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
+  'Entertainment':  '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>',
+  'Healthcare':     '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  'Transfer / P2P': '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  'Rent':           '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'Education':      '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  'ATM / Cash':     '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  'Other':          '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="17" r="0.5" fill="#a3e635"/>',
+};
+
+function catIcon(cat) {
+  const paths = CAT_ICONS[cat] || CAT_ICONS['Other'];
+  return `<span style="display:inline-flex;align-items:center;vertical-align:middle;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3e635" stroke-width="1.5">${paths}</svg></span>`;
+}
+
+let _allTransactions = [];
+let currentOffset = 0;
+const pageSize = 20;
+let _activeMonthFilter = null;   // set from URL param
+let _activeCatFilter = null;     // set from URL param
+
+function getCsrf() {
+  return document.querySelector('meta[name="csrf-token"]').content;
+}
+const CSRF = getCsrf();
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtAmt(n) {
+  return '₹' + parseFloat(n || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+function fmtDate(s) {
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function catPill(cat) {
+  const c = CAT_COLORS[cat] || CAT_COLORS['Other'];
+  return `<span style="display:flex;align-items:center;gap:6px;white-space:nowrap">${catIcon(cat)}<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase" style="background:${c.bg};color:${c.text};white-space:nowrap">${escHtml(cat)}</span></span>`;
+}
+
+function emptyState(msg) {
+  const text = msg || 'Upload a statement to see your data';
+  return `<div class="flex flex-col items-center justify-center py-8 gap-2" style="color:#6b7280">
+    <span class="material-symbols-outlined" style="font-size:28px;color:#6b7280">cloud_upload</span>
+    <span class="text-sm">${escHtml(text)}</span>
+  </div>`;
+}
+
+function showToast(msg, ok) {
+  const t = document.createElement('div');
+  t.style.cssText = [
+    'position:fixed','bottom:24px','right:24px','z-index:9999',
+    'padding:12px 20px','border-radius:8px','font-size:14px','font-weight:500',
+    'box-shadow:0 4px 20px rgba(0,0,0,0.5)',
+    'transition:opacity 0.4s,transform 0.4s',
+    ok === false ? 'background:#ef4444;color:#fff' : 'background:#4ade80;color:#0d0f0d'
+  ].join(';');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 2600);
+  setTimeout(() => t.remove(), 3100);
+}
+
+// ---- URL param pre-filtering ----
+function initFromURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const month = params.get('month');        // e.g. "2025-07"
+  const category = params.get('category');   // e.g. "Food & Dining"
+
+  if (month) {
+    _activeMonthFilter = month;
+    const label = formatMonthLabel(month);
+    document.getElementById('active-filter-label').textContent = `Showing transactions for ${label}`;
+    document.getElementById('active-filter-banner').style.display = 'flex';
+    document.getElementById('page-subtitle').textContent = `Filtered: ${label}`;
+  }
+
+  if (category) {
+    _activeCatFilter = category;
+    const catEl = document.getElementById('cat-filter');
+    if (catEl) catEl.value = category;
+    const bannerLabel = document.getElementById('active-filter-label');
+    const existing = bannerLabel.textContent;
+    bannerLabel.textContent = existing
+      ? existing + ` · Category: ${category}`
+      : `Showing category: ${category}`;
+    document.getElementById('active-filter-banner').style.display = 'flex';
+    document.getElementById('page-subtitle').textContent = `Filtered: ${category}`;
+  }
+}
+
+function formatMonthLabel(yyyymm) {
+  // "2025-07" → "Jul 2025"
+  const [y, m] = yyyymm.split('-');
+  const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+  return d.toLocaleString('default', { month: 'short', year: 'numeric' });
+}
+
+function clearAllFilters() {
+  _activeMonthFilter = null;
+  _activeCatFilter = null;
+  document.getElementById('cat-filter').value = '';
+  document.getElementById('txn-search').value = '';
+  document.getElementById('active-filter-banner').style.display = 'none';
+  document.getElementById('page-subtitle').textContent = 'All your transactions';
+  // Remove URL params without reloading
+  window.history.replaceState({}, '', '/transactions');
+  currentOffset = 0;
+  filterTransactions();
+}
+
+function applyFilter(txns) {
+  const catVal = (document.getElementById('cat-filter') || {}).value || _activeCatFilter || '';
+  const searchVal = ((document.getElementById('txn-search') || {}).value || '').toLowerCase().trim();
+  const sortVal = (document.getElementById('sort-select') || {}).value || 'date_desc';
+
+  let filtered = txns;
+
+  // Month filter (from URL param)
+  if (_activeMonthFilter) {
+    filtered = filtered.filter(t => t.date.startsWith(_activeMonthFilter));
+  }
+  // Category filter
+  if (catVal) filtered = filtered.filter(t => t.category === catVal);
+  // Search filter
+  if (searchVal) filtered = filtered.filter(t =>
+    (t.merchant || '').toLowerCase().includes(searchVal) ||
+    (t.description || '').toLowerCase().includes(searchVal)
+  );
+  // Sort
+  filtered = [...filtered].sort((a, b) => {
+    if (sortVal === 'date_desc') return b.date.localeCompare(a.date);
+    if (sortVal === 'date_asc')  return a.date.localeCompare(b.date);
+    if (sortVal === 'amount_desc') return parseFloat(b.amount) - parseFloat(a.amount);
+    if (sortVal === 'amount_asc')  return parseFloat(a.amount) - parseFloat(b.amount);
+    return 0;
+  });
+  return filtered;
+}
+
+function renderTransactions(txns) {
+  const tbody = document.getElementById('txn-tbody');
+  const loadMoreBtn = document.getElementById('load-more-btn');
+  const countEl = document.getElementById('txn-count-label');
+
+  if (!txns || !txns.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState()}</td></tr>`;
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    if (countEl) countEl.textContent = '0 transactions';
+    return;
+  }
+
+  const filtered = applyFilter(txns);
+  if (countEl) countEl.textContent = `${filtered.length} transaction${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8"><div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+    <div style="font-size: 28px; margin-bottom: 12px;">🗂️</div>
+    <div style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">No transactions found</div>
+    <div style="font-size: 13px; opacity: 0.7;">No transactions match the current filters</div>
+</div></td></tr>`;
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    return;
+  }
+
+  const allShown = currentOffset + pageSize >= filtered.length;
+  let rowsHtml = filtered.slice(0, currentOffset + pageSize).map(t => `
+    <tr class="transaction-row transition-colors" data-txn-id="${escHtml(t.txn_id)}">
+      <td class="px-6 py-4 text-sm" style="color:#6b7280">${fmtDate(t.date)}</td>
+      <td class="px-6 py-4 text-sm text-white">${escHtml(t.merchant)}${t.is_subscription ? '<br><span class="sub-badge">Subscription</span>' : ''}</td>
+      <td class="px-6 py-4"><span class="cat-cell">${catPill(t.category)}</span></td>
+      <td class="px-6 py-4 text-sm font-data-mono text-white text-right">${fmtAmt(t.amount)}</td>
+      <td class="px-6 py-4 text-right">
+        <button class="p-2 edit-btn cursor-pointer transition-colors"
+          style="color:#6b7280"
+          data-txn-id="${escHtml(t.txn_id)}"
+          data-category="${escHtml(t.category)}"
+          onmouseenter="this.style.color='#4ade80'"
+          onmouseleave="this.style.color='#6b7280'">
+          <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+  if (allShown) {
+    rowsHtml += `<tr><td colspan="5" style="padding:0"><div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.05);">
+    ✦ All transactions shown
+</div></td></tr>`;
+  }
+  tbody.innerHTML = rowsHtml;
+  tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn)));
+  if (loadMoreBtn) {
+    if (allShown) {
+      loadMoreBtn.style.display = 'none';
+    } else {
+      loadMoreBtn.style.display = '';
+      loadMoreBtn.textContent = `Load More (${filtered.length - currentOffset - pageSize} remaining)`;
+    }
+  }
+}
+
+function filterTransactions() {
+  currentOffset = 0;
+  renderTransactions(_allTransactions);
+}
+
+function loadMoreTransactions() {
+  currentOffset += pageSize;
+  renderTransactions(_allTransactions);
+}
+
+// ---- Inline Category Edit → POST /api/transactions/correct ----
+function openEdit(btn) {
+  const txnId = btn.dataset.txnId;
+  const row = btn.closest('tr');
+  const catCell = row.querySelector('.cat-cell');
+  const origHtml = catCell.innerHTML;
+  const origCat = btn.dataset.category;
+
+  catCell.innerHTML = `
+    <div class="flex items-center gap-1 flex-wrap">
+      <select class="inline-edit-select">
+        ${CATEGORIES.map(c =>
+          `<option value="${escHtml(c)}" ${c === origCat ? 'selected' : ''}>${escHtml(c)}</option>`
+        ).join('')}
+      </select>
+      <button class="save-edit px-2 py-1 rounded text-xs font-bold" style="background:#4ade80;color:#0d0f0d">✓</button>
+      <button class="cancel-edit px-2 py-1 rounded text-xs" style="background:var(--border);color:var(--text-secondary)">✕</button>
+    </div>
+  `;
+
+  catCell.querySelector('.cancel-edit').addEventListener('click', () => {
+    catCell.innerHTML = origHtml;
+  });
+
+  catCell.querySelector('.save-edit').addEventListener('click', async () => {
+    const newCat = catCell.querySelector('.inline-edit-select').value;
+    try {
+      const res = await fetch('/api/transactions/correct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrf()
+        },
+        body: JSON.stringify({ transaction_id: txnId, new_category: newCat })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        btn.dataset.category = newCat;
+        catCell.innerHTML = catPill(newCat);
+        // Update in-memory store so re-renders reflect the change
+        const txn = _allTransactions.find(t => t.txn_id === txnId);
+        if (txn) txn.category = newCat;
+        showToast('✓ Category updated');
+      } else {
+        showToast('Update failed', false);
+        catCell.innerHTML = origHtml;
+      }
+    } catch (_e) {
+      showToast('Network error', false);
+      catCell.innerHTML = origHtml;
+    }
+  });
+}
+
+// ---- Main data fetch ----
+async function loadTransactions() {
+  try {
+    const res = await fetch('/api/transactions/classified', {
+      headers: { 'X-CSRFToken': CSRF }
+    });
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error(data.message);
+    _allTransactions = data.transactions;
+    renderTransactions(_allTransactions);
+  } catch(e) {
+    showToast('Could not load transactions', true);
+    document.getElementById('txn-tbody').innerHTML =
+      `<tr><td colspan="5" class="px-6 py-8 text-center text-sm" style="color:var(--text-secondary)">Failed to load transactions.</td></tr>`;
+    const countEl = document.getElementById('txn-count-label');
+    if (countEl) countEl.textContent = '';
+  }
+}
+
+// ---- Theme toggle ----
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light-mode');
+  localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
+  _syncThemeUI(isLight);
+}
+function _syncThemeUI(isLight) {
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = isLight ? '☀' : '☾';
+}
+function initTheme() {
+  _syncThemeUI(document.documentElement.classList.contains('light-mode'));
+}
+
+// ---- Profile dropdown ----
+function toggleProfileDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profile-dropdown');
+  if (!dd) return;
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', () => {
+  const dd = document.getElementById('profile-dropdown');
+  if (dd) dd.style.display = 'none';
+});
+
+// ---- Init ----
+initTheme();
+initFromURLParams();
+loadTransactions();
+</script>
+</body>
+</html>

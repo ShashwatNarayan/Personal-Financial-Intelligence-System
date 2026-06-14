@@ -26,6 +26,50 @@
 > pre-deploy checklist item #2. `postgres://`→`postgresql://` normalization added
 > to `config.py` — resolves checklist item #5. `OWNER_EMAIL` env var value in
 > `render.yaml` updated from placeholder `snn@example.com` to the real owner email.
+> Updated 2026-06-15: **Dashboard Recent-Transactions UX** (`newDashboard.html`,
+> frontend-only). (1) Clicking a point on the Monthly Spending Trend chart now
+> filters Recent Transactions to that month via a `plotly_click` handler →
+> `_activeMonthFilter` (`YYYY-MM`), a dismissible 📅 month pill
+> (`#month-filter-pill` + `clearMonthFilter()`), and a smooth scroll to the table.
+> The handler slices the clicked x to 7 chars (`String(rawX).slice(0,7)`) so a
+> whole month matches even when Plotly returns a full date; the trend xaxis is now
+> `type:'date'` with `tickformat:'%b %Y'`. (2) The "All Transactions" sort-toggle
+> button was replaced with a **Sort By** `<select id="sort-select">` (Date/Amount,
+> asc/desc) — `sortAscending`/`allTransactionsClick()`/`sort-arrow-icon` removed,
+> `applyFilter()` now sorts off the dropdown. See §11.
+> Updated 2026-06-15: **Transactions page split.** Zone 5 (the Recent Transactions
+> table) was moved out of `newDashboard.html` into a dedicated **`/transactions`**
+> page (`main.transactions` → `dashboard/transactions.html`, self-contained
+> standalone template with its own CSS vars / theme init / navbar / JS). The new
+> page supports search, category filter, sort, Load-More paging, and inline category
+> edit (`POST /api/transactions/correct`), and pre-filters from URL params
+> (`?month=YYYY-MM` or `?category=...`) with a dismissible filter banner +
+> `clearAllFilters()`. Cross-links from the dashboard donut and trend charts now do
+> `window.location.href` redirects to `/transactions?...` instead of in-page DOM
+> filtering/scroll. The dashboard's `renderTransactions`/`applyFilter`/
+> `filterTransactions`/`loadMoreTransactions`/`setMonthFilter`/`clearMonthFilter`/
+> `openEdit` and the `_activeMonthFilter`/`currentOffset`/`pageSize` vars were
+> removed; `_allTransactions` + the donut/KPI wiring stay. See §11.
+> Updated 2026-06-15: **Anomaly detector → rolling-window z-score.** The detector
+> (`anomaly_detector.py`) previously tested only the **single most-recent month**
+> per category against **all** prior months, so (a) historical anomalies were never
+> detected and (b) a long history inflated the baseline std and suppressed detection
+> over time — the dashboard showed "No anomalies detected" despite 27 months of data.
+> `detect_anomalies()` now iterates **every** month from index 3 onward, using a
+> **rolling 3-month prior window** (`ROLLING_WINDOW = 3`) as the baseline, and emits
+> one anomaly per flagged month (all distinct months kept, sorted by `abs(z)` desc).
+> New per-anomaly fields: `actual_spend`/`expected_spend` (replacing
+> `current_spend`/`baseline_mean`/`baseline_std`/`deviation_percent`); `category`,
+> `month`, `z_score`, `anomaly_type`, `severity`, `explanation` unchanged, so
+> `generate_report()` still returns `{summary, anomalies, metadata}` and the frontend
+> needed no structural change. A **`MIN_ABSOLUTE_DIFF = 1000`** (₹) guard now skips
+> statistically significant but financially trivial anomalies (`|actual − baseline_mean|
+> < ₹1000`). Threshold was tuned **2.0 → 1.8 → 2.5** across iterations; final value is
+> **`threshold=2.5`** on **both** `AnomalyDetector` instances (the `/api/anomalies/report`
+> route and the upload-pipeline instance at ~`routes.py:208`). Frontend `renderAlerts()`
+> in `newDashboard.html` now shows the top **5** anomalies (`.slice(0,5)`, was 8).
+> Net effect on the seeded 2,202-row / 27-month dataset: **0 → 17** anomalies
+> (33 at 1.8 with no guard → 17 after the 2.5 threshold + ₹1000 guard). See §16b.
 
 ---
 
@@ -241,7 +285,7 @@ all users.
 | POST | `/api/transactions/correct` | Recategorize an entity; **validates `new_category` against the 12-value `VALID_CATEGORIES` enum (400 if invalid)**; updates all matching txns + upserts per-user `EntityMemory` + logs `Correction`; **if corrector is the owner (`OWNER_EMAIL`), also upserts `GlobalEntityMemory`** | JSON `{transaction_id\|txn_id, new_category}` | `{status, message, updated_count, aggregates:{category_breakdown}}`; 400 invalid category |
 | GET | `/api/insights/temporal` | MoM changes, fastest-growing, acceleration flags, monthly totals | — | `{status, insights:{data_quality, mom_changes, fastest_growing, acceleration_flags, monthly_totals}}` |
 | GET | `/api/reimbursements/report` | Reimbursement summary from stored data | — | `{status, report:{summary:{gross_spend,net_spend,total_reimbursed}, reimbursements:{...}, config, matched_pairs}}` |
-| GET | `/api/anomalies/report` | Z-score category anomalies | — | `{status, report:{summary, anomalies, metadata}}` |
+| GET | `/api/anomalies/report` | Rolling-window z-score category anomalies (every month vs prior-3-month baseline; `threshold=2.5` + ₹1000 min-abs-diff guard — see §16b) | — | `{status, report:{summary, anomalies, metadata}}` |
 | GET | `/api/subscriptions/audit` | Recurring subscription detection | — | `{status, report:{summary, subscriptions, metadata}}` |
 | GET | `/api/corrections/summary` | Feedback-loop proof: correction counts + recent | — | `{status, total_corrections, recent:[{entity_name,old_category,new_category,created_at}]}` |
 
@@ -281,6 +325,7 @@ body commented out).
 |---|---|---|
 | GET | `/` | `landing.html` (or redirect to `/dashboard` if authenticated) |
 | GET | `/dashboard` | `dashboard/newDashboard.html` (`@login_required`) |
+| GET | `/transactions` | Dedicated transactions page — `dashboard/transactions.html` (`@login_required`) |
 | GET | `/upload` | `dashboard/upload.html` (`@login_required`) |
 | GET | `/about` | `about.html` |
 | GET | `/privacy` | `legal/privacy.html` |
@@ -298,7 +343,7 @@ Step by step inside `upload_excel()` (`app/api/routes.py`):
 4. **Debit filter** — `df_expenses = df[df['transaction_type'] == 'debit'].copy()`. 400 if empty. **Credits are intentionally excluded from DB storage (Option B).**
 5. **5-stage categorization** — `SmartCategorizer(user_id).categorize_dataframe(df_expenses)` adds `category, entity_name, entity_type, confidence_level` (see §7, includes Stage 2b global lookup).
 6. **Reimbursement detection (v4 strict) + merge** — runs on `pd.concat([df_expenses, credits])` (categorized debits + raw credit rows) so the Shopping-only, same-entity, exact-amount matcher can read the debit `category` while still seeing credits. It sets `is_reimbursed`/`reimbursed_amount`/`net_amount` on its copy; those debit-row flags are then reindexed back onto `df_expenses` by index (unmatched `net_amount` filled with `amount`). See §16.
-7. **Anomaly detection** — defensive `if 'net_amount' not in df_expenses.columns: df_expenses['net_amount'] = df_expenses['amount']`, then `AnomalyDetector(df_expenses, threshold=2.0, min_months=3)`.
+7. **Anomaly detection** — defensive `if 'net_amount' not in df_expenses.columns: df_expenses['net_amount'] = df_expenses['amount']`, then `AnomalyDetector(df_expenses, threshold=2.5, min_months=3)` (rolling 3-month-window z-score + ₹1000 min-abs-diff guard — see §16b).
 8. **Subscription audit** — `SubscriptionAuditor(df_expenses, min_occurrences=3)`.
 9. **DB save loop** — preload existing fingerprints (one query); for each row compute `compute_fingerprint(user_id, date, description, amount)` (MD5); skip duplicates; build dict list; `db.session.bulk_insert_mappings(Transaction, ...)`. `is_reimbursed` read from row.
 10. **UploadLog** — created (filename via `secure_filename`, bank, file_hash), `row_count` set to new count after insert.
@@ -461,7 +506,7 @@ stripped from response unless `current_app.debug`.
 | `auth/register.html` | `/auth/register` | Same styling as login; required Terms/Privacy consent checkbox; reCAPTCHA disabled. |
 | `auth/reset_password_request.html` | `/auth/reset_password` | Email entry form, matches auth styling. |
 | `auth/reset_password.html` | `/auth/reset_password/<token>` | New-password + confirm form. |
-| `dashboard/newDashboard.html` | `/dashboard` (live) | The real dashboard. Tailwind CDN + Plotly + custom dark CSS. KPIs derived client-side from `/api/transactions/classified` + `/api/subscriptions/audit`. Plotly donut (category) + trend charts. Transaction table built in JS: `catPill()` renders a category pill **with a lime SVG icon** (flex, nowrap); subscription rows show a **red pill `.sub-badge`** (`#dc2626`, fully rounded). Inline category edit → `POST /api/transactions/correct`. Subscriptions modal. Review/needs-review flow reuses `catPill()`. |
+| `dashboard/newDashboard.html` | `/dashboard` (live) | The real dashboard. Tailwind CDN + Plotly + custom dark CSS. KPIs derived client-side from `/api/transactions/classified` + `/api/subscriptions/audit`. Plotly donut (category) + trend charts. Transaction table built in JS: `catPill()` renders a category pill **with a lime SVG icon** (flex, nowrap); subscription rows show a **red pill `.sub-badge`** (`#dc2626`, fully rounded). Inline category edit → `POST /api/transactions/correct`. Subscriptions modal. Review/needs-review flow reuses `catPill()`. **Recent-Transactions controls (2026-06-15):** category filter (`cat-filter`), search (`txn-search`), and a **Sort By** dropdown (`sort-select`: `date_desc`/`date_asc`/`amount_desc`/`amount_asc`) — all flow through `applyFilter()`. Clicking a **trend-chart** point sets `_activeMonthFilter` (`YYYY-MM`), shows a dismissible 📅 pill (`#month-filter-pill`, cleared by `clearMonthFilter()`), and `applyFilter()` adds `t.date.startsWith(_activeMonthFilter)`. Donut-slice click still drives `cat-filter`. |
 | `dashboard/upload.html` | `/upload` | Drag-drop upload UI → `POST /api/upload-excel`. |
 | `dashboard/index.html`, `newDashboard.html` (top-level), `dashboard.html` | legacy | Older dashboards not wired to the live route. |
 | `base.html` | shared shell | Bootstrap 5 CDN + Plotly CDN; used by legal/about pages. |
@@ -634,6 +679,54 @@ displaying refund credits as spend.
 **A re-upload is required** for old data to show reimbursements. The
 `/reimbursements/report` route recomputes from stored data, but since credits
 are not stored, it can only reflect flags already persisted at upload time.
+
+---
+
+## 16b. Anomaly Detection Logic (`app/analytics/anomaly_detector.py`)
+
+**Algorithm — rolling-window z-score (rewritten 2026-06-15).** Detects spending
+anomalies at the **category × month** level on monthly-summed `net_amount`
+(reimbursed rows contribute `net_amount = 0`).
+
+1. `_prepare_data()` buckets transactions by `(category, year_month)` and sums
+   `net_amount` → `self.monthly` (`category`, `year_month`, `spend`).
+2. For each category, sort its months ascending and **iterate every month from
+   index `ROLLING_WINDOW` (3) onward**. Each tested month's baseline is the
+   **immediately-preceding 3 months** (`cat_data.iloc[max(0,i-3):i]['spend']`).
+3. Per tested month, skip if baseline `< 2` points or `baseline_std == 0`;
+   compute `z = (spend − baseline_mean) / baseline_std`.
+4. **`MIN_ABSOLUTE_DIFF = 1000` (₹) guard** — skip if
+   `|spend − baseline_mean| < ₹1000` (drops statistically significant but
+   financially trivial swings, e.g. ₹50 → ₹120).
+5. Flag if `|z| >= threshold`. **`threshold = 2.5`** (set by both callers).
+   `anomaly_type = 'spike'` if `z > 0` else `'drop'`. Severity: `critical` ≥3.0,
+   `high` ≥2.5, `moderate` ≥1.8 (moderate unreachable at the current 2.5 threshold).
+6. All flagged months are kept (a category can have several distinct events);
+   final list sorted by `abs(z)` descending.
+
+**Per-anomaly fields:** `category`, `month`, `actual_spend`, `expected_spend`,
+`z_score`, `anomaly_type`, `severity`, `explanation` (the explanation string
+embeds the month + 3-month avg + `z=`). `generate_report()` returns the unchanged
+shape `{summary, anomalies, metadata}`; `get_summary()` reads
+`category`/`anomaly_type`/`severity`.
+
+**Why the rewrite:** the previous version tested only the **last** month vs **all**
+history, so historical anomalies were invisible and a growing baseline std
+suppressed detection — the dashboard read "No anomalies detected" on a 27-month
+dataset. The rolling window evaluates the full history with a stable local baseline.
+
+**Tuning history:** `threshold` went `2.0 → 1.8 → 2.5`; the `₹1000` guard was added
+last. Both `AnomalyDetector` call sites use `threshold=2.5, min_months=3`:
+`/api/anomalies/report` and the upload pipeline (`api/routes.py:208`). Frontend
+`renderAlerts()` shows the **top 5** by severity (`.slice(0,5)`).
+
+**Reference result (seeded 2,202-row / 27-month dataset):** **17** anomalies
+(14 spikes / 3 drops; 15 critical, 2 high). At `threshold=1.8` with no guard the
+same data yields 33; raising to 2.5 removes 10, and the ₹1000 guard removes 6 more.
+
+**Dead code:** the old `_generate_explanation()` and `_get_severity()` helper
+methods remain but are no longer called (explanation + severity are now inlined in
+the loop).
 
 ---
 

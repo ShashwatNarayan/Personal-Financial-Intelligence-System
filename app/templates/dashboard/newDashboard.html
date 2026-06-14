@@ -280,6 +280,11 @@
   </div>
   <div class="hidden md:flex items-center h-full">
     <a class="h-full px-4 flex items-center border-b-2 border-accent text-white font-medium" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a class="h-full px-4 flex items-center text-sm font-medium transition-colors"
+       style="color:var(--text-secondary)"
+       onmouseenter="this.style.color='var(--text-primary)'"
+       onmouseleave="this.style.color='var(--text-secondary)'"
+       href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
   <div class="flex items-center gap-4">
     <!-- Change 3: Theme toggle -->
@@ -552,70 +557,7 @@
     </div>
   </section>
 
-  <!-- Zone 5: Transactions Table -->
-  <!-- CLAUDE CODE: Transactions table wired to /api/transactions/classified -->
-  <section class="flex flex-col gap-4 mt-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <h2 class="font-headline-md font-bold text-white">Recent Transactions</h2>
-      <div class="flex items-center gap-2">
-        <!-- Change 2: Search transactions input, filters client-side on merchant/description -->
-        <div class="relative">
-          <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" style="font-size:16px">search</span>
-          <input id="txn-search" type="text" placeholder="Search transactions…"
-            class="rounded-lg text-sm pl-8 pr-3 py-2 focus:outline-none transition-all w-48"
-            style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);caret-color:#4ade80"
-            oninput="filterTransactions()"
-            onfocus="this.style.borderColor='#4ade80'"
-            onblur="this.style.borderColor='var(--border)'">
-        </div>
-        <div class="relative">
-          <select id="cat-filter" class="appearance-none rounded-lg text-sm pl-3 pr-8 py-2 focus:ring-0" style="background:var(--card);border:1px solid var(--border);color:var(--text-secondary)" onchange="filterTransactions()">
-            <option value="">All Categories</option>
-            <option>Food &amp; Dining</option>
-            <option>Shopping</option>
-            <option>Transport</option>
-            <option>Utilities</option>
-            <option>Entertainment</option>
-            <option>Healthcare</option>
-            <option>Transfer / P2P</option>
-            <option>Rent</option>
-            <option>Education</option>
-            <option>ATM / Cash</option>
-            <option>Other</option>
-          </select>
-          <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-secondary text-[18px] pointer-events-none">expand_more</span>
-        </div>
-        <!-- Change 5: Filter button removed; Change 6: All Transactions wired with sort toggle -->
-        <button id="all-txn-btn" onclick="allTransactionsClick()" class="px-4 py-2 bg-accent/10 border border-accent/20 text-accent rounded-lg text-sm font-medium hover:bg-accent/20 transition-colors flex items-center gap-1">
-          All Transactions <span class="material-symbols-outlined text-[16px]" id="sort-arrow-icon">arrow_downward</span>
-        </button>
-      </div>
-    </div>
-    <div class="card p-0 overflow-hidden flex flex-col" style="border-color:var(--border)">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr style="background:var(--navbar);border-bottom:1px solid var(--border)">
-              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-[100px]">Date</th>
-              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-auto">Merchant</th>
-              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-[150px]">Category</th>
-              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest text-right w-[120px]">Amount</th>
-              <th class="px-6 py-4 text-[10px] font-bold text-secondary uppercase tracking-widest w-[40px]"></th>
-            </tr>
-          </thead>
-          <tbody id="txn-tbody" style="border-color:var(--border)">
-            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
-            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
-            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded mb-1"></div></td></tr>
-            <tr><td colspan="5" class="px-6 py-2"><div class="shimmer h-8 rounded"></div></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="px-6 py-4 flex justify-center" style="border-top:1px solid var(--border)">
-        <button id="load-more-btn" class="px-6 py-2 rounded-lg text-sm transition-colors w-full sm:w-auto" style="border:1px solid var(--border);color:var(--text-secondary)" onmouseenter="this.style.color='var(--text-primary)';this.style.borderColor='var(--border)'" onmouseleave="this.style.color='var(--text-secondary)'" onclick="loadMoreTransactions()">Load More</button>
-      </div>
-    </div>
-  </section>
+  <!-- Zone 5 (Recent Transactions table) moved to the dedicated /transactions page -->
 
 </main>
 
@@ -706,7 +648,6 @@ let _allTransactions = [];
 let _spendTransactions = []; // _allTransactions minus internal transfers (SWEEP), for spend KPIs
 let _subsReport = null;
 let _allMonthlyTotals = []; // stores full monthly_totals for trend toggle
-let sortAscending = false;  // Change 6: default newest-first (descending)
 
 function getCsrf() {
   return document.querySelector('meta[name="csrf-token"]').content;
@@ -757,104 +698,6 @@ function showToast(msg, ok) {
   setTimeout(() => t.remove(), 3100);
 }
 
-// ---- Zone: Transactions Table ----
-// CLAUDE CODE: Renders rows from /api/transactions/classified
-let pageSize = 20;
-let currentOffset = 0;
-function renderTransactions(txns) {
-  const tbody = document.getElementById('txn-tbody');
-  const loadMoreBtn = document.getElementById('load-more-btn');
-  if (!txns || !txns.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState()}</td></tr>`;
-    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-    return;
-  }
-  const filtered = applyFilter(txns);
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8"><div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
-    <div style="font-size: 28px; margin-bottom: 12px;">🗂️</div>
-    <div style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">No transactions found</div>
-    <div style="font-size: 13px; opacity: 0.7;">No transactions in this category yet</div>
-</div></td></tr>`;
-    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-    return;
-  }
-  const allShown = currentOffset + pageSize >= filtered.length;
-  let rowsHtml = filtered.slice(0, currentOffset + pageSize).map(t => `
-    <tr class="transaction-row transition-colors" data-txn-id="${escHtml(t.txn_id)}">
-      <td class="px-6 py-4 text-sm" style="color:#6b7280">${fmtDate(t.date)}</td>
-      <td class="px-6 py-4 text-sm text-white">${escHtml(t.merchant)}${t.is_subscription ? '<br><span class="sub-badge">Subscription</span>' : ''}</td>
-      <td class="px-6 py-4"><span class="cat-cell">${catPill(t.category)}</span></td>
-      <td class="px-6 py-4 text-sm font-data-mono text-white text-right">${fmtAmt(t.amount)}</td>
-      <td class="px-6 py-4 text-right">
-        <button class="p-2 edit-btn cursor-pointer transition-colors"
-          style="color:#6b7280"
-          data-txn-id="${escHtml(t.txn_id)}"
-          data-category="${escHtml(t.category)}"
-          onmouseenter="this.style.color='#4ade80'"
-          onmouseleave="this.style.color='#6b7280'">
-          <span class="material-symbols-outlined" style="font-size:16px">edit</span>
-        </button>
-      </td>
-    </tr>
-  `).join('');
-  if (allShown) {
-    rowsHtml += `<tr><td colspan="5" style="padding:0"><div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.05);">
-    ✦ All transactions shown
-</div></td></tr>`;
-  }
-  tbody.innerHTML = rowsHtml;
-  tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn)));
-  if (loadMoreBtn) {
-    if (allShown) {
-      loadMoreBtn.style.display = 'none';
-    } else {
-      loadMoreBtn.style.display = '';
-      loadMoreBtn.textContent = `Load More (${filtered.length - currentOffset - pageSize} remaining)`;
-    }
-  }
-}
-
-function applyFilter(txns) {
-  const catVal = (document.getElementById('cat-filter') || {}).value || '';
-  const searchVal = ((document.getElementById('txn-search') || {}).value || '').toLowerCase().trim();
-  let filtered = txns;
-  if (catVal) filtered = filtered.filter(t => t.category === catVal);
-  if (searchVal) filtered = filtered.filter(t =>
-    (t.merchant || '').toLowerCase().includes(searchVal) ||
-    (t.description || '').toLowerCase().includes(searchVal)
-  );
-  // Change 6: sort by date according to current sortAscending state
-  filtered = [...filtered].sort((a, b) => {
-    const cmp = a.date.localeCompare(b.date);
-    return sortAscending ? cmp : -cmp;
-  });
-  return filtered;
-}
-
-function filterTransactions() {
-  currentOffset = 0;
-  renderTransactions(_allTransactions);
-}
-
-function loadMoreTransactions() {
-  currentOffset += pageSize;
-  renderTransactions(_allTransactions);
-}
-
-// Change 6: All Transactions button — resets filters, toggles sort direction
-function allTransactionsClick() {
-  sortAscending = !sortAscending;
-  const arrow = document.getElementById('sort-arrow-icon');
-  if (arrow) arrow.textContent = sortAscending ? 'arrow_upward' : 'arrow_downward';
-  const searchEl = document.getElementById('txn-search');
-  const catEl = document.getElementById('cat-filter');
-  if (searchEl) searchEl.value = '';
-  if (catEl) catEl.value = '';
-  currentOffset = 0;
-  renderTransactions(_allTransactions);
-}
-
 // Change 3: Toggle Temporal Insights section collapse
 function toggleTemporalInsights() {
   const content = document.getElementById('temporalContent');
@@ -863,61 +706,6 @@ function toggleTemporalInsights() {
   const isNowHidden = content.style.display !== 'none';
   content.style.display = isNowHidden ? 'none' : 'block';
   if (chevron) chevron.style.transform = isNowHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-}
-
-// ---- Zone: Inline Category Edit (Task 4) ----
-// CLAUDE CODE: Inline edit → POST /api/transactions/correct with CSRF token
-function openEdit(btn) {
-  const txnId = btn.dataset.txnId;
-  const row = btn.closest('tr');
-  const catCell = row.querySelector('.cat-cell');
-  const origHtml = catCell.innerHTML;
-  const origCat = btn.dataset.category;
-
-  catCell.innerHTML = `
-    <div class="flex items-center gap-1 flex-wrap">
-      <select class="inline-edit-select">
-        ${CATEGORIES.map(c =>
-          `<option value="${escHtml(c)}" ${c === origCat ? 'selected' : ''}>${escHtml(c)}</option>`
-        ).join('')}
-      </select>
-      <button class="save-edit px-2 py-1 rounded text-xs font-bold" style="background:#4ade80;color:#0d0f0d">✓</button>
-      <button class="cancel-edit px-2 py-1 rounded text-xs" style="background:var(--border);color:var(--text-secondary)">✕</button>
-    </div>
-  `;
-
-  catCell.querySelector('.cancel-edit').addEventListener('click', () => {
-    catCell.innerHTML = origHtml;
-  });
-
-  catCell.querySelector('.save-edit').addEventListener('click', async () => {
-    const newCat = catCell.querySelector('.inline-edit-select').value;
-    try {
-      const res = await fetch('/api/transactions/correct', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrf()
-        },
-        body: JSON.stringify({ transaction_id: txnId, new_category: newCat })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        btn.dataset.category = newCat;
-        catCell.innerHTML = catPill(newCat);
-        // Update in-memory store so re-renders reflect the change
-        const txn = _allTransactions.find(t => t.txn_id === txnId);
-        if (txn) txn.category = newCat;
-        showToast('✓ Category updated');
-      } else {
-        showToast('Update failed', false);
-        catCell.innerHTML = origHtml;
-      }
-    } catch (_e) {
-      showToast('Network error', false);
-      catCell.innerHTML = origHtml;
-    }
-  });
 }
 
 // ---- Zone: KPIs derived from classified transactions ----
@@ -1066,16 +854,11 @@ function renderCategoryDonut(txns) {
     }]
   }, { responsive: true, displayModeBar: false });
 
-  // Click a category slice → filter the Recent Transactions list and scroll to it
+  // Click a category slice → open the dedicated transactions page filtered by category
   el.style.cursor = 'pointer';
   el.on('plotly_click', function(data) {
     const category = data.points[0].label;
-    const filterDropdown = document.getElementById('cat-filter');
-    if (filterDropdown) {
-      filterDropdown.value = category;
-      filterDropdown.dispatchEvent(new Event('change'));
-      filterDropdown.closest('section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    window.location.href = `/transactions?category=${encodeURIComponent(category)}`;
   });
 }
 
@@ -1106,7 +889,9 @@ function _getTrendLayout() {
     margin: { t: 10, b: 40, l: 65, r: 10 },
     xaxis: {
       color: th.font_color, gridcolor: th.gridcolor, showgrid: false,
-      tickfont: { size: 10, color: th.font_color }
+      tickfont: { size: 10, color: th.font_color },
+      tickformat: '%b %Y',   // formats YYYY-MM as "Jul 2025"
+      type: 'date',
     },
     yaxis: {
       color: th.font_color, gridcolor: th.gridcolor, showgrid: true, gridwidth: 1,
@@ -1131,7 +916,15 @@ function _drawTrendChart(data, isFirst) {
   }];
   const config = { responsive: true, displayModeBar: false };
   if (isFirst) {
-    Plotly.newPlot(el, trace, _getTrendLayout(), config);
+    Plotly.newPlot(el, trace, _getTrendLayout(), config).then(function() {
+      // Click a month point → open the dedicated transactions page filtered by month
+      el.style.cursor = 'pointer';
+      el.on('plotly_click', function(data) {
+        const rawX = data.points[0].x;
+        const monthKey = String(rawX).slice(0, 7); // "YYYY-MM"
+        window.location.href = `/transactions?month=${monthKey}`;
+      });
+    });
   } else {
     Plotly.react(el, trace, _getTrendLayout(), config);
   }
@@ -1343,7 +1136,7 @@ function renderAlerts(report) {
     return;
   }
 
-  container.innerHTML = anomalies.slice(0, 8).map(a => {
+  container.innerHTML = anomalies.slice(0, 5).map(a => {
     const isSpike = a.anomaly_type === 'spike';
     const bg = isSpike ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)';
     const border = isSpike ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)';
@@ -1491,7 +1284,6 @@ async function loadDashboard() {
       // Internal transfers (SWEEP → entity_type 'internal') are kept in the ledger/list
       // and reconciliation total, but excluded from spend aggregations (KPIs, donut).
       _spendTransactions = _allTransactions.filter(t => t.entity_type !== 'internal');
-      renderTransactions(_allTransactions);       // list shows all, incl. Internal Transfer
       renderKpis(_spendTransactions);             // spend KPIs exclude internal transfers
       renderCategoryDonut(_spendTransactions);    // category breakdown excludes internal transfers
       updateDateRange(_allTransactions); // Change 6: update date range badge (full ledger span)
