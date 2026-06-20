@@ -31,13 +31,13 @@ It is built for anyone who wants to understand where their money actually goes w
 
 - **Bank statement parsing (HDFC + SBI)** — Auto-detects the source bank from statement signals, then dispatches to a bank-specific parser. Handles legacy `.xls`, modern `.xlsx`, header-row offsets, separator rows, and differing column naming conventions via a multi-engine fallback (`openpyxl` → `xlrd` → CSV).
 - **Smart categorization pipeline (5-step priority system)** — A transaction is resolved through per-user correction memory, a shared (owner-seeded) cross-user memory, entity/platform detection, and keyword matching, with a graceful fallback — each stage carrying a confidence level (`high` / `medium` / `low`). Platform names are matched on whole-word boundaries to avoid false positives (e.g. "VI" no longer matches "VIA").
-- **Anomaly detection (z-score based)** — Aggregates spend per category per month and flags statistically significant spikes or drops (configurable z-score threshold, requires ≥ 3 months of history), tagged by severity (`moderate` / `high` / `critical`).
+- **Anomaly detection (rolling-window z-score)** — Aggregates spend per category per month and tests *every* month against a rolling 3-month baseline (so historical anomalies surface, not just the latest month), flagging statistically significant spikes or drops (configurable z-score threshold, requires ≥ 3 months of history). A minimum absolute-rupee floor suppresses statistically-large-but-financially-trivial blips, and each anomaly is tagged by severity (`moderate` / `high` / `critical`).
 - **Subscription auditing** — Detects recurring debits across monthly / quarterly / yearly cadences — including *intermittent* subscriptions with skipped months — tracks cost trends, and flags "zombie" long-running and high-cost subscriptions.
 - **Reimbursement detection** — Matches refund credits back to the original purchase using strict criteria — exact amount (±₹1), same merchant/entity, the debit categorized as *Shopping*, within a 60-day forward window, one-to-one — so reimbursed expenses don't distort your real spend (`net_amount`). Deliberately conservative to avoid false positives from salary, interest, or P2P credits.
 - **Feedback memory loop** — User corrections are persisted to a per-user `entity_memory` table and applied across all matching transactions, so the categorizer gets smarter with every edit. Corrections from the designated **owner account** additionally propagate to a shared `global_entity_memory` store that improves categorization for all users.
 - **AI-powered natural language query (Gemini + intent routing)** — A keyword pre-classifier routes each question to the cheapest correct handler (subscription / opinion / SQL), minimizing LLM calls. SQL questions are translated to a sandboxed, validated `SELECT` and executed on a read-only database role.
 - **Password reset by email** — A secure forgot-password flow (Flask-Mail) using stateless, signed `itsdangerous` tokens (30-minute expiry; no reset-token columns stored in the database).
-- **Interactive Plotly dashboard** — Category breakdown rendered as a clickable pie chart with drill-down into individual transactions, plus collapsible trend, anomaly, and subscription panels, inline recategorization, and a responsive dark theme.
+- **Interactive Plotly dashboard + dedicated transactions view** — Category breakdown rendered as a clickable donut alongside a monthly trend chart; clicking a category slice or a month drills through to a dedicated **Transactions** page (`/transactions`) with full search, category filter, sort, paginated loading, and inline recategorization. Collapsible trend, anomaly, and subscription panels and a responsive dark/light theme round out the UI.
 - **Deduplication (SHA-256 + MD5)** — A SHA-256 hash of each uploaded file blocks duplicate uploads; an MD5 per-transaction fingerprint enforces row-level uniqueness, so re-uploading an overlapping statement never double-counts.
 
 ---
@@ -88,7 +88,7 @@ Personal-Financial-Intelligence-System/
 │   ├── cli.py                     # Custom CLI commands (deduplicate, clear-data, backfill-global-memory)
 │   ├── api/                       # Blueprint: upload, transactions, insights, corrections
 │   ├── auth/                      # Blueprint: registration, login, password reset
-│   ├── main/                      # Blueprint: landing + dashboard page routes
+│   ├── main/                      # Blueprint: landing, dashboard + transactions page routes
 │   ├── ai/
 │   │   └── query_engine.py        # NL → intent routing → SQL/opinion/subscription
 │   ├── analytics/
@@ -198,6 +198,8 @@ When a transaction is processed, `SmartCategorizer` (`app/analytics/categorizati
 
 User and owner corrections are written back to memory, so the system improves continuously.
 
+> **Categorization performance.** The shared global memory (step 2) is loaded **once per upload** into an in-memory lookup rather than queried per transaction. On a 958-row statement this reduced the categorization stage from 56,854.8 ms to 338.6 ms (959 → 2 database queries) and total upload time from 60,218.7 ms to 2,523.4 ms — since each query otherwise paid a full round-trip to the Singapore-hosted database.
+
 ### 2. AI query intent routing
 
 Rather than sending every question to the LLM, `query_engine.py` runs a cheap keyword pre-classifier (`_detect_intent`) that routes to the lowest-cost correct handler:
@@ -231,7 +233,7 @@ Six tables, user-scoped with cascading deletes and unique constraints for idempo
 | **`users`** | Account records — email, hashed password, timestamps; root of all per-user data. |
 | **`transactions`** | Every parsed transaction — date, entity, amount, category, type, confidence, reimbursement flag, and an MD5 `fingerprint` enforcing per-user row uniqueness. |
 | **`entity_memory`** | Per-user learned entity → category mappings with confidence and correction counts (powers step 1 of categorization). |
-| **`global_entity_memory`** | Cross-user, owner-seeded entity → category mappings shared across all accounts (powers step 2). |
+| **`global_entity_memory`** | Cross-user, owner-seeded entity → category mappings shared across all accounts (powers step 2). A DB-level CHECK constraint keeps every `entity_name` stored lowercase and trimmed. |
 | **`corrections`** | Immutable audit log of every user recategorization (`old_category → new_category`). |
 | **`uploads_log`** | One row per uploaded statement — filename, detected bank, row count, and a SHA-256 `file_hash` that blocks duplicate uploads. |
 

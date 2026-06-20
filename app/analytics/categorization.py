@@ -11,8 +11,12 @@ class SmartCategorizer:
         self.memory = None  # H5-disabled: global JSON memory removed (privacy leak)
         self.user_id = user_id
         self._db_cache = {}
+        self._global_cache = {}
         if user_id is not None:
             self._load_db_cache(user_id)
+        # Global memory is cross-user (not scoped to user_id), so always preload
+        # the full table once — avoids one DB query per row in categorize_dataframe.
+        self._load_global_cache()
 
         self.category_keywords = {
             'Food & Dining': [
@@ -95,6 +99,22 @@ class SmartCategorizer:
         rows = DbEntityMemory.query.filter_by(user_id=user_id).all()
         self._db_cache = {r.entity_name: (r.category, r.confidence) for r in rows}
 
+    def _load_global_cache(self):
+        """Pre-load the ENTIRE GlobalEntityMemory table — one query, avoids the
+        per-row N+1 in categorize_dataframe (was ~1 query/row, ~52ms each).
+
+        This table is cross-user, so the load is unfiltered (no user scoping,
+        no limit, no pagination). Keys are normalized with .lower().strip() to
+        match the case-insensitive lookup that get_global_category performs —
+        stored names are already lowercase, but the resolver hands in
+        Title-cased names, so both sides must be normalized identically.
+        """
+        from app.models import GlobalEntityMemory
+        rows = GlobalEntityMemory.query.all()
+        self._global_cache = {
+            r.entity_name.lower().strip(): r.category for r in rows
+        }
+
     def get_db_category(self, entity_name, user_id):
         """
         Check DB entity_memory for this user+entity first.
@@ -112,15 +132,12 @@ class SmartCategorizer:
         # owner-seeded — only the base account writes; see api/routes.py).
         # The most-corrected/accurate user naturally dominates the global
         # store over time via the upsert logic.
-        from app import db
-        from app.models import GlobalEntityMemory
         if not entity_name:
             return None
-        record = GlobalEntityMemory.query.filter(
-            db.func.lower(GlobalEntityMemory.entity_name) ==
-            entity_name.lower().strip()
-        ).first()
-        return record.category if record else None
+        # Read from the preloaded dict instead of querying per row. The lookup
+        # key is normalized identically to the cache keys (.lower().strip()) so
+        # this stays case-insensitive, matching the original SQL behavior.
+        return self._global_cache.get(entity_name.lower().strip())
 
     def categorize_transaction(self, merchant, description):
         """

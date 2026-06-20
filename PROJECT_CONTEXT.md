@@ -70,6 +70,19 @@
 > in `newDashboard.html` now shows the top **5** anomalies (`.slice(0,5)`, was 8).
 > Net effect on the seeded 2,202-row / 27-month dataset: **0 → 17** anomalies
 > (33 at 1.8 with no guard → 17 after the 2.5 threshold + ₹1000 guard). See §16b.
+> Updated 2026-06-20: **Upload categorization N+1 fix + global-memory normalization
+> constraint.** (1) `SmartCategorizer` now **preloads the full `GlobalEntityMemory`
+> table once** into a dict at init (new `_load_global_cache()`, mirroring the per-user
+> `_load_db_cache()`) instead of `get_global_category()` issuing one DB query per
+> transaction row. On a 958-debit-row statement the `categorize_dataframe` upload
+> stage dropped **56,854.8 ms → 338.6 ms** (queries **959 → 2**) and total upload
+> **60,218.7 ms → 2,523.4 ms**. Dict keys + lookups are `.lower().strip()`-normalized
+> to preserve the original case-insensitive match (verified 1,228 lookups, 100% parity
+> with the old per-row SQL; falsy guard kept). App-code change confined to
+> `app/analytics/categorization.py`. (2) New migration **`38608c90f036`** adds a CHECK
+> constraint `entity_name = lower(trim(entity_name))` on `global_entity_memory`,
+> codifying the normalize-before-insert convention both writers already follow.
+> Migration head → `38608c90f036`. See **§19**.
 
 ---
 
@@ -175,8 +188,10 @@ stateless itsdangerous tokens (see §10). **There are NO `net_amount` /
 `reimbursed_amount` columns** — those are computed at load/serialization time;
 only `is_reimbursed` (boolean) is persisted. Credits are not stored at all.
 
-Source of truth: `app/models.py`. Migration head: `463ffe6f87a6_add_global_entity_memory_table`
-(parent `d5dcf2c09ef5_initial_schema`).
+Source of truth: `app/models.py`. Migration head: `38608c90f036_add_check_constraint_normalizing_global_`
+(parent `463ffe6f87a6_add_global_entity_memory_table`, grandparent `d5dcf2c09ef5_initial_schema`).
+The head migration adds a CHECK constraint only — no model/column change (see §3
+`global_entity_memory`, §19.2).
 
 ### `users` (model `User`, extends `UserMixin`)
 | Column | Type | Constraints |
@@ -258,7 +273,7 @@ Audit trail of every manual category correction.
 | Column | Type | Constraints |
 |---|---|---|
 | id | Integer | PK |
-| entity_name | String(200) | **unique**, not null (stored lowercased/stripped) |
+| entity_name | String(200) | **unique**, not null (stored lowercased/stripped); **CHECK `entity_name = lower(trim(entity_name))`** — constraint `ck_global_entity_name_normalized`, migration `38608c90f036` (§19.2) |
 | category | String(50) | not null |
 | contributed_by_user_id | Integer | FK `users.id` ON DELETE **SET NULL**, nullable |
 | updated_at | DateTime | default `utcnow`, onupdate `utcnow` |
@@ -361,7 +376,7 @@ Step by step inside `upload_excel()` (`app/api/routes.py`):
 |---|---|---|
 | **1. Entity resolution** | `EntityResolver.resolve(description, merchant)` → `(entity_name, entity_type)`. Parses UPI/POS/NEFT patterns, known platforms, human-name detection. `entity_type` ∈ {platform, person, merchant, unknown}. **Platform matching is whole-word** (`re.search(rf'\b{re.escape(platform)}\b', …)`) at all 3 sites in `entity_resolver.py` — fixed 2026-06-10 so short tokens like `'VI'` no longer match inside `'VIA'` (see §15). | (no category yet) |
 | **2. DB entity memory** | If `user_id` set, look up `entity_name` in per-user `EntityMemory` cache (loaded once at init). If found and `confidence >= 0.9` → return that category. | **high** |
-| **2b. Global entity memory** | `get_global_category(entity_name)` — case-insensitive lookup in the cross-user `GlobalEntityMemory` table. Runs for **all** users (ungated). If a row exists → return that category. This is how the owner's corrections propagate to everyone. | **high** |
+| **2b. Global entity memory** | `get_global_category(entity_name)` — case-insensitive lookup in the cross-user `GlobalEntityMemory` table, served from a **dict preloaded once per `SmartCategorizer`** (`.lower().strip()`-keyed; previously one DB query per row — see §19.1). Runs for **all** users (ungated). If a row exists → return that category. This is how the owner's corrections propagate to everyone. | **high** |
 | **3. JSON shared memory** | **H5-DISABLED** — `self.memory = None`; all `self.memory.*` calls commented out (the old *file-based* global JSON cache; superseded by the DB-backed Stage 2b above). | n/a |
 | **4. Entity-based category** | `EntityResolver.categorize_by_entity(entity_name, entity_type)`. Persons → `Transfer / P2P`; platforms mapped to category sets; merchants by keyword. | platform → **high**, else **medium** |
 | **5. Keyword matching** | Substring match of `"{merchant} {description}".lower()` against `category_keywords` dict (Food & Dining, Transport, Shopping, Utilities, Entertainment, Healthcare, Rent, Education, ATM / Cash). Substring matching is intentional for noisy bank strings; the one exception is the Utilities `vi` token, which was changed to `'vodafone vi'` + `' vi '` (space-padded) so it only matches standalone, not inside `'VIA'`/`'INVOICE'` (2026-06-10, see §15). | **medium** |
@@ -599,7 +614,7 @@ services:
 | 5 | `DATABASE_URL` handles `postgres://`→`postgresql://` | ✅ PASS — **normalization added** post-checklist in `config.py` (`_db_url.replace('postgres://', 'postgresql://', 1)`) |
 | 6 | Static via `url_for` | ✅ PASS |
 | 7 | No `debug=True` in prod path | ✅ PASS (gunicorn `wsgi:app`) |
-| 8 | `migrations/` ≥1 revision | ✅ PASS (2 revisions; folder gitignored — H6) |
+| 8 | `migrations/` ≥1 revision | ✅ PASS (3 revisions; folder gitignored — H6) |
 | 9 | `.gitignore` has `.env` | ✅ PASS |
 | 10 | `pool_pre_ping` + `connect_timeout` on both engines | ✅ PASS |
 
@@ -913,6 +928,79 @@ at **all three layers** via an `entity_type != 'internal'` filter:
 - **Effect is upload-time:** rows stored before this session carry no
   `entity_type='internal'`; a **re-upload** is required for SWEEP rows to be
   tagged and for the reconciliation/exclusion to take effect.
+
+---
+
+## 19. Upload Categorization N+1 Fix & Global-Memory Normalization Constraint (2026-06-20)
+
+Two changes this session: a performance fix (app code, confined to
+`app/analytics/categorization.py`) and a schema guarantee (a new migration).
+Both were diagnosed and accuracy-reviewed before implementation —
+`PERF_DIAGNOSIS.md` and `ACCURACY_IMPACT_REVIEW.md` in the repo root.
+
+### 19.1 GlobalEntityMemory preload — eliminates the per-row N+1 (`categorization.py`)
+**Problem:** `get_global_category(entity_name)` (Stage 2b, §7) ran **one DB query
+per transaction row** during upload — `SELECT … WHERE lower(entity_name) =
+lower(:name)` against `GlobalEntityMemory`. On a 958-debit-row statement that is
+958 queries, each paying the ~52 ms Neon-Singapore round-trip, so categorization
+dominated the upload (~50 s of the ~60 s total). (Diagnosis: `PERF_DIAGNOSIS.md`.)
+
+**Fix:** `SmartCategorizer.__init__` now calls a new **`_load_global_cache()`**
+that loads the **entire** `GlobalEntityMemory` table once into
+`self._global_cache` — mirroring the existing per-user `_load_db_cache()`.
+`get_global_category()` reads that dict instead of querying. The load is
+**unfiltered** (the table is cross-user — no `user_id` scoping, no limit, no
+pagination). Stages 1, 2, 4, 5 are untouched; the return contract is unchanged
+(category string or `None`, confidence stays `high` on a hit).
+
+**Normalization (correctness-critical):** stored keys are already lowercase (both
+writers normalize — §3/§15), but `EntityResolver` hands Stage 2b a **Title-cased**
+name (e.g. `"Swiggy"`). So the cache is keyed
+`{ r.entity_name.lower().strip(): r.category }` and looked up with
+`self._global_cache.get(entity_name.lower().strip())`, preserving the original
+case-insensitive match; the `if not entity_name: return None` guard is retained.
+A naive `{r.entity_name: r.category}` keyed on the raw stored name with a
+Title-cased lookup would have silently missed nearly every entry and re-defaulted
+those rows to `Other` — the specific risk called out in `ACCURACY_IMPACT_REVIEW.md`.
+
+**Verified:** for all 614 current rows, both the exact stored name and its
+`.title()` variant (1,228 lookups total) returned identical results via the new
+dict and the old per-row SQL; absent-name and falsy-input behavior unchanged.
+
+**Measured (958-debit-row HDFC statement, `scripts/perf_probe.py`):**
+
+| Metric | Before | After |
+|---|---|---|
+| `categorize_dataframe` stage | 56,854.8 ms | 338.6 ms |
+| Queries in that stage | 959 | 2 (1 user-memory + 1 global preload) |
+| Total upload | 60,218.7 ms | 2,523.4 ms |
+
+**Lifecycle / race note:** the cache lives on the `SmartCategorizer` instance
+(one per upload request), so each upload takes a single fresh snapshot at start.
+A GlobalEntityMemory write landing mid-upload (owner correction via
+`/transactions/correct`) is not seen by the rest of that upload — a negligible
+widening of an already non-deterministic race, and arguably more consistent
+(one upload = one snapshot).
+
+### 19.2 CHECK constraint on `global_entity_memory.entity_name` (migration `38608c90f036`)
+Adds a DB-level CHECK **`ck_global_entity_name_normalized`** enforcing
+`entity_name = lower(trim(entity_name))`, turning the normalize-before-insert
+convention (already followed by both writers — `/transactions/correct` and the
+`backfill-global-memory` CLI, §3/§15) into a schema-level guarantee. This is the
+DB-side counterpart to §19.1's normalization assumption: it stops a future writer
+from inserting a mixed-case key that the preloaded dict would then fail to match.
+
+- **Migration:** `migrations/versions/38608c90f036_add_check_constraint_normalizing_global_.py`,
+  revises `463ffe6f87a6`. New **migration head → `38608c90f036`**.
+- `upgrade()` = `op.create_check_constraint(...)`; `downgrade()` =
+  `op.drop_constraint(..., type_='check')`. **Additive only** — no data change,
+  no table rewrite.
+- **Verified:** 0 pre-existing violating rows; the constraint rejects a
+  non-normalized test insert (`IntegrityError`, rolled back — nothing committed);
+  an upgrade → downgrade → upgrade round-trip confirms reversibility.
+- **Deploy:** rides the normal path — `render.yaml`'s `buildCommand` already runs
+  `flask db upgrade` on deploy (§14), so it applies automatically on the next
+  deploy with no manual step.
 
 ---
 
