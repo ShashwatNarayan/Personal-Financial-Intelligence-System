@@ -320,7 +320,7 @@ AI rate limit: custom in-memory sliding window, **10 requests / 60s per user_id*
 | Method | Path | Does | Rate limit | Form |
 |---|---|---|---|---|
 | GET/POST | `/auth/register` | Create account, auto-login, redirect to upload | none | `RegisterForm` |
-| GET/POST | `/auth/login` | Authenticate, set `last_login_at` | **5/min on POST** | `LoginForm` |
+| GET/POST | `/auth/login` | Authenticate, set `last_login_at`; on success redirect to `main.dashboard` if the user has ≥1 `UploadLog` row, else `main.upload` (new users) | **5/min on POST** | `LoginForm` |
 | GET/POST | `/auth/reset_password` | Request reset link (emails token); always shows same message (no user enumeration) | **5/min on POST** | `ResetPasswordRequestForm` |
 | GET/POST | `/auth/reset_password/<token>` | Validate token, set new password | none | `ResetPasswordForm` |
 | POST | `/auth/logout` | Log out | none (`@login_required`) | — |

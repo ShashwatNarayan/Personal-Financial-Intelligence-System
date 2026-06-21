@@ -13,7 +13,7 @@ from app.auth.forms import (
     ResetPasswordForm,
     ResetPasswordRequestForm,
 )
-from app.models import User
+from app.models import UploadLog, User
 
 RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 RECAPTCHA_MIN_SCORE = 0.5
@@ -106,7 +106,10 @@ def login():
         user.last_login_at = datetime.utcnow()
         db.session.commit()
 
-        return redirect(url_for('main.upload'))
+        # Existing users (with prior uploads) land on the dashboard; users who
+        # have never uploaded keep going to the upload page.
+        has_uploads = UploadLog.query.filter_by(user_id=user.id).first() is not None
+        return redirect(url_for('main.dashboard' if has_uploads else 'main.upload'))
 
     return render_template('auth/login.html', form=form)
 
