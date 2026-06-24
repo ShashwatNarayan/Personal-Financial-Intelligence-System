@@ -10,12 +10,12 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ---
-
 ## Live Demo
-
 **[https://arthalens.onrender.com/](https://arthalens.onrender.com/)**
 
 > Hosted on Render (free tier) + Neon Postgres. Cold starts may add a few seconds on the first load.
+
+<video src="https://github.com/user-attachments/assets/05c76fcc-9a97-4d28-9746-cf8e41d51154" controls width="100%"></video>
 
 ---
 
