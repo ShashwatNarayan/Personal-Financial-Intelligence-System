@@ -437,10 +437,7 @@ def upload_excel():
 def get_transactions():
     df = get_user_transactions_df(current_user.id)
     if df.empty:
-        return jsonify({
-            'status': 'error',
-            'message': 'No data available. Upload a statement first.'
-        }), 400
+        return jsonify({'status': 'success', 'transactions': [], 'count': 0})
 
     try:
         try:
@@ -501,7 +498,7 @@ def get_transactions():
 def get_needs_review():
     df = get_user_transactions_df(current_user.id)
     if df.empty:
-        return jsonify({'status': 'error', 'message': 'No data'}), 400
+        return jsonify({'status': 'success', 'transactions': [], 'count': 0})
 
     try:
         if 'confidence_level' not in df.columns:
@@ -672,10 +669,13 @@ def correct_transaction():
 def get_temporal_insights():
     df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
-        return jsonify({
-            'status': 'error',
-            'message': 'No data available. Upload a statement first.'
-        }), 400
+        return jsonify({'status': 'success', 'insights': {
+            'data_quality': {'months_available': 0},
+            'mom_changes': [],
+            'fastest_growing': None,
+            'acceleration_flags': [],
+            'monthly_totals': [],
+        }})
 
     try:
         from app.analytics.temporal_insights import TemporalInsights
@@ -700,7 +700,12 @@ def get_temporal_insights():
 def get_reimbursement_report():
     df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
-        return jsonify({'status': 'error', 'message': 'No data'}), 400
+        return jsonify({'status': 'success', 'report': {
+            'summary': {'gross_spend': 0, 'net_spend': 0, 'total_reimbursed': 0},
+            'reimbursements': {},
+            'config': {},
+            'matched_pairs': [],
+        }})
 
     try:
         from app.analytics.reimbursement_detector import ReimbursementDetector
@@ -724,7 +729,11 @@ def get_reimbursement_report():
 def get_anomaly_report():
     df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
-        return jsonify({'status': 'error', 'message': 'No data'}), 400
+        return jsonify({'status': 'success', 'report': {
+            'summary': {'total_anomalies': 0},
+            'anomalies': [],
+            'metadata': {},
+        }})
 
     try:
         from app.analytics.anomaly_detector import AnomalyDetector
@@ -748,7 +757,11 @@ def get_anomaly_report():
 def get_subscription_audit():
     df = get_user_transactions_df(current_user.id, exclude_internal=True)
     if df.empty:
-        return jsonify({'status': 'error', 'message': 'No data'}), 400
+        return jsonify({'status': 'success', 'report': {
+            'summary': {'total_subscriptions': 0, 'total_monthly_cost': 0},
+            'subscriptions': [],
+            'metadata': {},
+        }})
 
     try:
         from app.analytics.subscription_auditor import SubscriptionAuditor
