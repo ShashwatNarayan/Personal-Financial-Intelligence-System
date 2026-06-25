@@ -54,7 +54,11 @@
       "Bash(cat Procfile)",
       "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\('config.py',encoding='utf-8'\\).read\\(\\)\\); print\\('config.py parses OK'\\)\")",
       "Bash(git check-ignore *)",
-      "Bash(flask db *)"
+      "Bash(flask db *)",
+      "Bash(npm --version)",
+      "Bash(xxd)",
+      "Bash(npm install *)",
+      "Bash(npx tailwindcss *)"
     ]
   }
 }

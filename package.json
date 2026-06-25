@@ -1,0 +1,10 @@
+{
+  "name": "arthalens",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.11",
+    "tailwindcss": "^3.4.19"
+  }
+}
