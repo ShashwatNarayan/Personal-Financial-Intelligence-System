@@ -175,14 +175,26 @@ class EntityResolver:
                     return self.normalize_name(merchant), etype
                 return 'Local Merchant', etype
 
-        # POS transactions - extract merchant name
+        # POS transactions - extract merchant name.
+        # Two shapes occur:
+        #   (a) HDFC card swipe: POS <card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant...>
+        #       — the HH:MM:SS token anchors the structured prefix; the merchant is
+        #       everything after the <time> <city> pair (city = first token after time).
+        #   (b) generic POS: POS <terminal> <merchant...>  (legacy behaviour).
         if 'POS' in description.upper():
-            pos_parts = description.split()
-            for i, part in enumerate(pos_parts):
-                if 'POS' in part.upper() and i + 2 < len(pos_parts):
-                    merchant_name = ' '.join(pos_parts[i+2:]).strip()
-                    merchant_name = merchant_name.split('-')[0].strip()
-                    return self.normalize_name(merchant_name), 'merchant'
+            merchant_name = self._extract_pos_merchant(description)
+            if merchant_name:
+                # Re-run platform detection: a card-swipe merchant can embed a known
+                # brand that the earlier whole-word scan missed while it was still
+                # glued to the ref/date/city noise (e.g. WWWBIGBASKETCOM).
+                mu = merchant_name.upper()
+                for platform in self.platforms:
+                    if re.search(rf'\b{re.escape(platform)}\b', mu):
+                        return platform.title(), 'platform'
+                # A card swipe is a merchant by definition, never a P2P person —
+                # so we do NOT run it through is_human_name() (which would flag any
+                # two Title-case words, e.g. "Star Bazaar", as a person).
+                return self.normalize_name(merchant_name), 'merchant'
 
         # Try to extract from merchant field
         if merchant and merchant != 'Unknown':
@@ -199,6 +211,46 @@ class EntityResolver:
             return clean_merchant, 'merchant'
 
         return 'Unknown', 'unknown'
+
+    def _extract_pos_merchant(self, description):
+        """
+        Pull the merchant name out of a POS narration.
+
+        HDFC debit-card swipes read:
+            POS <masked-card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant...>
+        The HH:MM:SS token is a reliable anchor for the structured prefix: the
+        token immediately after it is the city, and everything past the city is
+        the merchant. Falls back to the legacy "POS <terminal> <merchant>" shape
+        when no time token is present.
+
+        Returns the raw (upper-cased) merchant string, or '' if nothing usable.
+        """
+        tokens = description.split()
+
+        time_idx = next(
+            (i for i, t in enumerate(tokens) if re.fullmatch(r'\d{1,2}:\d{2}:\d{2}', t)),
+            None
+        )
+        if time_idx is not None:
+            tail = tokens[time_idx + 1:]          # <city> <merchant...>  or  <merchant>
+            # First token after the time is the city; drop it. If only one token
+            # follows, treat it as the merchant (no city present).
+            merchant = ' '.join(tail[1:]) if len(tail) >= 2 else (tail[0] if tail else '')
+        else:
+            # Legacy: drop 'POS' and the next token (terminal id), keep the rest.
+            pos_idx = next((i for i, t in enumerate(tokens) if 'POS' in t.upper()), None)
+            if pos_idx is None or pos_idx + 2 >= len(tokens):
+                return ''
+            merchant = ' '.join(tokens[pos_idx + 2:])
+
+        merchant = merchant.split('-')[0].strip()
+
+        # Normalise a bare web address (WWWBIGBASKETCOM / www.bigbasket.com -> BIGBASKET)
+        if merchant.upper().startswith('WWW'):
+            merchant = re.sub(r'^WWW\.?', '', merchant, flags=re.IGNORECASE)
+            merchant = re.sub(r'\.?COM$', '', merchant, flags=re.IGNORECASE).strip()
+
+        return merchant
 
     def _classify_vpa(self, vpa):
         """
