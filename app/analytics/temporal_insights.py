@@ -105,6 +105,7 @@ class TemporalInsights:
                 'previous_month': previous['year_month'],
                 'current_spend': float(current['total_spend']),
                 'previous_spend': float(previous['total_spend']),
+                'transaction_count': int(current['transaction_count']),
                 'change_amount': float(change_amount),
                 'change_percent': float(change_percent),
                 'explanation': explanation
@@ -143,6 +144,9 @@ class TemporalInsights:
             'change_amount': float(fastest['change_amount']),
             'current_spend': float(fastest['current_spend']),
             'previous_spend': float(fastest['previous_spend']),
+            'transaction_count': int(fastest['transaction_count']),
+            'current_month': fastest['current_month'],
+            'previous_month': fastest['previous_month'],
             'explanation': f"{fastest['category']} grew {display_percent:.0f}% MoM (fastest growing category)"
         }
 

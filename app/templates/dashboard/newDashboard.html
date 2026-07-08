@@ -450,7 +450,7 @@
         <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
       </div>
       <!-- CLAUDE CODE: Fastest growing banner, populated from insights.fastest_growing -->
-      <div class="bg-accent/10 border border-accent/20 rounded-lg p-4 flex items-center justify-between mt-6" id="fastest-growing-banner">
+      <div class="bg-accent/10 border border-accent/20 rounded-lg px-4 py-3 flex items-center justify-between gap-4 mt-6" id="fastest-growing-banner">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
             <span class="material-symbols-outlined">trending_up</span>
@@ -1096,9 +1096,19 @@ function renderTemporal(insights) {
     return;
   }
 
+  // Format a YYYY-MM string to a short month name (e.g. "2026-07" → "Jul")
+  const fmtMonth = (ym) => {
+    const d = new Date(ym + '-01T00:00:00');
+    return isNaN(d) ? ym : d.toLocaleDateString('en-IN', { month: 'short' });
+  };
+  const monthRange = (fg.previous_month && fg.current_month)
+    ? `${fmtMonth(fg.previous_month)} → ${fmtMonth(fg.current_month)}`
+    : '';
+  const txnCount = (fg.transaction_count != null) ? fg.transaction_count : null;
+
   bannerEl.innerHTML = `
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(74,222,128,0.2);color:#4ade80">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(74,222,128,0.2);color:#4ade80">
         <span class="material-symbols-outlined">trending_up</span>
       </div>
       <div>
@@ -1106,8 +1116,11 @@ function renderTemporal(insights) {
         <p class="text-xs" style="color:var(--text-secondary)">${escHtml(fg.explanation)}</p>
       </div>
     </div>
-    <button class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors flex-shrink-0"
-      style="border:1px solid rgba(74,222,128,0.3);color:#4ade80">View Details</button>
+    <div class="flex-shrink-0 flex items-center gap-3 text-xs pl-4 ml-4" style="border-left:1px solid rgba(74,222,128,0.2);color:var(--text-secondary)">
+      ${monthRange ? `<span class="font-semibold whitespace-nowrap" style="color:#4ade80">${escHtml(monthRange)}</span><span style="opacity:0.3">|</span>` : ''}
+      <span class="whitespace-nowrap"><span style="color:var(--text-primary);font-weight:500">${fmtAmt(fg.previous_spend)}</span> → <span style="color:var(--text-primary);font-weight:500">${fmtAmt(fg.current_spend)}</span></span>
+      ${txnCount != null ? `<span style="opacity:0.3">|</span><span class="whitespace-nowrap">${txnCount} transaction${txnCount === 1 ? '' : 's'}</span>` : ''}
+    </div>
   `;
 }
 
