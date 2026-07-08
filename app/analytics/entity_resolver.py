@@ -157,25 +157,12 @@ class EntityResolver:
             if re.search(rf'\b{re.escape(platform)}\b', text_upper):
                 return platform.title(), 'platform'
 
-        # Check for local merchant keywords
-        local_keywords = {
-            'KAFE': 'merchant', 'CAFE': 'merchant', 'GUEST HOUSE': 'merchant',
-            'FILLING': 'merchant', 'PETROL': 'merchant', 'SUPER MARKET': 'merchant',
-            'SUPERMARKET': 'merchant', 'SALON': 'merchant', 'TRENDS': 'merchant',
-            'MARKET': 'merchant', 'STORE': 'merchant', 'SHOP': 'merchant',
-            'HOSPITAL': 'merchant', 'CLINIC': 'merchant', 'ICE CREAM': 'merchant',
-            'BAKERY': 'merchant', 'HOSPITALITY': 'merchant', 'RESTAURANT': 'merchant',
-            'FRUITS': 'merchant', 'LAUNDRY': 'merchant', 'RETAIL': 'merchant',
-            'PIZZA': 'merchant', 'FOOD': 'merchant'
-        }
-
-        for keyword, etype in local_keywords.items():
-            if keyword in text_upper:
-                if merchant and merchant != 'Unknown':
-                    return self.normalize_name(merchant), etype
-                return 'Local Merchant', etype
-
         # POS transactions - extract merchant name.
+        # NOTE: this MUST run before the local_keywords loop below. A POS
+        # narration often contains a local keyword (FILLING/STORE/CAFE/...), and
+        # the local_keywords loop short-circuits by returning the passed-in
+        # `merchant` verbatim — which for an unparsed SBI POS is the junk token
+        # "Pos". Running POS extraction first recovers the real merchant name.
         # Two shapes occur:
         #   (a) HDFC card swipe: POS <card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant...>
         #       — the HH:MM:SS token anchors the structured prefix; the merchant is
@@ -195,6 +182,24 @@ class EntityResolver:
                 # so we do NOT run it through is_human_name() (which would flag any
                 # two Title-case words, e.g. "Star Bazaar", as a person).
                 return self.normalize_name(merchant_name), 'merchant'
+
+        # Check for local merchant keywords
+        local_keywords = {
+            'KAFE': 'merchant', 'CAFE': 'merchant', 'GUEST HOUSE': 'merchant',
+            'FILLING': 'merchant', 'PETROL': 'merchant', 'SUPER MARKET': 'merchant',
+            'SUPERMARKET': 'merchant', 'SALON': 'merchant', 'TRENDS': 'merchant',
+            'MARKET': 'merchant', 'STORE': 'merchant', 'SHOP': 'merchant',
+            'HOSPITAL': 'merchant', 'CLINIC': 'merchant', 'ICE CREAM': 'merchant',
+            'BAKERY': 'merchant', 'HOSPITALITY': 'merchant', 'RESTAURANT': 'merchant',
+            'FRUITS': 'merchant', 'LAUNDRY': 'merchant', 'RETAIL': 'merchant',
+            'PIZZA': 'merchant', 'FOOD': 'merchant'
+        }
+
+        for keyword, etype in local_keywords.items():
+            if keyword in text_upper:
+                if merchant and merchant != 'Unknown':
+                    return self.normalize_name(merchant), etype
+                return 'Local Merchant', etype
 
         # Try to extract from merchant field
         if merchant and merchant != 'Unknown':

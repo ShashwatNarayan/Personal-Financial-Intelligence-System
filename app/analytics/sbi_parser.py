@@ -361,6 +361,12 @@ class SBIStatementParser:
         - Interest:          "INT.PAID/COMPUTED ON..."
         - Charges:           "CHARGES/..."
         """
+        # Shared POS card-swipe extractor (HH:MM:SS-anchored). Reused from
+        # EntityResolver so the two implementations stay in sync — do not
+        # duplicate the logic here (see entity_resolver._extract_pos_merchant).
+        from app.analytics.entity_resolver import EntityResolver
+        _pos_resolver = EntityResolver()
+
         def extract_merchant_name(description: str) -> str:
             desc = str(description).upper()
 
@@ -397,9 +403,19 @@ class SBIStatementParser:
                 return 'ATM'
 
             # POS transaction
+            # (a) slash-delimited format: POS/<terminal>/<merchant>
             pos_match = re.search(r'POS/[A-Z0-9]+/([A-Z][A-Z\s]{2,25})', desc)
             if pos_match:
                 return pos_match.group(1).strip().title()
+            # (b) space-delimited card-swipe format (no slashes):
+            #     POS <card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant...>
+            # The slash regex above won't match this shape; use the shared
+            # HH:MM:SS-anchored extractor to recover the real merchant BEFORE the
+            # generic words[0] fallback collapses it to "POS".
+            if 'POS' in desc:
+                pos_swipe = _pos_resolver._extract_pos_merchant(desc)
+                if pos_swipe:
+                    return pos_swipe.title()
 
             # Known platforms (direct mention in description)
             known_platforms = [
