@@ -13,54 +13,40 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  /* ── CSS Variables ── */
+  /* ── CSS Variables — ported verbatim from newDashboard.html (single design system) ── */
   :root {
-    --bg: #0d0f0d;
-    --card: #131a13;
-    --navbar: #0a0c0a;
-    --border: #1f2a1f;
-    --text-primary: #f0f0f0;
-    --text-secondary: #6b7280;
-    --accent: #4ade80;
-    --row-hover: #1c241c;
+    /* Dark mode = right strip of colourPallet.jpeg: vertical wash, Tetsu-Kon Blue → Light Violet */
+    --bg: linear-gradient(180deg, #17184B 0%, #273287 45%, #6B5FA8 75%, #D6B4FC 100%);
+    --card: rgba(23, 24, 75, 0.55);            /* Tetsu-Kon Blue, translucent glass */
+    --navbar: rgba(23, 24, 75, 0.66);          /* Tetsu-Kon Blue, slightly more opaque */
+    --border: rgba(39, 50, 135, 0.45);         /* Intergalactic Highway, low opacity */
+    --text-primary: #F0EEE9;                   /* Cloud Dancer — 16:1 on navy */
+    --text-secondary: rgba(211, 221, 231, 0.62); /* Nordic Breeze, dimmed */
+    --accent: #D6B4FC;                          /* Light Violet — fills/backgrounds */
+    --accent-text: #D6B4FC;                     /* accent used as TEXT (dark = Light Violet, unchanged) */
+    --on-accent: #17184B;                       /* Tetsu-Kon Blue — dark text on accent */
+    --accent-soft: rgba(214, 180, 252, 0.14);   /* accent tint fill */
+    --accent-border: rgba(214, 180, 252, 0.32); /* accent tint border */
+    --row-hover: rgba(214, 180, 252, 0.10);     /* subtle violet tint */
   }
   html.light-mode {
-    --bg: #f5f7f5;
-    --card: #ffffff;
-    --navbar: #ffffff;
-    --border: #e2e8e2;
-    --text-primary: #0d0f0d;
-    --text-secondary: #4b5563;
-    --accent: #4ade80;
-    --row-hover: #f0f7f0;
+    /* Light mode = left strip: vertical wash, Cloud Dancer → Nordic Breeze → Light Violet */
+    --bg: linear-gradient(180deg, #F0EEE9 0%, #F0EEE9 25%, #D3DDE7 60%, #D6B4FC 100%);
+    --card: rgba(240, 238, 233, 0.45);          /* Cloud Dancer, translucent glass — 0.45 for stronger frosting/gradient bleed-through in light mode (matches dark-mode's stronger glass) */
+    --navbar: rgba(240, 238, 233, 0.72);
+    --border: rgba(211, 221, 231, 0.90);        /* Nordic Breeze, low opacity */
+    --text-primary: #17184B;                    /* Tetsu-Kon Blue — 16:1 on Cloud Dancer */
+    --text-secondary: rgba(39, 50, 135, 0.80);  /* Intergalactic Highway, dimmed — darkened 0.72→0.80 to keep AA contrast on the more-translucent (0.45) cards over the violet gradient */
+    --accent: #D8E63C;                           /* Duranta Yellow — fills/backgrounds (unchanged) */
+    --accent-text: #17184B;                      /* accent TEXT → Tetsu-Kon Blue in light mode (yellow text reads poorly on Cloud Dancer); fills stay yellow */
+    --on-accent: #17184B;                        /* Tetsu-Kon Blue — dark text on accent */
+    --accent-soft: rgba(216, 230, 60, 0.18);
+    --accent-border: rgba(216, 230, 60, 0.38);
+    --row-hover: rgba(216, 230, 60, 0.14);       /* subtle yellow tint */
   }
-  /* ── Light-mode overrides ── */
-  html.light-mode body { background-color: var(--bg) !important; color: var(--text-primary); }
-  html.light-mode .card { background-color: var(--card) !important; border-color: var(--border) !important; }
-  html.light-mode nav  { background-color: var(--navbar) !important; border-bottom-color: var(--border) !important; }
+  /* Light-mode overrides (only what CSS variables can't express — matches dashboard) */
   html.light-mode .text-white { color: var(--text-primary) !important; }
-  html.light-mode .text-secondary { color: var(--text-secondary) !important; }
-  html.light-mode .bg-\[#131a13\] { background-color: var(--card) !important; }
-  html.light-mode .border-\[#1f2a1f\] { border-color: var(--border) !important; }
-  html.light-mode .bg-\[#0a0c0a\] { background-color: var(--navbar) !important; }
-  /* Search input */
-  html.light-mode #txn-search { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  /* Category dropdown */
-  html.light-mode #cat-filter { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  html.light-mode #sort-select { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  /* Table header row */
-  html.light-mode table thead tr { background-color: var(--navbar) !important; }
-  html.light-mode table thead th { color: var(--text-secondary) !important; border-color: var(--border) !important; }
-  html.light-mode tbody tr { border-color: var(--border) !important; }
-  /* Avatar button */
-  html.light-mode #avatar-btn { background-color: var(--border) !important; border-color: var(--border) !important; }
-  /* Profile dropdown */
-  html.light-mode #profile-dropdown { background: var(--card) !important; border-color: var(--border) !important; }
-  /* Inline edit select */
-  html.light-mode .inline-edit-select { background: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  /* Shimmer in light mode */
-  html.light-mode .shimmer { background: linear-gradient(90deg, #f0f0f0 0%, #e2e8e2 50%, #f0f0f0 100%); }
-  html.light-mode .bg-\[#1f2a1f\] { background-color: var(--border) !important; }
+  html.light-mode .shimmer { background: linear-gradient(90deg, #F0EEE9 0%, #D3DDE7 50%, #F0EEE9 100%); background-size: 200% 100%; }
   /* Transaction row hover — theme-aware */
   .transaction-row:hover { background-color: var(--row-hover) !important; }
   /* Table row dividers via border */
@@ -90,22 +76,35 @@
   html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
 
   body {
-    background-color: var(--bg);
+    background: var(--bg);
+    background-attachment: fixed;   /* full-page gradient stays put on scroll */
+    background-size: cover;         /* fill the viewport, no tiling/repeat */
+    min-height: 100vh;              /* gradient spans full page height */
     color: var(--text-primary);
   }
   .card {
     background-color: var(--card);
+    backdrop-filter: blur(12px);    /* let the page gradient glow through the glass surface */
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 24px;
+    padding: 16px;
     transition: border-color 0.2s, background-color 0.25s;
   }
-  .text-accent { color: #4ade80; }
-  .bg-accent { background-color: #4ade80; color: #0d0f0d; }
-  .border-accent { border-color: #4ade80; }
-  .text-secondary { color: #6b7280; }
+  .card:hover { border-color: var(--accent); }
+  .glass-card {
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+  }
+  .text-accent { color: var(--accent-text); }   /* accent-as-text: blue in light mode, Light Violet in dark */
+  .bg-accent { background-color: var(--accent); color: var(--on-accent); }
+  .bg-accent:hover { filter: brightness(0.92); }
+  .border-accent { border-color: var(--accent); }
+  .text-secondary { color: var(--text-secondary); }
   .shimmer {
-    background: linear-gradient(90deg, #131a13 0%, #1f2a1f 50%, #131a13 100%);
+    background: linear-gradient(90deg, #17184B 0%, #273287 50%, #17184B 100%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite linear;
   }
@@ -117,43 +116,66 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .inline-edit-select {
     background: var(--border);
-    border: 1px solid #3f493f;
+    border: 1px solid var(--border);
     color: var(--text-primary);
     font-size: 11px;
     border-radius: 4px;
     padding: 2px 6px;
   }
-  .sub-badge {
+  /* Subscription marker. Replaces the old red .sub-badge text pill (#dc2626 was
+     ad-hoc, not a Chintz palette colour). Inline SVG via <use>, so it inherits
+     colour through currentColor. Sized to the 14px text line and baseline-nudged
+     so adding it does not change row height. --text-secondary is the same token
+     the date cell in this row already uses, so legibility is proven in both
+     themes and it reads as passive metadata, not an interactive accent. */
+  .sub-icon {
+    width: 14px;
+    height: 14px;
     display: inline-block;
-    background-color: #dc2626;
-    color: white;
-    border-radius: 9999px;
-    font-size: 11px;
-    padding: 2px 8px;
-    font-weight: 500;
-    margin-top: 4px;
+    vertical-align: -2px;
+    margin-left: 6px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
   }
 </style>
 </head>
 <body class="font-body-md min-h-screen overflow-x-hidden">
 
-<!-- Top Navigation -->
-<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
+<!-- Inline SVG sprite: subscription marker. Defined ONCE here and referenced
+     per row with <use>. The path data is ~3.5KB, so inlining a full <svg> in
+     every table row would add megabytes of DOM string on large statements.
+     currentColor on the path lets .sub-icon theme it from CSS. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ico-subscription" viewBox="0 0 512 512">
+    <path fill="currentColor" stroke="currentColor" stroke-width="0.5"
+          style="fill-rule:evenodd;clip-rule:evenodd" d="M 79.94,31.96 c 91.86,0 183.71,0.05 275.56,0.15 c 23.08,2.44 38.92,20.26 39.25,43.39 c 0.02,85.6 0.01,171.21 -0.05,256.81 c -0.5,0.79 -1.23,1.06 -2.17,0.82 c -22.47,-6.14 -63.95,-0.55 -74.26,23.78 c -0.72,1.98 -1.4,3.96 -2.04,5.93 c -16,2.35 -28.06,18.77 -39.08,29.75 c -9.87,9.53 -12.76,23.33 -7.4,35.99 c 0.21,0.59 0.19,1.18 -0.06,1.75 c -2.97,2.3 -6.1,4.35 -9.41,6.14 c -9.38,3.89 -25.79,-13.19 -34.21,-17.17 c -1.12,-0.78 -2.27,-0.82 -3.45,-0.11 c -8.21,5.48 -16.44,10.94 -24.68,16.38 c -3.72,2.05 -7.47,2.1 -11.25,0.16 c -8.68,-5.76 -17.41,-11.45 -26.18,-17.05 c -0.69,-0.09 -1.32,0.06 -1.9,0.44 c -7.89,5.26 -25.41,20.45 -34.62,17.38 c -4.61,-2.21 -6.86,-5.87 -6.75,-11 c 0.09,-118.67 0.01,-237.34 -0.26,-356 c -1.34,-17.47 -18.74,-36.46 -36.47,-36.56 c -0.46,-0.17 -0.65,-0.5 -0.57,-0.98 Z M 53.24,297 c -0.02,-74.49 0.01,-148.98 0.09,-223.46 c 2.92,-26.42 38.95,-26.87 42.58,-1.04 c 0.09,82 0.12,164.01 0.11,246.02 c -0.03,0.97 -0.53,1.47 -1.5,1.5 c -6.67,-0.02 -13.35,-0.02 -20.02,-0.03 c -12.96,-0.63 -21.39,-10.1 -21.26,-22.99 Z M 213.25,158 c -0.41,12.75 8.28,22.95 21.25,23.22 c 13.65,0.03 27.31,0.03 40.97,0.01 c 1.35,0.09 1.95,0.84 1.79,2.24 c -0.01,5.69 -0.01,11.37 0,17.06 c 0.07,0.92 -0.25,1.64 -0.97,2.16 c -16.93,0.07 -33.86,0.08 -50.79,0.06 c -14.96,-0.65 -16.63,19.28 -2.01,21.21 c 6.98,0 13.96,0.05 20.93,0.14 c 0.54,0.27 0.82,0.72 0.83,1.34 c -0.57,9.12 -0.22,20.61 12.26,19.66 c 5.33,-1.11 8.37,-4.37 9.13,-9.78 c 0.03,-3.59 0.15,-7.18 0.35,-10.75 c 0.39,-0.45 0.89,-0.65 1.49,-0.59 c 15.64,1.05 27.23,-2.54 30.13,-19.67 c -0.14,-17.74 4.67,-39.17 -18.12,-44.11 c -14.67,-0.2 -29.34,-0.27 -44.01,-0.18 c -1.47,-0.15 -2.06,-0.98 -1.76,-2.5 c 0.03,-5.69 0.04,-11.39 0.02,-17.09 c -0.02,-0.64 0.24,-1.14 0.77,-1.5 c 16.99,-0.18 33.99,-0.24 50.99,-0.18 c 15,0.15 16.59,-19.42 1.96,-21.41 c -6.99,-0.03 -13.98,-0.12 -20.95,-0.27 c -0.53,-0.36 -0.79,-0.86 -0.77,-1.5 c 0.51,-9.52 0.21,-19.89 -12.23,-19.45 c -10.39,2.29 -9.37,10.95 -9.25,19.45 c 0.02,0.64 -0.24,1.14 -0.77,1.5 c -3.64,0.15 -7.29,0.24 -10.95,0.26 c -22.88,2.8 -20.65,23.17 -20.29,40.67 Z M 160.14,288 c 1.54,14.56 20.87,13.96 21.29,-0.5 c -1.73,-13.91 -20.11,-13.32 -21.29,0.5 Z M 202.81,288 c 0.13,6.42 4.5,10.25 10.72,10.71 c 41.99,0.04 83.98,0.05 125.97,0.04 c 15.47,0.59 16.96,-19.95 1.97,-21.44 c -41.99,-0.06 -83.98,-0.08 -125.97,-0.07 c -6.83,-0.37 -12.61,3.55 -12.69,10.76 Z M 160.14,341 c 0.93,14.28 19.94,14.86 21.31,0.5 c -0.42,-14.01 -19.97,-14.4 -21.31,-0.5 Z M 202.82,341 c -0.14,6.78 5.06,11.25 11.68,11 c 25,0.04 49.99,0 74.99,-0.13 c 13.41,-2.79 11.83,-21.49 -2.99,-21.12 c -25.01,-0.06 -50.01,0.01 -75.01,0.19 c -5.35,1.23 -8.24,4.58 -8.67,10.06 Z M 337.29,369 c 0.22,-3.87 1.93,-6.87 5.14,-9.02 c 40.89,-22.54 90.19,4.37 94.75,50.39 c 0.13,0.13 0.26,0.25 0.39,0.38 c 1.67,-1.17 3.29,-2.42 4.87,-3.76 c 9.83,-5.53 20.87,4.53 14.62,14.6 c -6.39,7.22 -16.1,16.49 -23.24,23.49 c -3.41,2.66 -7.12,3.22 -11.14,1.7 c -6.25,-3.71 -17.95,-17.35 -24.09,-22.87 c -10.82,-10.55 4.27,-26.02 15.13,-15.04 c 0.56,0.36 1.02,0.28 1.38,-0.26 c -1.13,-16.81 -16.63,-30.26 -32,-34.42 c -12.21,-2.73 -21.3,-0.2 -32.2,4.99 c -7.13,1.86 -13.15,-2.99 -13.61,-10.18 Z M 288.15,416 c 0.07,-8.15 19.26,-22.12 24.5,-28.78 c 4.85,-4.35 10.64,-4.16 15.34,0.29 c 5.31,6.05 20.63,18.89 23.56,25.2 c 3.08,11.45 -9.91,18.58 -18.23,10.33 c -1.68,-1.09 -1.6,1.51 -1.35,2.39 c 5.92,24.4 29.87,38.58 54.09,31.28 c 7.93,-3.22 17.33,-8.59 22.54,2.03 c 2.79,7.9 -1.6,12.84 -8.66,15.59 c -40.98,18.04 -85.57,-8.47 -90.19,-52.66 c -0.51,-0.53 -1.04,-0.5 -1.58,0.06 c -6.85,8.54 -19.01,5.5 -20.02,-5.73 Z"/>
+  </symbol>
+</svg>
+
+<!-- Top Navigation — ported verbatim from newDashboard.html (glass + logo swap + toggle + profile) -->
+<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
   <div class="flex items-center">
-    <img src="{{ url_for('static', filename='images/logo.png') }}"
+    <!-- Themed logo (Line Logo lockup): dark variant in dark mode, light variant in
+         light mode. Swap is driven by _syncThemeUI() (same place toggleTheme()
+         flips html.light-mode); the inline script below sets the correct variant
+         synchronously on first paint to avoid a dark→light flash. -->
+    <img id="navbar-logo"
+         src="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-dark="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-light="{{ url_for('static', filename='images/line-logo-light.svg') }}"
          alt="ArthaLens"
-         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+         style="height:28px;width:auto;max-width:100%;object-fit:contain;display:block;flex-shrink:0">
+    <script>(function(){var l=document.getElementById('navbar-logo');if(l&&document.documentElement.classList.contains('light-mode'))l.src=l.dataset.logoLight;})();</script>
   </div>
   <div class="hidden md:flex items-center h-full">
-    <!-- Dashboard link: NOT active -->
+    <!-- Dashboard link: NOT active on this page -->
     <a class="h-full px-4 flex items-center text-sm font-medium transition-colors"
        style="color:var(--text-secondary)"
        onmouseenter="this.style.color='var(--text-primary)'"
        onmouseleave="this.style.color='var(--text-secondary)'"
        href="{{ url_for('main.dashboard') }}">Dashboard</a>
-    <!-- Transactions link: active -->
-    <a class="h-full px-4 flex items-center border-b-2 border-accent text-white font-medium"
-       href="{{ url_for('main.transactions') }}">Transactions</a>
+    <!-- Transactions link: active on this page -->
+    <a class="h-full px-4 flex items-center border-b-2 border-accent text-white font-medium" href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
   <div class="flex items-center gap-4">
     <!-- Theme toggle -->
@@ -162,16 +184,12 @@
         <span id="theme-icon">☾</span>
       </div>
     </button>
-    <!-- Upload button -->
-    <a href="{{ url_for('main.upload') }}" class="bg-accent hover:bg-[#3bc26b] text-[#0d0f0d] font-medium px-4 py-2 rounded-[8px] transition-colors hidden sm:flex items-center gap-2 no-underline">
-      <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
-    </a>
     <!-- Profile dropdown avatar -->
     <div style="position:relative" id="avatar-wrapper">
       <button id="avatar-btn"
         class="w-8 h-8 rounded-full flex items-center justify-center text-secondary text-xs font-bold cursor-pointer transition-colors"
         style="background:var(--border);border:1px solid var(--border)"
-        onmouseenter="this.style.borderColor='#4ade80'" onmouseleave="this.style.borderColor='var(--border)'"
+        onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"
         onclick="toggleProfileDropdown(event)"
         aria-label="User profile menu">
         <span class="material-symbols-outlined text-[20px]">person</span>
@@ -186,7 +204,7 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit"
             style="width:100%;text-align:left;background:none;border:none;color:var(--text-primary);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-family:inherit"
-            onmouseenter="this.style.color='#4ade80'"
+            onmouseenter="this.style.color='var(--accent)'"
             onmouseleave="this.style.color='var(--text-primary)'">
             <span class="material-symbols-outlined" style="font-size:16px">logout</span>
             Logout
@@ -197,28 +215,37 @@
   </div>
 </nav>
 
-<div class="pt-[56px]">
-  <div class="max-w-[1280px] mx-auto px-6 py-8">
+<!-- Main content — same containment approach as the dashboard's <main>:
+     inline padding-top:64px (56px navbar + 8px), max-width:1400px !important centred,
+     gradient background stays full-bleed on <body> behind this. -->
+<main class="pb-8 px-6 flex flex-col gap-4" style="padding-top:64px;max-width:1400px !important;margin-left:auto !important;margin-right:auto !important;width:100%">
 
-    <!-- Page header -->
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <!-- Page header — matches dashboard "Spending Dashboard" header styling.
+         Upload Statement button moved here (was in the navbar) to sit parallel
+         with the title, exactly like the dashboard header. -->
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
-        <h1 class="font-headline-lg font-semibold" style="color:var(--text-primary)">Transactions</h1>
-        <p class="text-sm mt-1" style="color:var(--text-secondary)" id="page-subtitle">All your transactions</p>
+        <h1 class="font-headline-lg font-bold text-white mb-1">Transactions</h1>
+        <p class="font-body-md" style="color:var(--text-secondary)" id="page-subtitle">All your transactions</p>
       </div>
-    </div>
+      <!-- Upload button — same pill/rounded shape + accent colour as the dashboard version -->
+      <a href="{{ url_for('main.upload') }}" class="bg-accent font-medium px-4 py-2 rounded-full transition-colors flex items-center gap-2 no-underline">
+        <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
+      </a>
+    </header>
 
-    <!-- Active filter banner (hidden by default, shown when URL params are present) -->
-    <div id="active-filter-banner" class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg" style="display:none;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2)">
-      <span class="material-symbols-outlined" style="font-size:18px;color:#4ade80">filter_alt</span>
-      <span id="active-filter-label" class="text-sm font-medium" style="color:#4ade80"></span>
-      <button onclick="clearAllFilters()" class="ml-auto text-sm px-3 py-1 rounded-lg transition-colors" style="color:#4ade80;border:1px solid rgba(74,222,128,0.3);background:none;cursor:pointer">
+    <!-- Active filter banner (hidden by default, shown when URL params are present).
+         Re-themed from the old green to the shared accent tokens. -->
+    <div id="active-filter-banner" class="flex items-center gap-3 px-4 py-3 rounded-lg" style="display:none;background:var(--accent-soft);border:1px solid var(--accent-border)">
+      <span class="material-symbols-outlined" style="font-size:18px;color:var(--accent-text)">filter_alt</span>
+      <span id="active-filter-label" class="text-sm font-medium" style="color:var(--accent-text)"></span>
+      <button onclick="clearAllFilters()" class="ml-auto text-sm px-3 py-1 rounded-lg transition-colors" style="color:var(--accent-text);border:1px solid var(--accent-border);background:none;cursor:pointer">
         Clear filter
       </button>
     </div>
 
-    <!-- Controls row -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+    <!-- Filter / search bar — wrapped in a glass-card container (item 1) -->
+    <div class="glass-card flex flex-col sm:flex-row sm:items-center justify-between gap-4" style="padding:12px 16px;border-radius:8px">
       <div id="txn-count-label" class="text-sm" style="color:var(--text-secondary)">Loading...</div>
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Search -->
@@ -226,9 +253,9 @@
           <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:16px;color:var(--text-secondary)">search</span>
           <input id="txn-search" type="text" placeholder="Search transactions…"
             class="rounded-lg text-sm pl-8 pr-3 py-2 focus:outline-none w-48"
-            style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);caret-color:#4ade80"
+            style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);caret-color:var(--accent-text)"
             oninput="filterTransactions()"
-            onfocus="this.style.borderColor='#4ade80'"
+            onfocus="this.style.borderColor='var(--accent)'"
             onblur="this.style.borderColor='var(--border)'">
         </div>
         <!-- Category filter -->
@@ -266,8 +293,8 @@
       </div>
     </div>
 
-    <!-- Transactions table card -->
-    <div class="card p-0 overflow-hidden flex flex-col" style="border-color:var(--border)">
+    <!-- Transactions table card (glass via .card) -->
+    <div class="card overflow-hidden flex flex-col" style="padding:0">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -296,8 +323,7 @@
       </div>
     </div>
 
-  </div>
-</div>
+</main>
 
 <script>
 // ============================================================
@@ -309,38 +335,45 @@ const CATEGORIES = [
   'Healthcare','Transfer / P2P','Rent','Education','ATM / Cash','Other'
 ];
 
+// ── SINGLE SOURCE OF TRUTH for category colour — ported verbatim from
+// newDashboard.html so badges/icons here match the dashboard exactly. 11 genuinely
+// distinct hues (coral, violet, teal, olive, magenta, sage, steel-blue, indigo,
+// amber, slate, mauve); `text` is mid-luminance for legibility on both themes,
+// `bg` is the same hue at low opacity for the pill.
 const CAT_COLORS = {
-  'Food & Dining':  { bg: 'rgba(249,115,22,0.12)', text: '#fb923c' },
-  'Shopping':       { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa' },
-  'Transport':      { bg: 'rgba(14,165,233,0.12)',  text: '#38bdf8' },
-  'Utilities':      { bg: 'rgba(34,197,94,0.12)',   text: '#4ade80' },
-  'Entertainment':  { bg: 'rgba(168,85,247,0.12)',  text: '#c084fc' },
-  'Healthcare':     { bg: 'rgba(239,68,68,0.12)',   text: '#f87171' },
-  'Transfer / P2P': { bg: 'rgba(234,179,8,0.12)',   text: '#facc15' },
-  'Rent':           { bg: 'rgba(236,72,153,0.12)',  text: '#f472b6' },
-  'Education':      { bg: 'rgba(99,102,241,0.12)',  text: '#818cf8' },
-  'ATM / Cash':     { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' },
-  'Other':          { bg: 'rgba(120,113,108,0.12)', text: '#a8a29e' },
+  'Food & Dining':  { bg: 'rgba(217,119,87,0.16)',  text: '#D97757' },  // coral
+  'Shopping':       { bg: 'rgba(155,111,212,0.16)', text: '#9B6FD4' },  // violet
+  'Transport':      { bg: 'rgba(61,158,148,0.16)',  text: '#3D9E94' },  // teal
+  'Utilities':      { bg: 'rgba(169,174,51,0.18)',  text: '#A9AE33' },  // Duranta olive
+  'Entertainment':  { bg: 'rgba(199,107,158,0.16)', text: '#C76B9E' },  // magenta-pink
+  'Healthcare':     { bg: 'rgba(95,168,112,0.16)',  text: '#5FA870' },  // sage green
+  'Transfer / P2P': { bg: 'rgba(94,127,191,0.16)',  text: '#5E7FBF' },  // steel blue
+  'Rent':           { bg: 'rgba(108,95,199,0.16)',  text: '#6C5FC7' },  // indigo
+  'Education':      { bg: 'rgba(198,138,58,0.16)',  text: '#C68A3A' },  // amber
+  'ATM / Cash':     { bg: 'rgba(126,140,174,0.18)', text: '#7E8CAE' },  // slate
+  'Other':          { bg: 'rgba(154,143,176,0.16)', text: '#9A8FB0' },  // mauve-grey
 };
 
-// Category icons — lime-green stroke (18x18, no fill), shown before the category name
-const CAT_ICONS = {
-  'Food & Dining':  '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  'Shopping':       '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
-  'Transport':      '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
-  'Utilities':      '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
-  'Entertainment':  '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>',
-  'Healthcare':     '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-  'Transfer / P2P': '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
-  'Rent':           '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-  'Education':      '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
-  'ATM / Cash':     '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
-  'Other':          '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="17" r="0.5" fill="#a3e635"/>',
+// Category icons — Material Symbols (same set/weight as the dashboard), coloured
+// per-category from CAT_COLORS so icon, badge and text always share one mapping.
+const CAT_ICON_NAMES = {
+  'Food & Dining':  'restaurant',
+  'Shopping':       'shopping_bag',
+  'Transport':      'directions_car',
+  'Utilities':      'bolt',
+  'Entertainment':  'movie',
+  'Healthcare':     'medical_services',
+  'Transfer / P2P': 'swap_horiz',
+  'Rent':           'home',
+  'Education':      'school',
+  'ATM / Cash':     'local_atm',
+  'Other':          'category',
 };
 
 function catIcon(cat) {
-  const paths = CAT_ICONS[cat] || CAT_ICONS['Other'];
-  return `<span style="display:inline-flex;align-items:center;vertical-align:middle;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3e635" stroke-width="1.5">${paths}</svg></span>`;
+  const name = CAT_ICON_NAMES[cat] || CAT_ICON_NAMES['Other'];
+  const c = CAT_COLORS[cat] || CAT_COLORS['Other'];
+  return `<span class="material-symbols-outlined" style="font-size:18px;line-height:1;color:${c.text};flex-shrink:0;vertical-align:middle">${name}</span>`;
 }
 
 let _allTransactions = [];
@@ -378,8 +411,8 @@ function catPill(cat) {
 
 function emptyState(msg) {
   const text = msg || 'Upload a statement to see your data';
-  return `<div class="flex flex-col items-center justify-center py-8 gap-2" style="color:#6b7280">
-    <span class="material-symbols-outlined" style="font-size:28px;color:#6b7280">cloud_upload</span>
+  return `<div class="flex flex-col items-center justify-center py-8 gap-2" style="color:var(--text-secondary)">
+    <span class="material-symbols-outlined" style="font-size:28px;color:var(--text-secondary)">cloud_upload</span>
     <span class="text-sm">${escHtml(text)}</span>
   </div>`;
 }
@@ -391,7 +424,7 @@ function showToast(msg, ok) {
     'padding:12px 20px','border-radius:8px','font-size:14px','font-weight:500',
     'box-shadow:0 4px 20px rgba(0,0,0,0.5)',
     'transition:opacity 0.4s,transform 0.4s',
-    ok === false ? 'background:#ef4444;color:#fff' : 'background:#4ade80;color:#0d0f0d'
+    ok === false ? 'background:#ef4444;color:#fff' : 'background:var(--accent);color:var(--on-accent)'
   ].join(';');
   t.textContent = msg;
   document.body.appendChild(t);
@@ -504,17 +537,17 @@ function renderTransactions(txns) {
   const allShown = currentOffset + pageSize >= filtered.length;
   let rowsHtml = filtered.slice(0, currentOffset + pageSize).map(t => `
     <tr class="transaction-row transition-colors" data-txn-id="${escHtml(t.txn_id)}">
-      <td class="px-6 py-4 text-sm" style="color:#6b7280">${fmtDate(t.date)}</td>
-      <td class="px-6 py-4 text-sm text-white">${escHtml(t.merchant)}${t.is_subscription ? '<br><span class="sub-badge">Subscription</span>' : ''}</td>
+      <td class="px-6 py-4 text-sm" style="color:var(--text-secondary)">${fmtDate(t.date)}</td>
+      <td class="px-6 py-4 text-sm text-white">${escHtml(t.merchant)}${t.is_subscription ? '<svg class="sub-icon" role="img" aria-label="Recurring subscription"><title>Recurring subscription</title><use href="#ico-subscription"></use></svg>' : ''}</td>
       <td class="px-6 py-4"><span class="cat-cell">${catPill(t.category)}</span></td>
       <td class="px-6 py-4 text-sm font-data-mono text-white text-right">${fmtAmt(t.amount)}</td>
       <td class="px-6 py-4 text-right">
         <button class="p-2 edit-btn cursor-pointer transition-colors"
-          style="color:#6b7280"
+          style="color:var(--text-secondary)"
           data-txn-id="${escHtml(t.txn_id)}"
           data-category="${escHtml(t.category)}"
-          onmouseenter="this.style.color='#4ade80'"
-          onmouseleave="this.style.color='#6b7280'">
+          onmouseenter="this.style.color='var(--accent)'"
+          onmouseleave="this.style.color='var(--text-secondary)'">
           <span class="material-symbols-outlined" style="font-size:16px">edit</span>
         </button>
       </td>
@@ -562,7 +595,7 @@ function openEdit(btn) {
           `<option value="${escHtml(c)}" ${c === origCat ? 'selected' : ''}>${escHtml(c)}</option>`
         ).join('')}
       </select>
-      <button class="save-edit px-2 py-1 rounded text-xs font-bold" style="background:#4ade80;color:#0d0f0d">✓</button>
+      <button class="save-edit px-2 py-1 rounded text-xs font-bold" style="background:var(--accent);color:var(--on-accent)">✓</button>
       <button class="cancel-edit px-2 py-1 rounded text-xs" style="background:var(--border);color:var(--text-secondary)">✕</button>
     </div>
   `;
@@ -629,6 +662,9 @@ function toggleTheme() {
 function _syncThemeUI(isLight) {
   const icon = document.getElementById('theme-icon');
   if (icon) icon.textContent = isLight ? '☀' : '☾';
+  // Swap the navbar logo to match the theme (same logic as the dashboard).
+  const logo = document.getElementById('navbar-logo');
+  if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
 }
 function initTheme() {
   _syncThemeUI(document.documentElement.classList.contains('light-mode'));

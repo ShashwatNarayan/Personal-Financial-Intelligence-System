@@ -17,74 +17,82 @@
 <style>
   /* ── CSS Variables ── */
   :root {
-    --bg: #0d0f0d;
-    --card: #131a13;
-    --navbar: #0a0c0a;
-    --border: #1f2a1f;
-    --text-primary: #f0f0f0;
-    --text-secondary: #6b7280;
-    --accent: #4ade80;
-    --row-hover: #1c241c;     /* Change 3: table row hover */
+    /* Dark mode = right strip of colourPallet.jpeg: vertical wash, Tetsu-Kon Blue → Light Violet */
+    --bg: linear-gradient(180deg, #17184B 0%, #273287 45%, #6B5FA8 75%, #D6B4FC 100%);
+    --card: rgba(23, 24, 75, 0.55);            /* Tetsu-Kon Blue, translucent glass */
+    --navbar: rgba(23, 24, 75, 0.66);          /* Tetsu-Kon Blue, slightly more opaque */
+    --border: rgba(39, 50, 135, 0.45);         /* Intergalactic Highway, low opacity */
+    --text-primary: #F0EEE9;                   /* Cloud Dancer — 16:1 on navy */
+    --text-secondary: rgba(211, 221, 231, 0.62); /* Nordic Breeze, dimmed */
+    --accent: #D6B4FC;                          /* Light Violet — fills/backgrounds */
+    --accent-text: #D6B4FC;                     /* accent used as TEXT (dark = Light Violet, unchanged) */
+    --on-accent: #17184B;                       /* Tetsu-Kon Blue — dark text on accent */
+    --accent-soft: rgba(214, 180, 252, 0.14);   /* accent tint fill */
+    --accent-border: rgba(214, 180, 252, 0.32); /* accent tint border */
+    --row-hover: rgba(214, 180, 252, 0.10);     /* subtle violet tint */
+    --insight-highlight: #D8E63C;               /* Duranta Yellow — highlight text on glass */
+    --icon-soft: rgba(214, 180, 252, 0.14);     /* tint behind round glyph icons — violet, agrees with the violet glyph */
+    --panel-bg: #17184B;                        /* AI popup: solid, opaque (no glass/gradient) */
+    --modal-bg: rgba(23, 24, 75, 0.85);         /* Subscriptions modal — ONE cohesive glass panel (more opaque than cards) */
+    --panel-input-bg: #22245E;                  /* AI popup input: flat solid, slight offset */
+    --ai-fab-bg: #273287;                       /* AI FAB circle — darker than accent in dark mode */
+    --ai-fab-fg: #F0EEE9;                       /* AI FAB glyph on the darker circle */
+    --review-dot: #D6B4FC;                      /* Needs-Review bullet — Light Violet on dark glass */
   }
   html.light-mode {
-    --bg: #f5f7f5;
-    --card: #ffffff;
-    --navbar: #ffffff;
-    --border: #e2e8e2;
-    --text-primary: #0d0f0d;
-    --text-secondary: #4b5563;
-    --accent: #4ade80;
-    --row-hover: #f0f7f0;     /* Change 3: subtle green tint in light mode */
+    /* Light mode = left strip: vertical wash, Cloud Dancer → Nordic Breeze → Light Violet */
+    --bg: linear-gradient(180deg, #F0EEE9 0%, #F0EEE9 25%, #D3DDE7 60%, #D6B4FC 100%);
+    --card: rgba(240, 238, 233, 0.45);          /* Cloud Dancer, translucent glass — 0.45 for stronger frosting/gradient bleed-through in light mode (matches dark-mode's stronger glass) */
+    --navbar: rgba(240, 238, 233, 0.72);
+    --border: rgba(211, 221, 231, 0.90);        /* Nordic Breeze, low opacity */
+    --text-primary: #17184B;                    /* Tetsu-Kon Blue — 16:1 on Cloud Dancer */
+    --text-secondary: rgba(39, 50, 135, 0.80);  /* Intergalactic Highway, dimmed — darkened 0.72→0.80 to keep AA contrast on the more-translucent (0.45) cards over the violet gradient */
+    --accent: #D8E63C;                           /* Duranta Yellow — fills/backgrounds (unchanged) */
+    --accent-text: #17184B;                      /* accent TEXT → Tetsu-Kon Blue in light mode (yellow text reads poorly on Cloud Dancer); fills stay yellow */
+    --on-accent: #17184B;                        /* Tetsu-Kon Blue — dark text on accent */
+    --accent-soft: rgba(216, 230, 60, 0.18);
+    --accent-border: rgba(216, 230, 60, 0.38);
+    --row-hover: rgba(216, 230, 60, 0.14);       /* subtle yellow tint */
+    --insight-highlight: #273287;                /* Intergalactic Highway — dark highlight on light glass */
+    --icon-soft: rgba(23, 24, 75, 0.10);         /* Tetsu-Kon Blue tint — keeps round glyph icons reading fully blue (no yellow) in light mode */
+    --panel-bg: #F0EEE9;                         /* AI popup: solid, opaque */
+    --modal-bg: rgba(240, 238, 233, 0.85);       /* Subscriptions modal — ONE cohesive glass panel (more opaque than cards) */
+    --panel-input-bg: #E4E1DA;                   /* AI popup input: flat solid, slight offset */
+    --ai-fab-bg: #D8E63C;                         /* AI FAB circle — accent yellow (light mode unchanged) */
+    --ai-fab-fg: #17184B;
+    --review-dot: #273287;                        /* Needs-Review bullet — Intergalactic Highway on light glass */
   }
-  /* ── Light-mode overrides ── */
-  html.light-mode body { background-color: var(--bg) !important; color: var(--text-primary); }
-  html.light-mode .card { background-color: var(--card) !important; border-color: var(--border) !important; }
-  html.light-mode nav  { background-color: var(--navbar) !important; border-bottom-color: var(--border) !important; }
+  /* ── Light-mode overrides (only what CSS variables can't express) ── */
+  /* Surfaces, borders, navbar, modals, inputs etc. are all driven by the CSS
+     variables above, which now switch automatically between the two gradients —
+     the previous per-element !important overrides are no longer needed. */
+  /* text-white is a fixed white utility → remap to themed primary in light mode */
   html.light-mode .text-white { color: var(--text-primary) !important; }
-  html.light-mode .text-secondary { color: var(--text-secondary) !important; }
-  /* Intelligence alerts strip */
-  html.light-mode section.bg-\[#131a13\] { background-color: var(--card) !important; border-color: var(--border) !important; }
-  /* Date range badge, search/filter controls */
-  html.light-mode .bg-\[#131a13\] { background-color: var(--card) !important; }
-  html.light-mode .border-\[#1f2a1f\] { border-color: var(--border) !important; }
-  html.light-mode .bg-\[#0a0c0a\] { background-color: var(--navbar) !important; }
-  /* Search input */
-  html.light-mode #txn-search { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  /* Category dropdown */
-  html.light-mode #cat-filter { background-color: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  /* Table header row */
-  html.light-mode table thead tr { background-color: var(--navbar) !important; }
-  html.light-mode table thead th { color: var(--text-secondary) !important; border-color: var(--border) !important; }
-  html.light-mode tbody.divide-y { border-color: var(--border) !important; }
-  html.light-mode tbody tr { border-color: var(--border) !important; }
-  /* Avatar button */
-  html.light-mode #avatar-btn { background-color: var(--border) !important; border-color: var(--border) !important; }
-  /* Profile dropdown */
-  html.light-mode #profile-dropdown { background: var(--card) !important; border-color: var(--border) !important; }
-  /* Subscriptions modal */
-  html.light-mode #subs-modal > div { background-color: var(--card) !important; border-color: var(--border) !important; }
-  /* Modal footer */
-  html.light-mode #subs-modal .bg-\[#0a0c0a\] { background-color: var(--navbar) !important; border-color: var(--border) !important; }
-  /* Trend toggle group */
-  html.light-mode #trend-toggle-group { background-color: var(--bg) !important; border-color: var(--border) !important; }
-  /* Inline edit select */
-  html.light-mode .inline-edit-select { background: var(--card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-  /* Shimmer in light mode */
-  html.light-mode .shimmer { background: linear-gradient(90deg, #f0f0f0 0%, #e2e8e2 50%, #f0f0f0 100%); }
-  /* Load more / filter buttons */
-  html.light-mode .hover\:bg-\[#1f2a1f\]:hover { background-color: var(--border) !important; }
-  /* Reimbursements border */
-  html.light-mode .border-t { border-color: var(--border) !important; }
-  /* bg-[#1f2a1f] used as a background fill (not just border) */
-  html.light-mode .bg-\[#1f2a1f\] { background-color: var(--border) !important; }
+  /* Shimmer gradient is a fixed image (not a single var) → light-mode tones */
+  html.light-mode .shimmer { background: linear-gradient(90deg, #F0EEE9 0%, #D3DDE7 50%, #F0EEE9 100%); background-size: 200% 100%; }
+
+  /* ── Light-mode colour corrections ────────────────────────────────────────
+     Both surfaces below read as "yellow + blue mixed" in light mode, because
+     --accent-soft is a Duranta Yellow tint while --accent-text / --insight-
+     highlight resolve to blue. Dark mode is deliberately left alone: there
+     --accent-soft is a violet tint that already agrees with the violet glyph. */
+
+  /* Fastest Growing banner icon — one solid blue reading, no yellow behind the
+     glyph. NOTE: this is a Material Symbols font ligature, NOT a two-path SVG;
+     the "two colours" were the tinted circle vs. the glyph, not two fills. */
+  .fg-icon { background: var(--icon-soft); color: var(--accent-text); }
+
+  /* Subscription frequency pills (MONTHLY / YEARLY) — inverted in light mode:
+     solid Tetsu-Kon Blue plate with Duranta Yellow text. In dark mode this stays
+     yellow-on-violet-tint via the same two tokens. */
+  .freq-badge { color: var(--insight-highlight); background: var(--accent-soft); }
+  html.light-mode .freq-badge { background: var(--accent-text); color: var(--accent); }
   /* Change 2: Intelligence Alerts strip — theme-aware via class */
   .alerts-strip {
     background-color: var(--card);
     border: 1px solid var(--border);
     transition: background-color 0.25s, border-color 0.25s;
   }
-  html.light-mode .alerts-strip { border-color: var(--border); }
-  html.light-mode .alerts-strip .alert-label { color: var(--text-primary); }
   .alert-divider { background-color: var(--border); transition: background-color 0.25s; }
   /* Change 3: Transaction row hover — theme-aware */
   .transaction-row:hover { background-color: var(--row-hover) !important; }
@@ -115,30 +123,35 @@
   html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
 
   body {
-    background-color: var(--bg);
+    background: var(--bg);
+    background-attachment: fixed;   /* full-page gradient stays put on scroll */
+    background-size: cover;         /* fill the viewport, no tiling/repeat */
+    min-height: 100vh;              /* gradient spans full page height */
     color: var(--text-primary);
   }
   .card {
     background-color: var(--card);
+    backdrop-filter: blur(12px);    /* let the page gradient glow through the glass surface */
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 24px;
+    padding: 16px;                  /* density pass: 24px → 16px (tighter card interior) */
     transition: border-color 0.2s, background-color 0.25s;
   }
   .card:hover {
-    border-color: #4ade80;
+    border-color: var(--accent);
   }
   .glass-card {
-    background: rgba(19, 26, 19, 0.7);
+    background: var(--card);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
   }
-  .text-accent { color: #4ade80; }
-  .bg-accent { background-color: #4ade80; color: #0d0f0d; }
-  .border-accent { border-color: #4ade80; }
-  .text-secondary { color: #6b7280; }
+  .text-accent { color: var(--accent-text); }   /* accent-as-text: blue in light mode, Light Violet in dark */
+  .bg-accent { background-color: var(--accent); color: var(--on-accent); }
+  .bg-accent:hover { filter: brightness(0.92); }
+  .border-accent { border-color: var(--accent); }
+  .text-secondary { color: var(--text-secondary); }
   .shimmer {
-    background: linear-gradient(90deg, #131a13 0%, #1f2a1f 50%, #131a13 100%);
+    background: linear-gradient(90deg, #17184B 0%, #273287 50%, #17184B 100%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite linear;
   }
@@ -158,7 +171,7 @@
   }
   .inline-edit-select {
     background: var(--border);
-    border: 1px solid #3f493f;
+    border: 1px solid var(--border);
     color: var(--text-primary);
     font-size: 11px;
     border-radius: 4px;
@@ -179,11 +192,19 @@
 <body class="font-body-md min-h-screen overflow-x-hidden">
 
 <!-- Top Navigation -->
-<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
+<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
   <div class="flex items-center">
-    <img src="{{ url_for('static', filename='images/logo.png') }}"
+    <!-- Themed logo (Line Logo lockup): dark variant in dark mode, light variant in
+         light mode. Swap is driven by _syncThemeUI() (same place toggleTheme()
+         flips html.light-mode); the inline script below sets the correct variant
+         synchronously on first paint to avoid a dark→light flash. -->
+    <img id="navbar-logo"
+         src="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-dark="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-light="{{ url_for('static', filename='images/line-logo-light.svg') }}"
          alt="ArthaLens"
-         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+         style="height:28px;width:auto;max-width:100%;object-fit:contain;display:block;flex-shrink:0">
+    <script>(function(){var l=document.getElementById('navbar-logo');if(l&&document.documentElement.classList.contains('light-mode'))l.src=l.dataset.logoLight;})();</script>
   </div>
   <div class="hidden md:flex items-center h-full">
     <a class="h-full px-4 flex items-center border-b-2 border-accent text-white font-medium" href="{{ url_for('main.dashboard') }}">Dashboard</a>
@@ -205,7 +226,7 @@
       <button id="avatar-btn"
         class="w-8 h-8 rounded-full flex items-center justify-center text-secondary text-xs font-bold cursor-pointer transition-colors"
         style="background:var(--border);border:1px solid var(--border)"
-        onmouseenter="this.style.borderColor='#4ade80'" onmouseleave="this.style.borderColor='var(--border)'"
+        onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"
         onclick="toggleProfileDropdown(event)"
         aria-label="User profile menu">
         <span class="material-symbols-outlined text-[20px]">person</span>
@@ -220,7 +241,7 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit"
             style="width:100%;text-align:left;background:none;border:none;color:var(--text-primary);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-family:inherit"
-            onmouseenter="this.style.color='#4ade80'"
+            onmouseenter="this.style.color='var(--accent)'"
             onmouseleave="this.style.color='var(--text-primary)'">
             <span class="material-symbols-outlined" style="font-size:16px">logout</span>
             Logout
@@ -232,7 +253,15 @@
 </nav>
 
 <!-- Main Content -->
-<main class="pt-[72px] pb-12 px-6 max-w-7xl mx-auto flex flex-col gap-4">
+<!-- Layout set via inline styles (NOT Tailwind classes): the CSS is a pre-compiled
+     static bundle, so arbitrary classes like pt-[64px]/max-w-[1400px] that aren't
+     in the bundle silently do nothing. Inline styles always apply.
+       • padding-top:64px  = 56px fixed navbar + 8px breathing room.
+       • max-width:1400px  = centered content column matching correctsize.png
+         (reference content ≈ 73% of a 1920px viewport → 1400px); the gradient
+         background stays full-bleed on <body> behind this, only the column is
+         constrained. Navbar is intentionally left full-width (matches reference). -->
+<main class="pb-8 px-6 flex flex-col gap-3" style="padding-top:64px;max-width:1400px !important;margin-left:auto !important;margin-right:auto !important;width:100%">
 
   <!-- Header -->
   <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -247,7 +276,7 @@
         <span class="pl-2" style="color:var(--text-secondary);border-left:1px solid var(--border)" id="date-range-text">All Time</span>
       </div>
       <!-- CLAUDE CODE: Upload button wired to Flask upload route -->
-      <a href="{{ url_for('main.upload') }}" class="bg-accent hover:bg-[#3bc26b] text-[#0d0f0d] font-medium px-4 py-2 rounded-[8px] transition-colors flex items-center gap-2 no-underline">
+      <a href="{{ url_for('main.upload') }}" class="bg-accent font-medium px-4 py-2 rounded-full transition-colors flex items-center gap-2 no-underline">
         <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
       </a>
     </div>
@@ -257,7 +286,7 @@
   <!-- CLAUDE CODE: KPI values derived client-side from /api/transactions/classified + /api/subscriptions/audit -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Avg Monthly Spend -->
-    <div class="card flex flex-col justify-between h-32 relative overflow-hidden group">
+    <div class="card flex flex-col justify-between h-28 relative overflow-hidden group">
       <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Avg Monthly Spend</div>
       <div class="font-data-mono text-2xl text-white mt-2" id="kpi-avg-monthly">
         <div class="shimmer h-8 w-32 rounded"></div>
@@ -272,7 +301,7 @@
       </div>
     </div>
     <!-- Top Category -->
-    <div class="card flex flex-col justify-between h-32">
+    <div class="card flex flex-col justify-between h-28">
       <div class="flex justify-between items-start">
         <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Top Category</div>
         <span class="material-symbols-outlined text-secondary text-[18px]">swap_horiz</span>
@@ -287,7 +316,7 @@
       </div>
     </div>
     <!-- Active Subscriptions -->
-    <div class="card flex flex-col justify-between h-32 cursor-pointer hover:border-[#4ade80]" onclick="openModal()">
+    <div class="card flex flex-col justify-between h-28 cursor-pointer" onclick="openModal()">
       <div class="flex justify-between items-start">
         <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Active Subscriptions</div>
         <span class="material-symbols-outlined text-secondary text-[18px]">calendar_month</span>
@@ -305,7 +334,7 @@
       </div>
     </div>
     <!-- Highest Growth -->
-    <div class="card flex flex-col justify-between h-32">
+    <div class="card flex flex-col justify-between h-28">
       <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Highest Growth</div>
       <div>
         <div class="flex items-center gap-2 mb-1">
@@ -323,13 +352,22 @@
 
   <!-- Zone 2: Intelligence Alerts -->
   <!-- CLAUDE CODE: Alerts wired to /api/anomalies/report — spike anomalies as red pills, drops as blue -->
-  <section class="alerts-strip flex items-center gap-4 rounded-lg px-4 py-3">
+  <!-- Padding set inline (px-4/py-2.5 utilities aren't in the pre-compiled CSS
+       bundle → they silently applied no vertical padding, which is why this strip
+       rendered as a cramped ~26px line). 16px all round gives it real breathing
+       room comparable to the other cards' rhythm without pushing the charts below
+       the fold at 1366×768. -->
+  <section class="alerts-strip flex items-center gap-4 rounded-lg" style="padding:12px">
     <div class="alert-label flex items-center gap-2 font-medium whitespace-nowrap shrink-0" style="color:var(--text-primary)">
       <span class="material-symbols-outlined text-accent text-[20px]">lightbulb</span>
       Intelligence Alerts
     </div>
     <div class="w-px h-6 shrink-0 alert-divider"></div>
-    <div class="flex overflow-x-auto hide-scrollbar gap-3 w-full" id="alerts-container">
+    <!-- Single-line, horizontally scrollable; a right-edge fade mask makes overflow
+         read as intentional (scrollable) instead of an abrupt hard cut mid-word.
+         The fade sits over empty space when alerts don't overflow, so it's harmless. -->
+    <div class="flex overflow-x-auto hide-scrollbar gap-3 w-full" id="alerts-container"
+         style="-webkit-mask-image:linear-gradient(to right,#000 92%,transparent);mask-image:linear-gradient(to right,#000 92%,transparent)">
       <div class="shimmer h-7 w-48 rounded-full"></div>
       <div class="shimmer h-7 w-56 rounded-full"></div>
       <div class="shimmer h-7 w-40 rounded-full"></div>
@@ -337,22 +375,22 @@
   </section>
 
   <!-- Zone 3: Charts Row -->
-  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Left: Donut Chart -->
     <!-- CLAUDE CODE: Category donut chart rendered by Plotly into #categoryDonut -->
-    <div class="card h-[340px] flex flex-col relative">
-      <div class="flex justify-between items-start mb-4">
+    <div class="card h-[300px] flex flex-col relative">
+      <div class="flex justify-between items-start mb-3">
         <h3 class="text-white font-medium">Spending by Category</h3>
         <span class="text-[10px] text-secondary">Powered by Plotly</span>
       </div>
       <div class="flex-1 flex flex-col" style="min-height:0">
-        <div id="categoryDonut" style="width:100%;height:260px;"></div>
+        <div id="categoryDonut" style="width:100%;height:230px;"></div>
       </div>
     </div>
     <!-- Right: Monthly Trend Chart -->
     <!-- CLAUDE CODE: Monthly trend chart rendered by Plotly into #monthlyTrendChart from /api/insights/temporal -->
-    <div class="card h-[340px] flex flex-col">
-      <div class="flex justify-between items-center mb-4">
+    <div class="card h-[300px] flex flex-col">
+      <div class="flex justify-between items-center mb-3">
         <h3 class="text-white font-medium">Monthly Spending Trend</h3>
         <!-- Change 4: 6M/1Y/All trend toggle, wired to Plotly.react() -->
         <div class="flex rounded p-0.5" id="trend-toggle-group" style="background:var(--navbar);border:1px solid var(--border)">
@@ -362,13 +400,13 @@
         </div>
       </div>
       <div class="flex-1" style="min-height:0">
-        <div id="monthlyTrendChart" style="width:100%;height:240px;"></div>
+        <div id="monthlyTrendChart" style="width:100%;height:210px;"></div>
       </div>
     </div>
   </section>
 
   <!-- Zone 4: Intelligence Cards -->
-  <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Subscriptions Intelligence Card -->
     <!-- CLAUDE CODE: Subscriptions card wired to /api/subscriptions/audit -->
     <div class="card flex flex-col">
@@ -432,7 +470,7 @@
 
   <!-- Zone 6: Temporal Insights -->
   <!-- CLAUDE CODE: Temporal Insights section wired to /api/insights/temporal -->
-  <section class="flex flex-col gap-6 mt-4">
+  <section class="flex flex-col gap-3">
     <div class="flex items-center">
       <!-- Change 3: Chevron toggles collapse/expand of temporal content -->
       <button onclick="toggleTemporalInsights()" aria-label="Toggle Temporal Insights" class="flex items-center gap-2 cursor-pointer" style="background:none;border:none;padding:0;font-family:inherit">
@@ -450,7 +488,7 @@
         <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
       </div>
       <!-- CLAUDE CODE: Fastest growing banner, populated from insights.fastest_growing -->
-      <div class="bg-accent/10 border border-accent/20 rounded-lg px-4 py-3 flex items-center justify-between gap-4 mt-6" id="fastest-growing-banner">
+      <div class="rounded-lg px-4 py-3 flex items-center justify-between gap-4 mt-6" id="fastest-growing-banner" style="background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--accent-border)">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
             <span class="material-symbols-outlined">trending_up</span>
@@ -479,7 +517,7 @@
 <!-- Subscriptions Modal -->
 <!-- CLAUDE CODE: Modal populated from /api/subscriptions/audit response -->
 <div class="fixed inset-0 z-[100] items-center justify-center p-4 bg-black/70 backdrop-blur-sm" id="subs-modal" onclick="closeModal(event)">
-  <div class="rounded-[12px] w-full max-w-[480px] shadow-2xl flex flex-col max-h-[80vh]" style="background:var(--card);border:1px solid var(--border)" onclick="event.stopPropagation()">
+  <div class="rounded-[12px] w-full max-w-[480px] shadow-2xl flex flex-col max-h-[80vh]" style="background:var(--modal-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border)" onclick="event.stopPropagation()">
     <div class="p-6 flex justify-between items-start" style="border-bottom:1px solid var(--border)">
       <div>
         <h2 class="font-headline-md font-bold" style="color:var(--text-primary)">Active Subscriptions</h2>
@@ -495,7 +533,7 @@
       <div class="shimmer h-10 rounded mb-2"></div>
       <div class="shimmer h-10 rounded"></div>
     </div>
-    <div class="p-6 flex justify-between items-center rounded-b-[12px]" style="border-top:1px solid var(--border);background:var(--navbar)">
+    <div class="p-6 flex justify-between items-center rounded-b-[12px]" style="border-top:1px solid var(--border)">
       <p class="text-xs" style="color:var(--text-secondary)" id="modal-showing">Loading…</p>
       <button class="px-4 py-2 border border-accent text-accent rounded-lg text-sm font-medium hover:bg-accent/10 transition-colors" onclick="closeModalBtn()">Done</button>
     </div>
@@ -512,44 +550,56 @@ const CATEGORIES = [
   'Healthcare','Transfer / P2P','Rent','Education','ATM / Cash','Other'
 ];
 
+// ── SINGLE SOURCE OF TRUTH for category colour ──────────────────────────────
+// Every per-category colour in the UI — badge/pill fill + text, category icon,
+// donut slice, and donut legend swatch — is derived from THIS object. Do not add
+// a parallel colour list; the donut reads `.text` here so slices and legend can
+// never drift from the badges.
+//
+// The 11 categories get 11 genuinely distinct HUES (coral, violet, teal, olive,
+// magenta, sage, steel-blue, indigo, amber, slate, mauve) rather than opacity
+// variants of 2–3 base colours, so no two read alike at a glance. Each `text`
+// tone is mid-luminance so it stays legible on BOTH the dark Tetsu-Kon glass and
+// the light Cloud Dancer glass; `bg` is the same hue at low opacity for the pill.
 const CAT_COLORS = {
-  'Food & Dining':  { bg: 'rgba(249,115,22,0.12)', text: '#fb923c' },
-  'Shopping':       { bg: 'rgba(59,130,246,0.12)',  text: '#60a5fa' },
-  'Transport':      { bg: 'rgba(14,165,233,0.12)',  text: '#38bdf8' },
-  'Utilities':      { bg: 'rgba(34,197,94,0.12)',   text: '#4ade80' },
-  'Entertainment':  { bg: 'rgba(168,85,247,0.12)',  text: '#c084fc' },
-  'Healthcare':     { bg: 'rgba(239,68,68,0.12)',   text: '#f87171' },
-  'Transfer / P2P': { bg: 'rgba(234,179,8,0.12)',   text: '#facc15' },
-  'Rent':           { bg: 'rgba(236,72,153,0.12)',  text: '#f472b6' },
-  'Education':      { bg: 'rgba(99,102,241,0.12)',  text: '#818cf8' },
-  'ATM / Cash':     { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' },
-  'Other':          { bg: 'rgba(120,113,108,0.12)', text: '#a8a29e' },
+  'Food & Dining':  { bg: 'rgba(217,119,87,0.16)',  text: '#D97757' },  // coral
+  'Shopping':       { bg: 'rgba(155,111,212,0.16)', text: '#9B6FD4' },  // violet
+  'Transport':      { bg: 'rgba(61,158,148,0.16)',  text: '#3D9E94' },  // teal
+  'Utilities':      { bg: 'rgba(169,174,51,0.18)',  text: '#A9AE33' },  // Duranta olive
+  'Entertainment':  { bg: 'rgba(199,107,158,0.16)', text: '#C76B9E' },  // magenta-pink
+  'Healthcare':     { bg: 'rgba(95,168,112,0.16)',  text: '#5FA870' },  // sage green
+  'Transfer / P2P': { bg: 'rgba(94,127,191,0.16)',  text: '#5E7FBF' },  // steel blue
+  'Rent':           { bg: 'rgba(108,95,199,0.16)',  text: '#6C5FC7' },  // indigo
+  'Education':      { bg: 'rgba(198,138,58,0.16)',  text: '#C68A3A' },  // amber
+  'ATM / Cash':     { bg: 'rgba(126,140,174,0.18)', text: '#7E8CAE' },  // slate
+  'Other':          { bg: 'rgba(154,143,176,0.16)', text: '#9A8FB0' },  // mauve-grey
 };
 
-// Category icons — lime-green stroke (18x18, no fill), shown before the category name
-const CAT_ICONS = {
-  'Food & Dining':  '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  'Shopping':       '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
-  'Transport':      '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
-  'Utilities':      '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
-  'Entertainment':  '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>',
-  'Healthcare':     '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-  'Transfer / P2P': '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
-  'Rent':           '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-  'Education':      '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
-  'ATM / Cash':     '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
-  'Other':          '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="17" r="0.5" fill="#a3e635"/>',
+// Category icons — Material Symbols (same icon set/weight used across the dashboard),
+// coloured per-category from CAT_COLORS so badges stay in sync with the category palette.
+const CAT_ICON_NAMES = {
+  'Food & Dining':  'restaurant',
+  'Shopping':       'shopping_bag',
+  'Transport':      'directions_car',
+  'Utilities':      'bolt',
+  'Entertainment':  'movie',
+  'Healthcare':     'medical_services',
+  'Transfer / P2P': 'swap_horiz',
+  'Rent':           'home',
+  'Education':      'school',
+  'ATM / Cash':     'local_atm',
+  'Other':          'category',
 };
 
 function catIcon(cat) {
-  const paths = CAT_ICONS[cat] || CAT_ICONS['Other'];
-  return `<span style="display:inline-flex;align-items:center;vertical-align:middle;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3e635" stroke-width="1.5">${paths}</svg></span>`;
+  const name = CAT_ICON_NAMES[cat] || CAT_ICON_NAMES['Other'];
+  const c = CAT_COLORS[cat] || CAT_COLORS['Other'];
+  return `<span class="material-symbols-outlined" style="font-size:18px;line-height:1;color:${c.text};flex-shrink:0;vertical-align:middle">${name}</span>`;
 }
 
-// Change 2: Donut colour gradient — dark-to-bright green
-const DONUT_COLORS = [
-  '#4ade80','#3bc26b','#2da855','#1f8e40','#14742e','#0a5a1f','#063d14','#041f0a'
-];
+// NOTE: donut slice colours are NOT a separate list — they are pulled per-slice
+// from CAT_COLORS by category label (see renderCategoryDonut), so pie slices,
+// legend swatches and category badges always share ONE colour mapping.
 
 let _allTransactions = [];
 let _spendTransactions = []; // _allTransactions minus internal transfers (SWEEP), for spend KPIs
@@ -584,8 +634,8 @@ function catPill(cat) {
 
 function emptyState(msg) {
   const text = msg || 'Upload a statement to see your data';
-  return `<div class="flex flex-col items-center justify-center py-8 gap-2" style="color:#6b7280">
-    <span class="material-symbols-outlined" style="font-size:28px;color:#6b7280">cloud_upload</span>
+  return `<div class="flex flex-col items-center justify-center py-8 gap-2" style="color:var(--text-secondary)">
+    <span class="material-symbols-outlined" style="font-size:28px;color:var(--text-secondary)">cloud_upload</span>
     <span class="text-sm">${escHtml(text)}</span>
   </div>`;
 }
@@ -597,7 +647,7 @@ function showToast(msg, ok) {
     'padding:12px 20px','border-radius:8px','font-size:14px','font-weight:500',
     'box-shadow:0 4px 20px rgba(0,0,0,0.5)',
     'transition:opacity 0.4s,transform 0.4s',
-    ok === false ? 'background:#ef4444;color:#fff' : 'background:#4ade80;color:#0d0f0d'
+    ok === false ? 'background:#ef4444;color:#fff' : 'background:var(--accent);color:var(--on-accent)'
   ].join(';');
   t.textContent = msg;
   document.body.appendChild(t);
@@ -688,7 +738,7 @@ function updateDateRange(txns) {
   if (!el) return;
   if (!txns || !txns.length) {
     el.textContent = 'No data uploaded';
-    el.style.color = '#6b7280';
+    el.style.color = 'var(--text-secondary)';
     return;
   }
   const sorted = txns.map(t => t.date).sort();
@@ -703,14 +753,19 @@ function updateDateRange(txns) {
 function getPlotlyTheme() {
   const isLight = document.documentElement.classList.contains('light-mode');
   return {
-    plot_bgcolor:       isLight ? '#ffffff' : '#131a13',
-    paper_bgcolor:      isLight ? '#ffffff' : '#131a13',
-    font_color:         isLight ? '#4b5563' : '#6b7280',
-    gridcolor:          isLight ? '#e2e8e2' : '#1f2a1f',
-    linecolor:          '#4ade80',
-    annotation_color:   isLight ? '#0d0f0d' : '#ffffff',
+    // Transparent so the frosted-glass chart card behind the plot shows through
+    plot_bgcolor:       'rgba(0,0,0,0)',
+    paper_bgcolor:      'rgba(0,0,0,0)',
+    // Donut slice separators — match the glass card tone in each mode
+    slice_line:         isLight ? 'rgba(240,238,233,0.65)' : 'rgba(23,24,75,0.65)',
+    // High-contrast legend + axis tick text against the transparent glass card
+    font_color:         isLight ? '#17184B' : '#F0EEE9',
+    gridcolor:          isLight ? '#D3DDE7' : 'rgba(211,221,231,0.22)',
+    linecolor:          isLight ? '#D8E63C' : '#D6B4FC',
+    fillcolor:          isLight ? 'rgba(216,230,60,0.16)' : 'rgba(214,180,252,0.14)',
+    annotation_color:   isLight ? '#17184B' : '#F0EEE9',
     // Change 1: primary text colour for donut centre annotation
-    font_color_primary: isLight ? '#0d0f0d' : '#f0f0f0',
+    font_color_primary: isLight ? '#17184B' : '#F0EEE9',
   };
 }
 
@@ -737,8 +792,10 @@ function renderCategoryDonut(txns) {
     labels: sorted.map(([k]) => k),
     values: sorted.map(([, v]) => v),
     marker: {
-      colors: DONUT_COLORS.slice(0, sorted.length),
-      line: { color: th.plot_bgcolor, width: 2 }
+      // slice colours pulled from the shared CAT_COLORS map by category label,
+      // so a slice, its legend swatch, and that category's badge always match
+      colors: sorted.map(([k]) => (CAT_COLORS[k] || CAT_COLORS['Other']).text),
+      line: { color: th.slice_line, width: 2 }
     },
     textinfo: 'none',
     hovertemplate: '<b>%{label}</b><br>₹%{value:,.0f}<br>%{percent}<extra></extra>',
@@ -811,14 +868,15 @@ function _getTrendLayout() {
 function _drawTrendChart(data, isFirst) {
   const el = document.getElementById('monthlyTrendChart');
   if (!el) return;
+  const th = getPlotlyTheme();
   const trace = [{
     x: data.map(m => m.month),
     y: data.map(m => m.total),
     type: 'scatter',
     mode: 'lines',
     fill: 'tozeroy',
-    line: { color: '#4ade80', width: 2, shape: 'spline' },
-    fillcolor: 'rgba(74,222,128,0.08)',
+    line: { color: th.linecolor, width: 2, shape: 'spline' },
+    fillcolor: th.fillcolor,
     hovertemplate: '<b>%{x}</b><br>₹%{y:,.0f}<extra></extra>',
   }];
   const config = { responsive: true, displayModeBar: false };
@@ -892,8 +950,8 @@ function renderSubsCard(report) {
     <div class="flex justify-between items-center">
       <div>
         <p class="text-sm" style="color:var(--text-primary)">${escHtml(s.entity)}</p>
-        <span class="text-[10px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5"
-          style="color:var(--text-secondary);background:var(--border)">${escHtml(s.frequency)}</span>
+        <span class="freq-badge text-[10px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5"
+          >${escHtml(s.frequency)}</span>
       </div>
       <span class="font-data-mono" style="color:var(--text-primary)">${fmtAmt(s.avg_amount)}</span>
     </div>
@@ -925,7 +983,7 @@ function renderReimb(report) {
   section.style.display = 'block';
   list.innerHTML = pairs.map(p => {
     const badge = p.confidence === 'high'
-      ? `<span style="background:rgba(74,222,128,0.12);color:#4ade80;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">✓ exact</span>`
+      ? `<span style="background:var(--accent-soft);color:var(--accent-text);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">✓ exact</span>`
       : `<span style="background:rgba(234,179,8,0.12);color:#facc15;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">~ close</span>`;
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
@@ -962,7 +1020,7 @@ function renderNeedsReview(txns) {
   body.innerHTML = txns.slice(0, 6).map(t => `
     <div class="flex justify-between items-center" data-review-row="${escHtml(t.txn_id)}">
       <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full" style="background:#eab308;flex-shrink:0"></span>
+        <span class="w-2 h-2 rounded-full" style="background:var(--review-dot);flex-shrink:0"></span>
         <p class="text-sm" style="color:var(--text-primary)">${escHtml(t.merchant)}</p>
       </div>
       <div class="flex items-center gap-2">
@@ -971,7 +1029,7 @@ function renderNeedsReview(txns) {
           style="background:none;border:none;cursor:pointer;padding:2px;color:var(--text-secondary)"
           data-txn-id="${escHtml(t.txn_id)}"
           data-category="${escHtml(t.category)}"
-          onmouseenter="this.style.color='#4ade80'"
+          onmouseenter="this.style.color='var(--accent)'"
           onmouseleave="this.style.color='var(--text-secondary)'">
           <span class="material-symbols-outlined" style="font-size:16px;pointer-events:none">edit</span>
         </button>
@@ -993,7 +1051,7 @@ function openReviewEdit(btn) {
       <select class="review-inline-select" style="background:var(--card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;padding:4px 8px;font-size:12px">
         ${CATEGORIES.map(c => `<option value="${escHtml(c)}" ${c === origCat ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
       </select>
-      <button class="review-save-btn" style="background:#4ade80;color:#0d0f0d;border:none;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer">✓</button>
+      <button class="review-save-btn" style="background:var(--accent);color:var(--on-accent);border:none;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer">✓</button>
       <button class="review-cancel-btn" style="background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer">✕</button>
     </div>
   `;
@@ -1043,20 +1101,24 @@ function renderAlerts(report) {
     return;
   }
 
+  // Muted/neutral vertical-bar separator between alerts — visually splits them
+  // without competing with the red/blue alert text (spacing comes from the "|"
+  // padding plus the container's flex gap → renders as "  |  ").
+  const sep = `<span aria-hidden="true" class="alert-sep"
+      style="color:var(--text-secondary);opacity:0.55;align-self:center;padding:0 2px;flex-shrink:0">|</span>`;
   container.innerHTML = anomalies.slice(0, 5).map(a => {
     const isSpike = a.anomaly_type === 'spike';
-    const bg = isSpike ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)';
-    const border = isSpike ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)';
-    const color = isSpike ? '#f87171' : '#60a5fa';
+    // Plain coloured text + icon — no pill background, border, or icon circle
+    const color = isSpike ? '#f87171' : '#60a5fa';   // muted coral / blue, not pure red
     const icon = isSpike ? 'warning' : 'trending_down';
     return `
-      <div class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex items-center gap-1"
-        style="background:${bg};border:1px solid ${border};color:${color};flex-shrink:0">
+      <div class="text-xs font-medium whitespace-nowrap flex items-center gap-1"
+        style="color:${color};flex-shrink:0">
         <span class="material-symbols-outlined" style="font-size:14px">${icon}</span>
         ${escHtml(a.explanation)}
       </div>
     `;
-  }).join('');
+  }).join(sep);
 }
 
 // ---- Zone: Temporal Insights (MoM cards + fastest growing) ----
@@ -1070,7 +1132,7 @@ function renderTemporal(insights) {
     } else {
       container.innerHTML = momChanges.slice(0, 6).map(c => {
         const isPos = c.change_percent >= 0;
-        const pctColor = isPos ? '#f87171' : '#4ade80';
+        const pctColor = isPos ? '#f87171' : 'var(--accent)';
         const arrow = isPos ? '↑' : '↓';
         return `
           <div class="card min-w-[240px] flex flex-col gap-3">
@@ -1108,16 +1170,16 @@ function renderTemporal(insights) {
 
   bannerEl.innerHTML = `
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(74,222,128,0.2);color:#4ade80">
+      <div class="fg-icon w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
         <span class="material-symbols-outlined">trending_up</span>
       </div>
       <div>
-        <h4 class="font-medium" style="color:var(--text-primary)">Fastest Growing: <span style="color:#4ade80">${escHtml(fg.category)}</span></h4>
+        <h4 class="font-medium" style="color:var(--text-primary)">Fastest Growing: <span style="color:var(--insight-highlight);font-weight:600">${escHtml(fg.category)}</span></h4>
         <p class="text-xs" style="color:var(--text-secondary)">${escHtml(fg.explanation)}</p>
       </div>
     </div>
-    <div class="flex-shrink-0 flex items-center gap-3 text-xs pl-4 ml-4" style="border-left:1px solid rgba(74,222,128,0.2);color:var(--text-secondary)">
-      ${monthRange ? `<span class="font-semibold whitespace-nowrap" style="color:#4ade80">${escHtml(monthRange)}</span><span style="opacity:0.3">|</span>` : ''}
+    <div class="flex-shrink-0 flex items-center gap-3 text-xs pl-4 ml-4" style="border-left:1px solid var(--accent-border);color:var(--text-secondary)">
+      ${monthRange ? `<span class="font-semibold whitespace-nowrap" style="color:var(--insight-highlight)">${escHtml(monthRange)}</span><span style="opacity:0.3">|</span>` : ''}
       <span class="whitespace-nowrap"><span style="color:var(--text-primary);font-weight:500">${fmtAmt(fg.previous_spend)}</span> → <span style="color:var(--text-primary);font-weight:500">${fmtAmt(fg.current_spend)}</span></span>
       ${txnCount != null ? `<span style="opacity:0.3">|</span><span class="whitespace-nowrap">${txnCount} transaction${txnCount === 1 ? '' : 's'}</span>` : ''}
     </div>
@@ -1152,8 +1214,8 @@ function populateModal(report) {
       <div class="flex justify-between items-center">
         <div>
           <p class="text-sm font-medium" style="color:var(--text-primary)">${escHtml(s.entity)}</p>
-          <span class="text-[10px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5 mt-1 inline-block"
-            style="color:var(--text-secondary);background:var(--border)">${escHtml(s.frequency)}</span>
+          <span class="freq-badge text-[10px] uppercase font-bold tracking-wider rounded px-1.5 py-0.5 mt-1 inline-block"
+            >${escHtml(s.frequency)}</span>
         </div>
         <div class="text-right flex items-center gap-2">
           ${hasCostIncrease
@@ -1283,32 +1345,57 @@ function toggleTheme() {
   const isLight = document.documentElement.classList.toggle('light-mode');
   localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
   _syncThemeUI(isLight);
-  // re-theme Plotly charts after toggle
+  // Re-theme the already-rendered Plotly charts after the class switch. Plotly draws
+  // legend text, axis labels, gridlines, slice borders and the line itself using values
+  // captured at plot time — CSS variable changes never reach those canvas/SVG marks, so
+  // toggling only the html class leaves them stale. We must push the fresh theme in
+  // explicitly, at BOTH levels: relayout() for layout (backgrounds, fonts, axes) AND
+  // restyle() for trace props (donut slice-border colour, trend line + fill colour).
   const th = getPlotlyTheme();
-  const chartUpdate = {
-    plot_bgcolor:  th.plot_bgcolor,
-    paper_bgcolor: th.paper_bgcolor,
-    'font.color':  th.font_color,
-  };
-  if (document.getElementById('categoryDonut')?.data?.length) {
-    // Change 1: also update donut annotation colour
+
+  const donut = document.getElementById('categoryDonut');
+  if (donut?.data?.length) {
+    // trace-level: donut slice border colour (relayout can't reach this)
+    Plotly.restyle('categoryDonut', { 'marker.line.color': th.slice_line });
+    // layout-level: backgrounds, global font, legend font (own override), centre annotation
     Plotly.relayout('categoryDonut', {
-      ...chartUpdate,
+      plot_bgcolor:  th.plot_bgcolor,
+      paper_bgcolor: th.paper_bgcolor,
+      'font.color':  th.font_color,
+      'legend.font.color': th.font_color,
       annotations: [{
         font: { size: 16, color: th.font_color_primary, family: 'JetBrains Mono' },
         showarrow: false,
-        text: document.getElementById('categoryDonut').layout?.annotations?.[0]?.text || '',
+        text: donut.layout?.annotations?.[0]?.text || '',
         x: 0.5, y: 0.5
       }]
     });
   }
-  if (document.getElementById('monthlyTrendChart')?.data?.length) {
-    Plotly.relayout('monthlyTrendChart', chartUpdate);
+
+  const trend = document.getElementById('monthlyTrendChart');
+  if (trend?.data?.length) {
+    // trace-level: line colour + area fill
+    Plotly.restyle('monthlyTrendChart', { 'line.color': th.linecolor, fillcolor: th.fillcolor });
+    // layout-level: backgrounds + both axes (axis colour, gridlines, tick-label colour)
+    Plotly.relayout('monthlyTrendChart', {
+      plot_bgcolor:  th.plot_bgcolor,
+      paper_bgcolor: th.paper_bgcolor,
+      'font.color':  th.font_color,
+      'xaxis.color': th.font_color,
+      'yaxis.color': th.font_color,
+      'xaxis.gridcolor': th.gridcolor,
+      'yaxis.gridcolor': th.gridcolor,
+      'xaxis.tickfont.color': th.font_color,
+      'yaxis.tickfont.color': th.font_color
+    });
   }
 }
 function _syncThemeUI(isLight) {
   const icon   = document.getElementById('theme-icon');
   if (icon) icon.textContent = isLight ? '☀' : '☾';
+  // Swap the navbar logo to match the theme (dark/light SVG variant).
+  const logo = document.getElementById('navbar-logo');
+  if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
   // circle slides via CSS (html.light-mode .theme-toggle-pill-circle { transform: translateX(24px) })
 }
 
@@ -1336,15 +1423,15 @@ document.addEventListener('DOMContentLoaded', () => {
 <style>
   .ai-msg-user {
     align-self: flex-end;
-    background: rgba(74,222,128,0.16);
-    border: 1px solid rgba(74,222,128,0.30);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
     color: var(--text-primary);
     border-radius: 12px 12px 2px 12px;
     padding: 8px 12px; max-width: 80%; font-size: 13px; line-height: 1.45;
   }
   .ai-msg-bot {
     align-self: flex-start;
-    background: rgba(74,222,128,0.06);
+    background: var(--accent-soft);
     border: 1px solid var(--border);
     color: var(--text-primary);
     border-radius: 12px 12px 12px 2px;
@@ -1359,18 +1446,18 @@ document.addEventListener('DOMContentLoaded', () => {
 </style>
 
 <button id="aiChatFab" onclick="toggleAiChat()" aria-label="Open ArthaLens AI"
-  style="position:fixed;bottom:28px;right:28px;z-index:1000;width:56px;height:56px;border-radius:50%;background:#4ade80;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(74,222,128,0.4);display:flex;align-items:center;justify-content:center;font-size:22px;color:#0d0f0d;">
+  style="position:fixed;bottom:28px;right:28px;z-index:1000;width:56px;height:56px;border-radius:50%;background:var(--ai-fab-bg);border:none;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.30);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--ai-fab-fg);">
   ✦
 </button>
 
 <div id="aiChatPanel"
-  style="position:fixed;bottom:96px;right:28px;z-index:999;width:360px;height:480px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:none;">
+  style="position:fixed;bottom:96px;right:28px;z-index:999;width:360px;height:480px;background:var(--panel-bg);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:none;">
 
   <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
     <div style="display:flex;align-items:center;gap:8px;">
-      <span style="color:#4ade80;font-size:18px;">✦</span>
+      <span style="color:var(--accent-text);font-size:18px;">✦</span>
       <span style="font-weight:700;color:var(--text-primary);font-size:15px;">ArthaLens AI</span>
-      <span style="font-size:10px;padding:2px 6px;background:rgba(74,222,128,0.12);color:#4ade80;border-radius:4px;border:1px solid rgba(74,222,128,0.25);">Beta</span>
+      <span style="font-size:10px;padding:2px 6px;background:var(--accent-soft);color:var(--accent-text);border-radius:4px;border:1px solid var(--accent-border);">Beta</span>
     </div>
     <button onclick="toggleAiChat()" aria-label="Close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;line-height:1;padding:0;">✕</button>
   </div>
@@ -1382,12 +1469,12 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="ai-msg-bot">Hi! Try asking: <em>How much did I spend on food last month?</em> or <em>Who did I pay the most?</em></div>
   </div>
 
-  <div style="position:absolute;bottom:0;width:100%;padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;box-sizing:border-box;background:var(--card);border-radius:0 0 16px 16px;">
+  <div style="position:absolute;bottom:0;width:100%;padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;box-sizing:border-box;background:var(--panel-bg);border-radius:0 0 16px 16px;">
     <input id="aiQuestionInput" type="text" placeholder="Ask about your spending..." maxlength="500"
-      style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;"
+      style="flex:1;background:var(--panel-input-bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;"
       onkeydown="if(event.key==='Enter') submitAiQuery()">
     <button id="aiSendBtn" onclick="submitAiQuery()"
-      style="background:#4ade80;color:#0d0f0d;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;">
+      style="background:var(--accent);color:var(--on-accent);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;">
       Send
     </button>
   </div>

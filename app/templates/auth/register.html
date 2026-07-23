@@ -12,26 +12,33 @@
 <style>
 /* ── CSS Variables ── */
 :root {
-  --bg: #0d0f0d;
-  --card: #131a13;
-  --navbar: #0a0c0a;
-  --border: #1f2a1f;
-  --text-primary: #f0f0f0;
-  --text-secondary: #6b7280;
-  --accent: #4ade80;
-  --overlay: rgba(0,0,0,0.65);
-  --card-glass: rgba(19,26,19,0.85);
+  /* Ported from newDashboard.html. Card alpha tuned MORE opaque than the dashboard
+     (0.55/0.45) because these cards sit over a busy photo (notes.png), not a smooth
+     gradient — a photo needs more coverage for form legibility. */
+  --card: rgba(23, 24, 75, 0.72);              /* Tetsu-Kon Blue frosted card over photo */
+  --border: rgba(39, 50, 135, 0.55);           /* Intergalactic Highway, stronger on photo */
+  --text-primary: #F0EEE9;                     /* Cloud Dancer */
+  --text-secondary: rgba(211, 221, 231, 0.78); /* Nordic Breeze, dimmed */
+  --accent: #D6B4FC;                           /* Light Violet — fills/buttons */
+  --accent-text: #D6B4FC;                      /* accent-as-text (dark unchanged) */
+  --on-accent: #17184B;                        /* dark text on accent */
+  --accent-soft: rgba(214, 180, 252, 0.14);
+  --accent-border: rgba(214, 180, 252, 0.32);
+  --input-bg: rgba(23, 24, 75, 0.55);          /* input fill inside the frosted card */
+  --card-glass: var(--card);
 }
 html.light-mode {
-  --bg: #f5f7f5;
-  --card: #ffffff;
-  --navbar: #ffffff;
-  --border: #e2e8e2;
-  --text-primary: #0d0f0d;
-  --text-secondary: #4b5563;
-  --accent: #4ade80;
-  --overlay: rgba(0,0,0,0.45);
-  --card-glass: rgba(255,255,255,0.92);
+  --card: rgba(240, 238, 233, 0.82);           /* Cloud Dancer frosted card — more opaque for photo legibility */
+  --border: rgba(211, 221, 231, 0.95);
+  --text-primary: #17184B;                     /* Tetsu-Kon Blue */
+  --text-secondary: rgba(39, 50, 135, 0.82);
+  --accent: #D8E63C;                           /* Duranta Yellow — fills/buttons */
+  --accent-text: #17184B;                      /* accent-as-text → Tetsu-Kon Blue in light */
+  --on-accent: #17184B;
+  --accent-soft: rgba(216, 230, 60, 0.18);
+  --accent-border: rgba(216, 230, 60, 0.38);
+  --input-bg: rgba(240, 238, 233, 0.62);
+  --card-glass: var(--card);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -104,7 +111,7 @@ body {
 }
 .al-input {
   width: 100%;
-  background: var(--bg);
+  background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-primary);
@@ -121,23 +128,23 @@ body {
 .al-submit {
   width: 100%;
   background: var(--accent);
-  color: #0d0f0d;
+  color: var(--on-accent);
   border: none;
-  border-radius: 8px;
+  border-radius: 9999px;           /* pill — matches dashboard accent buttons */
   padding: 12px 0;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   margin-top: 8px;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, filter 0.2s;
 }
 .al-submit:hover { opacity: 0.88; }
 
 /* Flash messages */
 .flash { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
 .flash-danger { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
-.flash-success { background: rgba(74,222,128,0.1); color: var(--accent); border: 1px solid rgba(74,222,128,0.2); }
+.flash-success { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-border); }
 .flash-info { background: rgba(107,114,128,0.1); color: var(--text-secondary); border: 1px solid var(--border); }
 
 /* Footer link */
@@ -149,7 +156,7 @@ body {
   font-size: 13px;
   color: var(--text-secondary);
 }
-.auth-footer-link a { color: var(--accent); font-weight: 600; }
+.auth-footer-link a { color: var(--accent-text); font-weight: 600; }
 
 /* Theme toggle (top-right of card) */
 .theme-toggle-btn {
@@ -191,9 +198,13 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 
     <!-- Brand — Change 1: single img, logo PNG contains brand name -->
     <div class="auth-brand">
-      <img src="{{ url_for('static', filename='images/logo.png') }}"
+      <img id="auth-logo"
+           src="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+           data-logo-dark="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+           data-logo-light="{{ url_for('static', filename='images/line-logo-light.svg') }}"
            alt="ArthaLens"
-           style="height:76px;width:auto;object-fit:contain;display:block;margin:0 auto 24px auto;flex-shrink:0">
+           style="height:38px;width:auto;max-width:100%;object-fit:contain;display:block;margin:0 auto 24px auto;flex-shrink:0">
+      <script>(function(){var l=document.getElementById('auth-logo');if(l&&document.documentElement.classList.contains('light-mode'))l.src=l.dataset.logoLight;})();</script>
       <h1 class="auth-title">Create Account</h1>
       <p class="auth-subtitle">Start understanding your spending today</p>
     </div>
@@ -231,12 +242,12 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
       <div style="margin: 16px 0;">
         <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
           <input type="checkbox" name="terms_consent" id="terms_consent" required
-                 style="margin-top: 3px; accent-color: #00b8a3; flex-shrink: 0;">
+                 style="margin-top: 3px; accent-color: var(--accent); flex-shrink: 0;">
           <span>
             I have read and agree to the
-            <a href="/terms" target="_blank" style="color: #00b8a3;">Terms of Service</a>
+            <a href="/terms" target="_blank" style="color: var(--accent-text);">Terms of Service</a>
             and
-            <a href="/privacy" target="_blank" style="color: #00b8a3;">Privacy Policy</a>,
+            <a href="/privacy" target="_blank" style="color: var(--accent-text);">Privacy Policy</a>,
             including the disclosure that transaction data may be sent to Google's Gemini API
             when using the AI query feature.
           </span>
@@ -266,6 +277,9 @@ function toggleTheme() {
 function _syncUI(isLight) {
   const icon = document.getElementById('theme-icon');
   if (icon) icon.textContent = isLight ? '☀' : '☾';
+  // Swap the brand logo (Line Logo) to match the theme, same as the dashboard navbar.
+  const logo = document.getElementById('auth-logo');
+  if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
 }
 document.addEventListener('DOMContentLoaded', () => {
   _syncUI(document.documentElement.classList.contains('light-mode'));

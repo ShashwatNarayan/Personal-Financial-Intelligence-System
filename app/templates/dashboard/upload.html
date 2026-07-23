@@ -1,36 +1,53 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
-<!-- Change 5: Init theme from localStorage before render to prevent flash -->
+<!-- Init theme from localStorage before render to prevent flash -->
 <script>if(localStorage.getItem('arthalens-theme')==='light')document.documentElement.classList.add('light-mode');</script>
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <meta name="color-scheme" content="dark">
+<!-- CSRF token for POST requests -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>ArthaLens — Upload Statement</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.output.css') }}">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  /* Change 3: CSS Variables */
+  /* ── CSS Variables — ported verbatim from newDashboard.html / transactions.html
+        (single design system; no green anywhere) ── */
   :root {
-    --bg: #0d0f0d;
-    --card: #131a13;
-    --navbar: #0a0c0a;
-    --border: #1f2a1f;
-    --text-primary: #f0f0f0;
-    --text-secondary: #6b7280;
-    --accent: #4ade80;
+    /* Dark mode = right strip of colourPallet.jpeg: vertical wash, Tetsu-Kon Blue → Light Violet */
+    --bg: linear-gradient(180deg, #17184B 0%, #273287 45%, #6B5FA8 75%, #D6B4FC 100%);
+    --card: rgba(23, 24, 75, 0.55);            /* Tetsu-Kon Blue, translucent glass */
+    --navbar: rgba(23, 24, 75, 0.66);          /* Tetsu-Kon Blue, slightly more opaque */
+    --border: rgba(39, 50, 135, 0.45);         /* Intergalactic Highway, low opacity */
+    --text-primary: #F0EEE9;                   /* Cloud Dancer — 16:1 on navy */
+    --text-secondary: rgba(211, 221, 231, 0.62); /* Nordic Breeze, dimmed */
+    --accent: #D6B4FC;                          /* Light Violet — fills/backgrounds */
+    --accent-text: #D6B4FC;                     /* accent used as TEXT (dark = Light Violet, unchanged) */
+    --on-accent: #17184B;                       /* Tetsu-Kon Blue — dark text on accent */
+    --accent-soft: rgba(214, 180, 252, 0.14);   /* accent tint fill */
+    --accent-border: rgba(214, 180, 252, 0.32); /* accent tint border */
+    --row-hover: rgba(214, 180, 252, 0.10);     /* subtle violet tint */
   }
   html.light-mode {
-    --bg: #f5f7f5;
-    --card: #ffffff;
-    --navbar: #ffffff;
-    --border: #e2e8e2;
-    --text-primary: #0d0f0d;
-    --text-secondary: #4b5563;
-    --accent: #4ade80;
+    /* Light mode = left strip: vertical wash, Cloud Dancer → Nordic Breeze → Light Violet */
+    --bg: linear-gradient(180deg, #F0EEE9 0%, #F0EEE9 25%, #D3DDE7 60%, #D6B4FC 100%);
+    --card: rgba(240, 238, 233, 0.45);          /* Cloud Dancer, translucent glass */
+    --navbar: rgba(240, 238, 233, 0.72);
+    --border: rgba(211, 221, 231, 0.90);        /* Nordic Breeze, low opacity */
+    --text-primary: #17184B;                    /* Tetsu-Kon Blue — 16:1 on Cloud Dancer */
+    --text-secondary: rgba(39, 50, 135, 0.80);  /* Intergalactic Highway, dimmed */
+    --accent: #D8E63C;                           /* Duranta Yellow — fills/backgrounds */
+    --accent-text: #17184B;                      /* accent TEXT → Tetsu-Kon Blue in light mode */
+    --on-accent: #17184B;                        /* Tetsu-Kon Blue — dark text on accent */
+    --accent-soft: rgba(216, 230, 60, 0.18);
+    --accent-border: rgba(216, 230, 60, 0.38);
+    --row-hover: rgba(216, 230, 60, 0.14);       /* subtle yellow tint */
   }
+  /* Light-mode overrides (only what CSS variables can't express — matches dashboard) */
+  html.light-mode .text-white { color: var(--text-primary) !important; }
+
   /* Theme toggle pill */
   .theme-toggle-pill {
     width: 48px; height: 24px;
@@ -54,50 +71,117 @@
     pointer-events: none;
   }
   html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
+
   body {
-    background-color: var(--bg);
+    background: var(--bg);
+    background-attachment: fixed;   /* full-page gradient stays put on scroll */
+    background-size: cover;         /* fill the viewport, no tiling/repeat */
+    min-height: 100vh;              /* gradient spans full page height */
     color: var(--text-primary);
-    transition: background-color 0.25s, color 0.25s;
+    font-family: Inter, system-ui, sans-serif;
   }
   .card {
     background-color: var(--card);
+    backdrop-filter: blur(12px);    /* let the page gradient glow through the glass surface */
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: 8px;
-    transition: background-color 0.25s, border-color 0.25s;
+    padding: 16px;
+    transition: border-color 0.2s, background-color 0.25s;
   }
-  .text-accent { color: #4ade80; }
-  .bg-accent { background-color: #4ade80; color: #0d0f0d; }
+  .glass-card {
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+  }
+  .text-accent { color: var(--accent-text); }
+  .bg-accent { background-color: var(--accent); color: var(--on-accent); }
+  .bg-accent:hover { filter: brightness(0.92); }
+  .border-accent { border-color: var(--accent); }
+  .text-secondary { color: var(--text-secondary); }
   .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
+
+  /* ── Drop zone ──────────────────────────────────────────────────────────────
+     The dashed outline lives on a ::before pseudo-element rather than on
+     #dropZone itself, for two reasons:
+       1. The halo filter must apply ONLY to the outline. Putting drop-shadow on
+          #dropZone would also halo its text and icon children.
+       2. Same problem the landing-page "How It Works" connector had: the page
+          gradient is background-attachment:fixed, so a single fixed-colour
+          dashed line loses contrast at whichever gradient stop it happens to sit
+          over. The fix is the same light-line + dark-halo pair — on dark stops
+          the line carries it, on light stops the halo does, so it stays visible
+          in both themes at any scroll position without per-mode branching. */
   #dropZone {
-    border: 2px dashed #1f2a1f;
-    border-radius: 12px;
-    transition: border-color 0.2s, background-color 0.2s;
-    cursor: pointer;
     position: relative;
-  }
-  #dropZone.drag-over {
-    border-color: #4ade80;
-    background-color: rgba(74, 222, 128, 0.04);
-  }
-  #dropZone:hover {
-    border-color: #3f493f;
-  }
-  #processBtn {
-    background-color: #4ade80;
-    color: #0d0f0d;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 10px 24px;
-    font-size: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: transparent;
     transition: background-color 0.2s;
+  }
+  #dropZone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 2px dashed rgba(240, 238, 233, 0.85);
+    filter: drop-shadow(0 0 1px rgba(23, 24, 75, 0.95))
+            drop-shadow(0 0 2px rgba(23, 24, 75, 0.55));
+    pointer-events: none;
+    transition: border-color 0.2s;
+  }
+  #dropZone:hover::before { border-color: var(--accent-border); }
+  #dropZone.drag-over::before { border-color: var(--accent); }
+  #dropZone.drag-over { background-color: var(--accent-soft); }
+
+  /* Selected-file chip — nested glass: an accent-tinted surface sitting inside
+     the outer glass card, so it reads as a layer above the card rather than a
+     second card. */
+  .file-chip {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* Round glyph icons (bank + cloud-upload). Dark mode: violet glyph on a violet
+     tint, which already agrees. Light mode is inverted deliberately — a solid
+     Tetsu-Kon Blue plate with a Duranta Yellow glyph — instead of the default
+     blue-glyph-on-pale-yellow, which read as two competing colours.
+     Both glyphs are Material Symbols font ligatures (not flat-colour SVG assets),
+     so this is a pure values swap: no currentColor fix was needed. */
+  .icon-circle {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+  }
+  html.light-mode .icon-circle {
+    background: var(--accent-text);          /* Tetsu-Kon Blue */
+    border-color: var(--accent-text);
+  }
+  /* Beats the plain .text-accent rule on specificity — no !important needed */
+  html.light-mode .icon-circle .text-accent { color: var(--accent); }  /* Duranta Yellow */
+
+  /* Primary action — pill, matching the accent buttons on the other pages */
+  #processBtn {
+    background-color: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+    border-radius: 9999px;
+    padding: 12px 24px;
+    font-size: 14px;
+    transition: filter 0.2s, opacity 0.2s;
     border: none;
     cursor: pointer;
     width: 100%;
+    font-family: inherit;
   }
-  #processBtn:hover:not(:disabled) { background-color: #3bc26b; }
+  #processBtn:hover:not(:disabled) { filter: brightness(0.92); }
   #processBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .toast-item {
     position: fixed;
     bottom: 24px;
@@ -107,50 +191,89 @@
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     transition: opacity 0.4s, transform 0.4s;
   }
 </style>
 </head>
-<body style="font-family:Inter,sans-serif;min-height:100vh">
+<body class="font-body-md min-h-screen overflow-x-hidden">
 
-<!-- Top Navigation — Change 1: single logo img; Change 2: bell/gear removed, theme toggle added -->
-<nav style="position:fixed;top:0;width:100%;height:56px;background:var(--navbar);border-bottom:1px solid var(--border);z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 24px;transition:background-color 0.25s,border-color 0.25s">
-  <div style="display:flex;align-items:center">
-    <img src="{{ url_for('static', filename='images/logo.png') }}"
+<!-- Top Navigation — ported from transactions.html (glass + logo swap + toggle + profile) -->
+<nav class="fixed top-0 w-full h-[56px] z-50 flex items-center justify-between px-6" style="background:var(--navbar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:background-color 0.25s,border-color 0.25s">
+  <div class="flex items-center">
+    <!-- Themed logo (Line Logo lockup): dark variant in dark mode, light variant in
+         light mode. Swap is driven by _syncThemeUI() (same place toggleTheme()
+         flips html.light-mode); the inline script below sets the correct variant
+         synchronously on first paint to avoid a dark→light flash. -->
+    <img id="navbar-logo"
+         src="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-dark="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-light="{{ url_for('static', filename='images/line-logo-light.svg') }}"
          alt="ArthaLens"
-         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+         style="height:28px;width:auto;max-width:100%;object-fit:contain;display:block;flex-shrink:0">
+    <script>(function(){var l=document.getElementById('navbar-logo');if(l&&document.documentElement.classList.contains('light-mode'))l.src=l.dataset.logoLight;})();</script>
   </div>
-  <div style="display:flex;align-items:center;height:100%">
-    <a href="{{ url_for('main.dashboard') }}"
-       style="height:100%;padding:0 16px;display:flex;align-items:center;border-bottom:2px solid #4ade80;color:var(--text-primary);font-weight:500;text-decoration:none;font-size:14px">
-      Dashboard
-    </a>
+  <div class="hidden md:flex items-center h-full">
+    <a class="h-full px-4 flex items-center text-sm font-medium transition-colors"
+       style="color:var(--text-secondary)"
+       onmouseenter="this.style.color='var(--text-primary)'"
+       onmouseleave="this.style.color='var(--text-secondary)'"
+       href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a class="h-full px-4 flex items-center text-sm font-medium transition-colors"
+       style="color:var(--text-secondary)"
+       onmouseenter="this.style.color='var(--text-primary)'"
+       onmouseleave="this.style.color='var(--text-secondary)'"
+       href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
-  <div style="display:flex;align-items:center;gap:16px">
-    <!-- Change 2: Theme toggle (same as dashboard) -->
+  <div class="flex items-center gap-4">
+    <!-- Theme toggle -->
     <button class="theme-toggle-pill" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
       <div class="theme-toggle-pill-circle" id="theme-circle">
         <span id="theme-icon">☾</span>
       </div>
     </button>
-    <span style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-secondary)">
-      <span class="material-symbols-outlined" style="font-size:20px">person</span>
-    </span>
+    <!-- Profile dropdown avatar -->
+    <div style="position:relative" id="avatar-wrapper">
+      <button id="avatar-btn"
+        class="w-8 h-8 rounded-full flex items-center justify-center text-secondary text-xs font-bold cursor-pointer transition-colors"
+        style="background:var(--border);border:1px solid var(--border)"
+        onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"
+        onclick="toggleProfileDropdown(event)"
+        aria-label="User profile menu">
+        <span class="material-symbols-outlined text-[20px]">person</span>
+      </button>
+      <div id="profile-dropdown"
+        style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:var(--card);border:1px solid var(--border);border-radius:8px;min-width:180px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:200">
+        <div style="font-weight:600;color:var(--text-primary);font-size:13px;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          {{ current_user.email }}
+        </div>
+        <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+        <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;padding:0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+            style="width:100%;text-align:left;background:none;border:none;color:var(--text-primary);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-family:inherit"
+            onmouseenter="this.style.color='var(--accent)'"
+            onmouseleave="this.style.color='var(--text-primary)'">
+            <span class="material-symbols-outlined" style="font-size:16px">logout</span>
+            Logout
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </nav>
 
 <!-- Main Content -->
-<main style="padding-top:72px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding-left:16px;padding-right:16px">
+<main style="padding-top:72px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding-left:16px;padding-right:16px;padding-bottom:40px">
   <div class="card" style="width:100%;max-width:560px;padding:40px">
 
     <!-- Header -->
     <div style="text-align:center;margin-bottom:32px">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(74,222,128,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <div class="icon-circle" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
         <span class="material-symbols-outlined text-accent" style="font-size:28px">account_balance</span>
       </div>
-      <h1 style="font-size:24px;font-weight:600;color:#fff;letter-spacing:-0.01em;margin:0 0 8px">Upload Bank Statement</h1>
-      <p style="font-size:14px;color:#6b7280;margin:0">Import your transactions automatically from an Excel file.</p>
+      <h1 class="text-white" style="font-size:24px;font-weight:600;letter-spacing:-0.01em;margin:0 0 8px">Upload Bank Statement</h1>
+      <p style="font-size:14px;color:var(--text-secondary);margin:0">Import your transactions automatically from an Excel file.</p>
     </div>
 
     <!-- Drop Zone -->
@@ -161,24 +284,24 @@
 
       <!-- Default state -->
       <div id="dropDefault">
-        <div style="width:64px;height:64px;border-radius:50%;background:rgba(74,222,128,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <div class="icon-circle" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
           <span class="material-symbols-outlined text-accent" style="font-size:32px">cloud_upload</span>
         </div>
-        <p style="font-size:16px;font-weight:500;color:#fff;margin:0 0 6px">Drag &amp; drop your bank statement here</p>
-        <p style="font-size:13px;color:#6b7280;margin:0 0 10px">or click to browse</p>
-        <p style="font-size:11px;color:#3f493f;margin:0">Supports HDFC and SBI Excel statements (.xlsx, .xls)</p>
+        <p class="text-white" style="font-size:16px;font-weight:500;margin:0 0 6px">Drag &amp; drop your bank statement here</p>
+        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 10px">or click to browse</p>
+        <p style="font-size:11px;color:var(--text-secondary);opacity:0.75;margin:0">Supports HDFC and SBI Excel statements (.xlsx, .xls)</p>
       </div>
 
       <!-- File selected state (hidden until file chosen) -->
-      <div id="fileInfo" style="display:none;align-items:center;gap:12px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:12px 16px;position:relative;z-index:20">
+      <div id="fileInfo" class="file-chip" style="display:none;align-items:center;gap:12px;padding:12px 16px;position:relative;z-index:20">
         <span class="material-symbols-outlined text-accent" style="font-size:22px;flex-shrink:0">description</span>
         <div style="text-align:left;flex:1;min-width:0">
-          <div id="fileName" style="font-size:13px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-          <div id="fileSize" style="font-size:11px;color:#6b7280;font-family:'JetBrains Mono',monospace"></div>
+          <div id="fileName" class="text-white" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="fileSize" style="font-size:11px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace"></div>
         </div>
         <button id="removeFile" type="button"
-          style="background:none;border:none;color:#6b7280;cursor:pointer;padding:4px;display:flex;align-items:center;flex-shrink:0"
-          onmouseenter="this.style.color='#f87171'" onmouseleave="this.style.color='#6b7280'">
+          style="background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:4px;display:flex;align-items:center;flex-shrink:0"
+          onmouseenter="this.style.color='#f87171'" onmouseleave="this.style.color='var(--text-secondary)'">
           <span class="material-symbols-outlined" style="font-size:18px">close</span>
         </button>
       </div>
@@ -195,8 +318,8 @@
     <!-- Back link -->
     <div style="text-align:center;margin-top:20px">
       <a href="{{ url_for('main.dashboard') }}"
-         style="font-size:13px;color:#6b7280;text-decoration:none"
-         onmouseenter="this.style.color='#4ade80'" onmouseleave="this.style.color='#6b7280'">
+         style="font-size:13px;color:var(--text-secondary);text-decoration:none"
+         onmouseenter="this.style.color='var(--accent-text)'" onmouseleave="this.style.color='var(--text-secondary)'">
         ← Back to Dashboard
       </a>
     </div>
@@ -218,15 +341,36 @@ const processBtn = document.getElementById('processBtn');
 const processBtnText = document.getElementById('processBtnText');
 const statusMsg  = document.getElementById('statusMsg');
 
+// Palette-driven feedback colours. Success reads from the live CSS variables so
+// it follows the theme; error keeps the semantic red already used for danger
+// states in the auth pages and transactions table (the Chintz palette has no
+// error colour of its own).
+const ERROR_FG     = '#f87171';
+const ERROR_BG     = 'rgba(239, 68, 68, 0.12)';
+const ERROR_BORDER = 'rgba(239, 68, 68, 0.25)';
+const ERROR_SOLID  = '#ef4444';
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function showToast(message, ok) {
   const t = document.createElement('div');
   t.className = 'toast-item';
-  t.style.background = ok ? '#4ade80' : '#ef4444';
-  t.style.color = ok ? '#0d0f0d' : '#fff';
+  t.style.background = ok ? cssVar('--accent') : ERROR_SOLID;
+  t.style.color = ok ? cssVar('--on-accent') : '#F0EEE9';
   t.textContent = message;
   document.body.appendChild(t);
   setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 3000);
   setTimeout(() => t.remove(), 3500);
+}
+
+function setStatus(message, ok) {
+  statusMsg.textContent = message;
+  statusMsg.style.display = 'block';
+  statusMsg.style.background = ok ? cssVar('--accent-soft') : ERROR_BG;
+  statusMsg.style.border = '1px solid ' + (ok ? cssVar('--accent-border') : ERROR_BORDER);
+  statusMsg.style.color = ok ? cssVar('--accent-text') : ERROR_FG;
 }
 
 // Drag-and-drop
@@ -258,7 +402,7 @@ removeFile.addEventListener('click', e => {
   statusMsg.style.display = 'none';
 });
 
-// Change 2 & 3: Theme toggle (same logic as dashboard)
+// ── Theme toggle (same logic as the dashboard, now including the logo swap) ──
 function toggleTheme() {
   const isLight = document.documentElement.classList.toggle('light-mode');
   localStorage.setItem('arthalens-theme', isLight ? 'light' : 'dark');
@@ -267,9 +411,24 @@ function toggleTheme() {
 function _syncThemeUI(isLight) {
   const icon = document.getElementById('theme-icon');
   if (icon) icon.textContent = isLight ? '☀' : '☾';
+  // Swap the navbar logo to match the theme (same logic as the dashboard).
+  const logo = document.getElementById('navbar-logo');
+  if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
 }
 document.addEventListener('DOMContentLoaded', () => {
   _syncThemeUI(document.documentElement.classList.contains('light-mode'));
+});
+
+// ── Profile dropdown (matches dashboard / transactions) ──
+function toggleProfileDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profile-dropdown');
+  if (dd) dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', e => {
+  const wrapper = document.getElementById('avatar-wrapper');
+  const dd = document.getElementById('profile-dropdown');
+  if (dd && wrapper && !wrapper.contains(e.target)) dd.style.display = 'none';
 });
 
 processBtn.addEventListener('click', async () => {
@@ -296,20 +455,12 @@ processBtn.addEventListener('click', async () => {
     if (res.ok && (data.status === 'success' || data.status === 'info')) {
       const msg = data.message || 'Transactions processed successfully';
       showToast(msg, true);
-      statusMsg.textContent = msg;
-      statusMsg.style.display = 'block';
-      statusMsg.style.background = 'rgba(74,222,128,0.08)';
-      statusMsg.style.border = '1px solid rgba(74,222,128,0.2)';
-      statusMsg.style.color = '#4ade80';
+      setStatus(msg, true);
       setTimeout(() => { window.location.href = '{{ url_for("main.dashboard") }}'; }, 1800);
     } else {
       const err = data.message || data.error || 'Upload failed';
       showToast(err, false);
-      statusMsg.textContent = err;
-      statusMsg.style.display = 'block';
-      statusMsg.style.background = 'rgba(239,68,68,0.08)';
-      statusMsg.style.border = '1px solid rgba(239,68,68,0.2)';
-      statusMsg.style.color = '#f87171';
+      setStatus(err, false);
     }
   } catch (_e) {
     showToast('Network error — please try again', false);

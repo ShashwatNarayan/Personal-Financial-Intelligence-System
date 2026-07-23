@@ -86,6 +86,21 @@ class AnomalyDetector:
 
                 # Flag if exceeds threshold
                 if abs(z_score) >= self.threshold:
+                    # Plain-language explanation for the dashboard. The z-score
+                    # stays in the returned dict (used for sorting/severity and
+                    # available to logs) but is deliberately kept OUT of the
+                    # user-facing string — non-technical users shouldn't see raw
+                    # statistics or "3-month avg" jargon.
+                    month_label = pd.Period(
+                        current_row['year_month'], freq='M'
+                    ).strftime('%b %Y')  # "2025-11" -> "Nov 2025"
+                    direction_word = 'high' if z_score > 0 else 'low'
+                    explanation = (
+                        f"{category} spending was unusually {direction_word} in "
+                        f"{month_label} — ₹{current_row['spend']:,.0f} vs your "
+                        f"typical ₹{baseline_mean:,.0f}/month"
+                    )
+
                     anomalies.append({
                         'category': category,
                         'month': current_row['year_month'],
@@ -96,13 +111,7 @@ class AnomalyDetector:
                         'severity': 'critical' if abs(z_score) >= 3.0
                                     else 'high' if abs(z_score) >= 2.5
                                     else 'moderate',
-                        'explanation': (
-                            f"{category} spending ₹{current_row['spend']:,.0f} in "
-                            f"{current_row['year_month']} was "
-                            f"{'above' if z_score > 0 else 'below'} normal "
-                            f"(3-month avg: ₹{baseline_mean:,.0f}, "
-                            f"z={z_score:.1f})"
-                        )
+                        'explanation': explanation
                     })
 
         # Sort by absolute z-score (most significant first)

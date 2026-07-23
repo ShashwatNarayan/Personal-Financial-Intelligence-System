@@ -12,22 +12,33 @@
 <style>
 /* ── CSS Variables ── */
 :root {
-  --bg: #0d0f0d;
-  --card: #131a13;
-  --navbar: #0a0c0a;
-  --border: #1f2a1f;
-  --text-primary: #f0f0f0;
-  --text-secondary: #6b7280;
-  --accent: #4ade80;
+  /* Ported from newDashboard.html — gradient bg + glass cards + palette accents */
+  --bg: linear-gradient(180deg, #17184B 0%, #273287 45%, #6B5FA8 75%, #D6B4FC 100%);
+  --card: rgba(23, 24, 75, 0.55);
+  --navbar: rgba(23, 24, 75, 0.66);
+  --border: rgba(39, 50, 135, 0.45);
+  --text-primary: #F0EEE9;
+  --text-secondary: rgba(211, 221, 231, 0.72);
+  --accent: #D6B4FC;                 /* Light Violet — fills/buttons */
+  --accent-text: #D6B4FC;            /* accent-as-text (dark unchanged) */
+  --on-accent: #17184B;
+  --accent-soft: rgba(214, 180, 252, 0.14);
+  --accent-border: rgba(214, 180, 252, 0.32);
+  --hero-accent: #D6B4FC;            /* headline accent word — Light Violet on the dark gradient */
 }
 html.light-mode {
-  --bg: #f5f7f5;
-  --card: #ffffff;
-  --navbar: #ffffff;
-  --border: #e2e8e2;
-  --text-primary: #0d0f0d;
-  --text-secondary: #4b5563;
-  --accent: #4ade80;
+  --bg: linear-gradient(180deg, #F0EEE9 0%, #F0EEE9 25%, #D3DDE7 60%, #D6B4FC 100%);
+  --card: rgba(240, 238, 233, 0.45);
+  --navbar: rgba(240, 238, 233, 0.72);
+  --border: rgba(211, 221, 231, 0.90);
+  --text-primary: #17184B;
+  --text-secondary: rgba(39, 50, 135, 0.72);
+  --accent: #D8E63C;                 /* Duranta Yellow — fills/buttons */
+  --accent-text: #17184B;            /* accent-as-text -> Tetsu-Kon Blue in light */
+  --on-accent: #17184B;
+  --accent-soft: rgba(216, 230, 60, 0.18);
+  --accent-border: rgba(216, 230, 60, 0.38);
+  --hero-accent: #6C5FC7;            /* headline accent word — deeper violet, legible on the light gradient */
 }
 
 /* ── Base ── */
@@ -35,7 +46,9 @@ html.light-mode {
 html { scroll-behavior: smooth; }
 body {
   font-family: Inter, system-ui, sans-serif;
-  background-color: var(--bg);
+  background: var(--bg);
+  background-attachment: fixed;
+  background-size: cover;
   color: var(--text-primary);
   min-height: 100vh;
   transition: background-color 0.25s, color 0.25s;
@@ -49,6 +62,8 @@ a { text-decoration: none; color: inherit; }
   top: 0; left: 0; right: 0;
   height: 56px;
   background: var(--navbar);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   z-index: 100;
   display: flex;
@@ -73,14 +88,14 @@ a { text-decoration: none; color: inherit; }
   transition: border-color 0.2s, color 0.2s;
   font-family: inherit;
 }
-.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-outline:hover { border-color: var(--accent-text); color: var(--accent-text); }
 
 .btn-filled {
   padding: 6px 16px;
   border: none;
   border-radius: 8px;
   background: var(--accent);
-  color: #0d0f0d;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -135,7 +150,7 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
   max-width: 720px;
   margin-bottom: 20px;
 }
-.l-hero h1 span { color: var(--accent); }
+.l-hero h1 span { color: var(--hero-accent); }
 .l-hero p {
   font-size: 17px;
   color: var(--text-secondary);
@@ -147,9 +162,9 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 .btn-hero-primary {
   padding: 12px 28px;
   background: var(--accent);
-  color: #0d0f0d;
+  color: var(--on-accent);
   border: none;
-  border-radius: 8px;
+  border-radius: 9999px;            /* pill — matches dashboard Upload Statement button */
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -159,20 +174,22 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
   gap: 8px;
   transition: opacity 0.2s;
 }
-.btn-hero-primary:hover { opacity: 0.88; color: #0d0f0d; }
+.btn-hero-primary:hover { opacity: 0.88; color: var(--on-accent); }
 .btn-hero-ghost {
   padding: 12px 28px;
-  background: transparent;
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9999px;            /* pill glass secondary */
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
   transition: border-color 0.2s;
 }
-.btn-hero-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-hero-ghost:hover { border-color: var(--accent-text); color: var(--accent-text); }
 .trust-line {
   font-size: 12px;
   color: var(--text-secondary);
@@ -206,25 +223,27 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 
 .feature-card {
   background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 24px;
   transition: border-color 0.2s;
 }
-.feature-card:hover { border-color: var(--accent); }
+.feature-card:hover { border-color: var(--accent-text); }
 .feature-icon {
   width: 44px; height: 44px;
-  background: rgba(74,222,128,0.1);
+  background: var(--accent-soft);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 16px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .feature-card h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
 .feature-card p  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 
 /* ── How It Works ── */
-.how-section { padding: 80px 32px; background: var(--bg); transition: background-color 0.25s; }
+.how-section { padding: 80px 32px; }
 .how-section .l-section-heading { margin-bottom: 56px; }
 .steps-row {
   max-width: 900px;
@@ -239,19 +258,30 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
   padding: 0 24px;
   position: relative;
 }
+/* Step connector — Option B (halo), not mix-blend-mode. The body gradient is
+   background-attachment:fixed, so this line travels through every gradient stop as
+   you scroll. Blend modes can't fix that here: body's background propagates to the
+   canvas (html has no background of its own), so there is no backdrop in the
+   stacking context to blend against — and even if there were, difference-blending
+   collapses to ~1.9:1 against the #6B5FA8 mid-stop, failing worst exactly where the
+   line already dies. Instead: light line + dark halo. On dark stops the line carries
+   it; on light stops the halo does. Deliberately fixed colors, not theme vars —
+   the pair is background-independent, so it needs no per-mode branching. */
 .step::after {
   content: '';
   position: absolute;
   top: 52px; right: 0;
   width: 100%; height: 0;
-  border-top: 2px dashed var(--border);
+  border-top: 2px dashed rgba(240, 238, 233, 0.85);
+  filter: drop-shadow(0 0 1px rgba(23, 24, 75, 0.95))
+          drop-shadow(0 0 2px rgba(23, 24, 75, 0.55));
   transform: translateX(50%);
 }
 .step:last-child::after { display: none; }
 .step-num {
   font-size: 36px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
   font-family: 'JetBrains Mono', monospace;
   line-height: 1;
   padding-bottom: 16px;
@@ -260,13 +290,16 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 .step h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
 .step p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
 
-/* ── Stats Strip ── */
+/* ── Stats Strip ──
+   Solid, opaque, and intentionally NOT theme-variable: the body gradient is
+   background-attachment:fixed, so at the bottom of the scroll these sections sat
+   over the lightest gradient stop (#D6B4FC) and dissolved into it. Hard-coding
+   Intergalactic Highway breaks the fade cleanly and keeps the anchor identical in
+   both themes. Footer below goes one step darker (Tetsu-Kon Blue). */
 .stats-strip {
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  background: #273287;                        /* Intergalactic Highway — solid */
+  border-top: 1px solid rgba(240, 238, 233, 0.10);
   padding: 48px 32px;
-  transition: background-color 0.25s;
 }
 .stats-row {
   max-width: 900px;
@@ -280,26 +313,37 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 .stat-num {
   font-size: 32px;
   font-weight: 700;
-  color: var(--accent);
+  color: #D8E63C;                             /* Duranta Yellow — emphasis on the solid blue */
   font-family: 'JetBrains Mono', monospace;
   margin-bottom: 6px;
   line-height: 1;
 }
-.stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+.stat-label { font-size: 12px; color: rgba(211, 221, 231, 0.72); font-weight: 500; }
 
 /* ── Footer ── */
 .l-footer {
-  background: var(--navbar);
-  border-top: 1px solid var(--border);
+  background: #17184B;                        /* Tetsu-Kon Blue — solid */
+  border-top: 1px solid rgba(240, 238, 233, 0.08);
   height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
   font-size: 12px;
-  color: var(--text-secondary);
-  transition: background-color 0.25s;
+  color: rgba(211, 221, 231, 0.72);
 }
+
+/* Legal strip — same slab as .l-footer so the two read as one dark footer zone */
+.l-footer-legal {
+  background: #17184B;
+  text-align: center;
+  padding: 16px 32px 24px;
+  font-size: 12px;
+  color: rgba(211, 221, 231, 0.72);
+}
+.l-footer-legal a { color: rgba(211, 221, 231, 0.72); margin: 0 12px; transition: color 0.2s; }
+.l-footer-legal a:hover { color: #D8E63C; }
+.l-footer-legal span { margin: 0 12px; }
 </style>
 </head>
 <body>
@@ -308,9 +352,13 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 <nav class="l-nav">
   <!-- Change 1: Single img — logo PNG already contains brand name text -->
   <a class="l-nav-brand" href="#">
-    <img src="{{ url_for('static', filename='images/logo.png') }}"
+    <img id="nav-logo"
+         src="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-dark="{{ url_for('static', filename='images/line-logo-dark.svg') }}"
+         data-logo-light="{{ url_for('static', filename='images/line-logo-light.svg') }}"
          alt="ArthaLens"
-         style="height:48px;width:auto;object-fit:contain;display:block;flex-shrink:0">
+         style="height:28px;width:auto;max-width:100%;object-fit:contain;display:block;flex-shrink:0">
+    <script>(function(){var l=document.getElementById('nav-logo');if(l&&document.documentElement.classList.contains('light-mode'))l.src=l.dataset.logoLight;})();</script>
   </a>
 
   <div class="l-nav-right">
@@ -351,7 +399,7 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 </section>
 
 <!-- ── Features ── -->
-<section style="padding:80px 32px;background:var(--bg);transition:background-color 0.25s">
+<section style="padding:80px 32px">
   <div class="l-section" style="padding:0;max-width:1100px">
     <h2 class="l-section-heading">Everything you need to understand your money</h2>
     <div class="features-grid">
@@ -438,7 +486,7 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
       <div class="step-num">01</div>
       <h3>Upload</h3>
       <p>Drop your HDFC or SBI Excel statement. No formatting needed.</p>
-      <p style="font-size:11px;color:var(--accent);margin-top:8px;font-weight:500;">Your statement is processed and deleted immediately. We never store it.</p>
+      <p style="font-size:11px;color:var(--accent-text);margin-top:8px;font-weight:500;">Your statement is processed and deleted immediately. We never store it.</p>
     </div>
     <div class="step">
       <div class="step-num">02</div>
@@ -482,11 +530,11 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
 </footer>
 
 <!-- Legal footer links -->
-<div style="text-align: center; padding: 16px; font-size: 12px; color: var(--text-secondary); opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;">
-    <a href="/about" style="color: inherit; text-decoration: none; margin: 0 12px;">About</a>
-    <a href="/privacy" style="color: inherit; text-decoration: none; margin: 0 12px;">Privacy Policy</a>
-    <a href="/terms" style="color: inherit; text-decoration: none; margin: 0 12px;">Terms of Service</a>
-    <span style="margin: 0 12px;">© 2026 Shashwat Narayan</span>
+<div class="l-footer-legal">
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+    <span>© 2026 Shashwat Narayan</span>
 </div>
 
 <script>
@@ -501,6 +549,8 @@ function _syncToggleUI(isLight) {
   const icon   = document.getElementById('theme-icon');
   const circle = document.getElementById('theme-circle');
   if (icon)   icon.textContent  = isLight ? '☀' : '☾'; // ☀ / ☾
+  const logo = document.getElementById('nav-logo');
+  if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
   // circle slides via CSS (html.light-mode .theme-toggle-circle { transform: translateX(24px) })
 }
 
