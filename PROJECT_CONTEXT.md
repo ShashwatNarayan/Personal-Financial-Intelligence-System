@@ -83,6 +83,54 @@
 > constraint `entity_name = lower(trim(entity_name))` on `global_entity_memory`,
 > codifying the normalize-before-insert convention both writers already follow.
 > Migration head → `38608c90f036`. See **§19**.
+> Updated 2026-07-01: **HDFC POS card-swipe entity fix.** Debit-card POS
+> narrations (`POS <masked-card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant>`)
+> were surfacing the *whole* dirty string as the entity name (e.g.
+> `"616672 29Jun26 10:50:32 Hyderabad Asian Instiute Of Gast"`) because
+> `EntityResolver.resolve()`'s POS branch blindly joined every token after
+> `POS <card>` (`' '.join(pos_parts[i+2:])`), sweeping in the ref/date/time/city.
+> That entity is what the UI shows (`api/routes.py` serializes `merchant =
+> t.entity_name`). Fix (app-code, `entity_resolver.py` only): the POS branch now
+> delegates to a new **`_extract_pos_merchant()`** helper that anchors on the
+> `HH:MM:SS` token (the reliable prefix delimiter), drops the single city token
+> after it, and keeps the trailing merchant; it also normalizes bare web
+> addresses (`WWWBIGBASKETCOM` → `BIGBASKET`) and re-runs whole-word platform
+> detection on the cleaned name (so `bigbasket` → **platform → Food & Dining**).
+> Card swipes are treated as **merchants by definition** — the result is *not*
+> passed through `is_human_name()`, so two-word shop names like `"Star Bazaar"`
+> no longer misfile as `person` → `Transfer / P2P`. Legacy `POS <terminal>
+> <merchant>` (no time token) and all UPI/SBI/ATM paths are unchanged. See **§15**.
+> Updated 2026-07-09: **SBI POS card-swipe merchant extraction fix.** SBI
+> debit-card POS rows use the *space-delimited* card-swipe shape
+> (`POS <card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant>`), not the
+> slash-delimited `POS/<term>/<merchant>` the SBI parser assumed — so
+> `sbi_parser.extract_merchant_name()` fell through to its generic `words[0]`
+> fallback and returned the literal **`"Pos"`** as the merchant, and
+> `entity_resolver.resolve()` compounded it: the `local_keywords` loop (matching
+> `FILLING`/`STORE`/`CAFE`/…) ran *before* the POS block and short-circuited by
+> returning the junk `"Pos"` verbatim. Net effect: every such POS row collapsed to
+> entity **`Pos`**, and its category came from memory keyed on that one bad entity
+> (e.g. a fuel station showing as **Food & Dining**). Two scoped fixes: (1)
+> `sbi_parser.py` tries the slash regex first, then **reuses**
+> `EntityResolver._extract_pos_merchant()` (HH:MM:SS-anchored) before the
+> `words[0]` fallback; (2) `entity_resolver.resolve()` **reorders** the POS block
+> to run *before* the `local_keywords` loop. `"…HYDERABAD SAINATH FILLING STATIO"`
+> now resolves to **`Sainath Filling Statio`** (merchant) → **Transport** (city
+> `HYDERABAD` dropped). `categorization.py`/global/per-user memory untouched; stale
+> `Pos` memory rows are a separate follow-up. See **§18.9**, **§15**.
+> Updated 2026-07-09: **Temporal Insights "Fastest Growing" card — dead button
+> removed + compact stats (frontend + `temporal_insights.py`).** The card's
+> non-functional **"View Details"** button (no `href`/`onclick`/listener bound —
+> purely decorative) was removed and replaced with a compact single-row stats
+> block — month range (`May → Jun`), `₹prev → ₹current` spend, and this-month
+> transaction count — laid out horizontally in the existing `#4ade80`/dark theme
+> so the card's height matches the MoM tiles above it. Backend:
+> `get_fastest_growing_category()` now also returns `transaction_count`,
+> `current_month`, `previous_month` (data already present in
+> `calculate_mom_changes()`, which gained `transaction_count`); the
+> `fastest_growing` object under `/api/insights/temporal` is a **superset — no
+> breaking change**. `renderTemporal()` in `newDashboard.html` renders the block.
+> See **§11**.
 
 ---
 
@@ -521,7 +569,7 @@ stripped from response unless `current_app.debug`.
 | `auth/register.html` | `/auth/register` | Same styling as login; required Terms/Privacy consent checkbox; reCAPTCHA disabled. |
 | `auth/reset_password_request.html` | `/auth/reset_password` | Email entry form, matches auth styling. |
 | `auth/reset_password.html` | `/auth/reset_password/<token>` | New-password + confirm form. |
-| `dashboard/newDashboard.html` | `/dashboard` (live) | The real dashboard. Tailwind CDN + Plotly + custom dark CSS. KPIs derived client-side from `/api/transactions/classified` + `/api/subscriptions/audit`. Plotly donut (category) + trend charts. Transaction table built in JS: `catPill()` renders a category pill **with a lime SVG icon** (flex, nowrap); subscription rows show a **red pill `.sub-badge`** (`#dc2626`, fully rounded). Inline category edit → `POST /api/transactions/correct`. Subscriptions modal. Review/needs-review flow reuses `catPill()`. **Recent-Transactions controls (2026-06-15):** category filter (`cat-filter`), search (`txn-search`), and a **Sort By** dropdown (`sort-select`: `date_desc`/`date_asc`/`amount_desc`/`amount_asc`) — all flow through `applyFilter()`. Clicking a **trend-chart** point sets `_activeMonthFilter` (`YYYY-MM`), shows a dismissible 📅 pill (`#month-filter-pill`, cleared by `clearMonthFilter()`), and `applyFilter()` adds `t.date.startsWith(_activeMonthFilter)`. Donut-slice click still drives `cat-filter`. |
+| `dashboard/newDashboard.html` | `/dashboard` (live) | The real dashboard. Tailwind CDN + Plotly + custom dark CSS. KPIs derived client-side from `/api/transactions/classified` + `/api/subscriptions/audit`. Plotly donut (category) + trend charts. Transaction table built in JS: `catPill()` renders a category pill **with a lime SVG icon** (flex, nowrap); subscription rows show a **red pill `.sub-badge`** (`#dc2626`, fully rounded). Inline category edit → `POST /api/transactions/correct`. Subscriptions modal. Review/needs-review flow reuses `catPill()`. **Recent-Transactions controls (2026-06-15):** category filter (`cat-filter`), search (`txn-search`), and a **Sort By** dropdown (`sort-select`: `date_desc`/`date_asc`/`amount_desc`/`amount_asc`) — all flow through `applyFilter()`. Clicking a **trend-chart** point sets `_activeMonthFilter` (`YYYY-MM`), shows a dismissible 📅 pill (`#month-filter-pill`, cleared by `clearMonthFilter()`), and `applyFilter()` adds `t.date.startsWith(_activeMonthFilter)`. Donut-slice click still drives `cat-filter`. **Temporal Insights — Fastest Growing card (2026-07-09):** `renderTemporal()` renders the `#fastest-growing-banner`; its old non-functional "View Details" button was removed for a compact horizontal stats row (month range `May → Jun`, `₹prev → ₹current` spend, this-month txn count) driven by the new `transaction_count`/`current_month`/`previous_month` fields on `/api/insights/temporal`'s `fastest_growing`. |
 | `dashboard/upload.html` | `/upload` | Drag-drop upload UI → `POST /api/upload-excel`. |
 | `dashboard/index.html`, `newDashboard.html` (top-level), `dashboard.html` | legacy | Older dashboards not wired to the live route. |
 | `base.html` | shared shell | Bootstrap 5 CDN + Plotly CDN; used by legal/about pages. |
@@ -642,6 +690,9 @@ services:
 - **Neon cold-start resilience on the AI engine (2026-06-11)** — `get_ro_engine()` gained `connect_args` (connect_timeout + TCP keepalives) and `pool_size` 3→2; `execute_query()` now retries once on `OperationalError` after a 1s sleep. Addresses `SSL SYSCALL error: Connection reset by peer` on the first AI query after Neon auto-suspend. The engine is a lazy singleton, so a **server restart is required** to apply. See §8.
 - **Privacy/Terms updated for two architectural facts (2026-06-11)** — Privacy §4 + a new "Shared category learning" note and Terms §8 now disclose the **operator-seeded `GlobalEntityMemory`** cross-user propagation (with "may expand" clause); Privacy §5 + Terms §7 now state AI queries use a **read-only DB connection**. Wording matches the owner-gated code (not "any user"). "Last updated: June 2026" date on the pages was left unchanged.
 - **"Vi" false-positive categorization fix (2026-06-10)** — descriptions like `"…YATRA FLIGHT VIA SMART"` were mis-resolved to entity `'Vi'` (Vodafone Idea) → `Utilities`, because `'VI'` substring-matched `'VIA'`. Two fixes: (1) `entity_resolver.py` — **all 3** platform checks (`name_upper`, `text_upper`, and the UPI payment-app `actual_merchant` sub-branch) switched from `platform in X` to whole-word `re.search(rf'\b{re.escape(platform)}\b', X)`; (2) `categorization.py` — the Utilities keyword `'vi'` replaced with `'vodafone vi'` + space-padded `' vi '` so it only matches standalone (not inside `VIA`/`INVOICE`/`AVIA`). Other Stage-5 keywords keep intentional substring matching. With the fix, the example now falls through to the Stage-5 `'flight'` keyword → correctly **Transport**. Legit standalone `"VI"` (e.g. `UPI-VI-RECHARGE`) still resolves to the telecom platform.
+- **HDFC POS card-swipe entity extraction fix (2026-07-01)** — HDFC debit-card POS narrations read `POS <masked-card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant…>`. The old `EntityResolver.resolve()` POS branch assumed the merchant started at token index 2 (`' '.join(pos_parts[i+2:])`), so for this layout it emitted the ref/date/time/city as the entity name — surfaced in the UI because `/api/transactions/classified` serializes `merchant = t.entity_name` (`api/routes.py:65`) and the transactions page renders `t.merchant`. Fix is confined to `entity_resolver.py`: a new **`_extract_pos_merchant()`** helper anchors on the `HH:MM:SS` token, drops the one city token after it, keeps the trailing merchant, normalizes bare URLs (`WWWBIGBASKETCOM` → `BIGBASKET`), and the POS branch re-runs whole-word platform detection on the cleaned name (recovering brands glued into the noise, e.g. BigBasket → Food & Dining). **POS results are typed `merchant` unconditionally** (the `is_human_name()` check was intentionally *not* applied) so two-Title-word shop names like `"Star Bazaar"` don't get misclassified as `person` → `Transfer / P2P`. Legacy `POS <terminal> <merchant>` (no time token) falls back to the old drop-two-tokens behavior; UPI/SBI/ATM paths untouched. The parser's own `_extract_merchants()` still returns the literal `'POS'` for these rows, but that `merchant` column is inert — the entity is derived from `description` in the resolver. Not verified end-to-end against the live DB (offline env; Stages 1/2b are empty-cache lookups that don't affect entity extraction).
+- **SBI POS card-swipe merchant fix (2026-07-09)** — the sibling of the HDFC fix above, for SBI's *space-delimited* POS narrations. `sbi_parser.extract_merchant_name()` now **reuses** `EntityResolver._extract_pos_merchant()` (HH:MM:SS-anchored) after its slash regex fails and before the `words[0]` fallback, so the `merchant` column is no longer the literal `"Pos"`; and `entity_resolver.resolve()` now runs the POS block **before** the `local_keywords` loop so a POS name containing a keyword (`FILLING`/`STORE`/`CAFE`/…) is extracted rather than overwritten by the junk `merchant`. Unlike the HDFC bullet's "merchant column is inert" note, for SBI the parser column is now correct too. `categorization.py` and entity memory untouched — clearing stale `Pos` memory rows is a deliberately-separate follow-up. See §18.9.
+- **Temporal "Fastest Growing" card — dead "View Details" button removed (2026-07-09)** — the button had no `href`/`onclick`/listener (purely decorative). Removed and replaced with a compact horizontal stats row (month range, `₹prev → ₹current`, txn count) in `renderTemporal()` (`newDashboard.html`). `temporal_insights.get_fastest_growing_category()` now also returns `transaction_count`/`current_month`/`previous_month` (already computed upstream in `calculate_mom_changes()`); the `/api/insights/temporal` `fastest_growing` object is a superset — no breaking change. See §11.
 - **Latent items:** `get_user_transactions_df` uses `t.transaction_type or ''` (a NULL type would silently drop a row from detection); `/transactions/classified` and `/needs-review` hardcode `'transaction_type': 'debit'` in their serialized output. Credits receive no `entity_type` at detector time (v4 no longer relies on it). The `_owner_email()` gate writes nothing if `OWNER_EMAIL` is unset.
 
 ---
@@ -928,6 +979,49 @@ at **all three layers** via an `entity_type != 'internal'` filter:
 - **Effect is upload-time:** rows stored before this session carry no
   `entity_type='internal'`; a **re-upload** is required for SWEEP rows to be
   tagged and for the reconciliation/exclusion to take effect.
+
+### 18.9 SBI POS card-swipe merchant extraction (`sbi_parser.py` + `entity_resolver.py`) — 2026-07-09
+**Bug:** SBI debit-card POS rows arrive as a *space-delimited* card swipe —
+`POS <masked-card> <ref> <DDMONYY> <HH:MM:SS> <city> <merchant…>` (e.g.
+`POS 512967XXXXXX6372 903902 08JUL26 18:41:12 HYDERABAD SAINATH FILLING STATIO`)
+— **not** the slash-delimited `POS/<terminal>/<merchant>` that
+`sbi_parser.extract_merchant_name()` assumed. Two failures compounded:
+1. The parser's POS regex `POS/[A-Z0-9]+/…` didn't match, so it fell through to
+   the generic `words[0]` fallback → the first alpha token is always `POS` → the
+   `merchant` column became the literal **`"Pos"`**.
+2. In `entity_resolver.resolve()`, the **`local_keywords` loop** (`FILLING`,
+   `PETROL`, `MARKET`, `STORE`, `CAFE`, `FOOD`, …) ran **before** the POS block and
+   short-circuits by returning the passed-in `merchant` verbatim when it isn't
+   `'Unknown'` — so the junk `"Pos"` was returned even though the good POS parser
+   (`_extract_pos_merchant`, §15) sat a few lines below and was never reached.
+
+Every such POS row collapsed to entity **`Pos`**; its category then came from
+memory keyed on that single bad entity (Stage 2/2b, §7), which is why a fuel
+station surfaced as **Food & Dining** — the description matches no Food keyword,
+and the truncated `FILLING STATIO` doesn't match the Stage-5 phrase
+`filling station` (§18.7), so the label was purely memory-driven off `Pos`.
+
+**Fix (two scoped edits, no `categorization.py` change):**
+- `sbi_parser.extract_merchant_name()` — keeps the slash regex as the first
+  attempt, then (before the `words[0]` fallback) **reuses**
+  `EntityResolver._extract_pos_merchant()` for the space-delimited shape. Reused by
+  importing `EntityResolver` inside `_extract_merchants()` and instantiating once
+  (no circular import — `entity_resolver` imports only `re`/`hashlib`), so the two
+  POS parsers stay in sync rather than duplicated.
+- `entity_resolver.resolve()` — the POS block (`if 'POS' in description.upper()`)
+  is **moved to run before** the `local_keywords` loop; non-POS behavior is
+  unchanged (the loop still runs, just after the POS block).
+
+**Verified (offline):** the example now yields `merchant`-column
+`Sainath Filling Statio` (FIX 1) and `resolve()` → `('Sainath Filling Statio',
+'merchant')` → `categorize_by_entity` → **Transport** — even when `resolve()` is
+handed the old junk `"Pos"`. Regressions checked: non-POS `CAFE` still uses
+`local_keywords`; HDFC POS `WWWBIGBASKETCOM` → `Bigbasket` platform; UPI `SWIGGY`
+→ platform; legacy `POS <term> <merchant>` (no time token) → merchant.
+**Follow-ups (not in this pass):** stale `Pos` mappings already in per-user
+`entity_memory`/`GlobalEntityMemory` still high-confidence-override these rows
+until cleared; the ~30-char bank-side name truncation (`STATION`→`STATIO`, §18.7)
+is unchanged. Effect is **upload-time** — a re-upload re-extracts stored rows.
 
 ---
 
