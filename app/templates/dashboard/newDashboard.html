@@ -122,6 +122,77 @@
   }
   html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
 
+  /* ── Mobile navigation (hamburger + dropdown panel) ────────────────────────
+     The desktop link row is `hidden md:flex`, so below 768px it disappears and
+     the Dashboard/Transactions links become unreachable. These rules add them
+     back as a dropdown under the navbar.
+
+     Breakpoint is a real media query, NOT Tailwind `md:` variants: the
+     stylesheet is a pre-compiled static bundle (see the note on <main>), so a
+     class like `md:hidden` that isn't already in the bundle would silently do
+     nothing until a recompile — and a missed recompile would leak the
+     hamburger onto desktop. 767.98px is the exact complement of Tailwind's
+     `md` (min-width:768px), so the two never overlap or gap.
+
+     This block is duplicated verbatim in newDashboard.html, transactions.html
+     and upload.html — keep the three in sync. */
+  .nav-mobile-toggle {
+    display: none;                  /* ≥768px: the desktop link row handles nav */
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .nav-mobile-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+  .nav-mobile-panel {
+    display: none;
+    position: absolute;             /* <nav> is position:fixed → containing block */
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 24px 12px;         /* 24px matches the navbar's px-6 */
+    background: var(--navbar);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-mobile-panel.open { display: flex; }
+  .nav-mobile-link {
+    display: block;
+    padding: 10px 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-mobile-link:hover { color: var(--text-primary); }
+  .nav-mobile-link.active {
+    color: var(--text-primary);
+    border-left: 2px solid var(--accent);
+    padding-left: 10px;
+  }
+  @media (max-width: 767.98px) {
+    .nav-mobile-toggle { display: inline-flex; }
+  }
+  /* Never let an open panel survive a resize/rotate onto desktop. */
+  @media (min-width: 768px) {
+    .nav-mobile-panel.open { display: none; }
+  }
+
   body {
     background: var(--bg);
     background-attachment: fixed;   /* full-page gradient stays put on scroll */
@@ -215,6 +286,12 @@
        href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
   <div class="flex items-center gap-4">
+    <!-- Mobile nav trigger — visible only below 768px (see .nav-mobile-toggle) -->
+    <button class="nav-mobile-toggle" id="nav-mobile-btn" type="button"
+            onclick="toggleMobileNav()"
+            aria-label="Open navigation menu" aria-expanded="false" aria-controls="nav-mobile-panel">
+      <span class="material-symbols-outlined" id="nav-mobile-icon" style="font-size:20px">menu</span>
+    </button>
     <!-- Change 3: Theme toggle -->
     <button class="theme-toggle-pill" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
       <div class="theme-toggle-pill-circle" id="theme-circle">
@@ -249,6 +326,13 @@
         </form>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile nav panel — mirrors the `hidden md:flex` desktop link row above.
+       Rendered at all widths but only displayed below 768px (.nav-mobile-panel). -->
+  <div class="nav-mobile-panel" id="nav-mobile-panel">
+    <a class="nav-mobile-link active" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a class="nav-mobile-link" href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
 </nav>
 
@@ -380,7 +464,7 @@
     <!-- CLAUDE CODE: Category donut chart rendered by Plotly into #categoryDonut -->
     <div class="card h-[300px] flex flex-col relative">
       <div class="flex justify-between items-start mb-3">
-        <h3 class="text-white font-medium">Spending by Category</h3>
+        <h3 class="text-white font-medium text-base">Spending by Category</h3>
         <span class="text-[10px] text-secondary">Powered by Plotly</span>
       </div>
       <div class="flex-1 flex flex-col" style="min-height:0">
@@ -391,7 +475,7 @@
     <!-- CLAUDE CODE: Monthly trend chart rendered by Plotly into #monthlyTrendChart from /api/insights/temporal -->
     <div class="card h-[300px] flex flex-col">
       <div class="flex justify-between items-center mb-3">
-        <h3 class="text-white font-medium">Monthly Spending Trend</h3>
+        <h3 class="text-white font-medium text-base">Monthly Spending Trend</h3>
         <!-- Change 4: 6M/1Y/All trend toggle, wired to Plotly.react() -->
         <div class="flex rounded p-0.5" id="trend-toggle-group" style="background:var(--navbar);border:1px solid var(--border)">
           <button id="trend-btn-6m" class="px-2 py-1 text-[10px] font-bold uppercase rounded" style="background:var(--border);color:var(--text-primary)" onclick="setTrendFilter(6)">6M</button>
@@ -410,7 +494,7 @@
     <!-- Subscriptions Intelligence Card -->
     <!-- CLAUDE CODE: Subscriptions card wired to /api/subscriptions/audit -->
     <div class="card flex flex-col">
-      <h3 class="text-white font-medium mb-4 flex items-center justify-between">
+      <h3 class="text-white font-medium mb-4 flex items-center justify-between text-base">
         Subscriptions
         <span class="text-secondary text-xs font-normal" id="subs-card-count">Active (—)</span>
       </h3>
@@ -424,7 +508,7 @@
     <!-- Reimbursements Intelligence Card -->
     <!-- CLAUDE CODE: Reimbursements card wired to /api/reimbursements/report -->
     <div class="card flex flex-col">
-      <h3 class="text-white font-medium mb-4">Reimbursements</h3>
+      <h3 class="text-white font-medium mb-4 text-base">Reimbursements</h3>
       <div class="space-y-4">
         <div class="flex justify-between items-center">
           <span class="text-sm text-secondary">Gross Claims</span>
@@ -458,7 +542,7 @@
     <!-- Needs Review Card -->
     <!-- CLAUDE CODE: Needs Review card wired to /api/transactions/needs-review -->
     <div class="card flex flex-col">
-      <h3 class="text-white font-medium mb-4">Needs Review</h3>
+      <h3 class="text-white font-medium mb-4 text-base">Needs Review</h3>
       <div class="space-y-4" id="needs-review-body">
         <div class="shimmer h-8 rounded mb-2"></div>
         <div class="shimmer h-8 rounded mb-2"></div>
@@ -1174,7 +1258,7 @@ function renderTemporal(insights) {
         <span class="material-symbols-outlined">trending_up</span>
       </div>
       <div>
-        <h4 class="font-medium" style="color:var(--text-primary)">Fastest Growing: <span style="color:var(--insight-highlight);font-weight:600">${escHtml(fg.category)}</span></h4>
+        <h4 class="font-medium text-base" style="color:var(--text-primary)">Fastest Growing: <span style="color:var(--insight-highlight);font-weight:600">${escHtml(fg.category)}</span></h4>
         <p class="text-xs" style="color:var(--text-secondary)">${escHtml(fg.explanation)}</p>
       </div>
     </div>
@@ -1398,6 +1482,41 @@ function _syncThemeUI(isLight) {
   if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
   // circle slides via CSS (html.light-mode .theme-toggle-pill-circle { transform: translateX(24px) })
 }
+
+// ---- Mobile navigation (hamburger dropdown) ----
+// Identical helper in newDashboard.html / transactions.html / upload.html.
+// Deliberately does NOT stopPropagation: letting the click reach document keeps
+// the existing profile-dropdown close-on-outside-click working, and the listener
+// below ignores clicks originating inside the button or the panel.
+function toggleMobileNav() {
+  const panel = document.getElementById('nav-mobile-panel');
+  if (!panel) return;
+  _setMobileNav(panel.classList.contains('open') ? false : true);
+}
+function _setMobileNav(open) {
+  const panel = document.getElementById('nav-mobile-panel');
+  const btn   = document.getElementById('nav-mobile-btn');
+  const icon  = document.getElementById('nav-mobile-icon');
+  if (!panel) return;
+  panel.classList.toggle('open', open);
+  if (btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (icon) icon.textContent = open ? 'close' : 'menu';
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('nav-mobile-panel');
+  const btn   = document.getElementById('nav-mobile-btn');
+  if (!panel || !panel.classList.contains('open')) return;
+  if (panel.contains(e.target) || (btn && btn.contains(e.target))) return;
+  _setMobileNav(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') _setMobileNav(false);
+});
+// Resizing past the md breakpoint hides the panel via CSS; reset the button
+// state too so the icon and aria-expanded don't go stale.
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) _setMobileNav(false);
+});
 
 // ---- Change 3: Profile dropdown ----
 function toggleProfileDropdown(e) {

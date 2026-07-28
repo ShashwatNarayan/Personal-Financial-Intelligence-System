@@ -1,3 +1,107 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Type-scale metrics for the four `font-*` design tokens.
+
+   WHY THIS FILE AND NOT tailwind.config.js
+   ----------------------------------------
+   The scale already exists in tailwind.config.js under `theme.extend.fontSize`
+   (headline-lg / headline-md / label-caps / body-md). But `fontSize` generates
+   `text-*` utilities, while the markup uses `font-*` — which resolves to the
+   `fontFamily` namespace and therefore emits `font-family: Inter` ONLY, with no
+   font-size. Combined with preflight's `h1,h2 { font-size: inherit }`, every
+   heading in the app rendered at the inherited 16px.
+
+   Rather than rename the tokens across every template, the metrics are attached
+   here to the `font-*` class names the markup actually uses. The `font-family`
+   declarations keep coming from the config; these rules only add the missing
+   size / weight / leading / tracking, so the two never conflict.
+
+   WHY @layer components AND NOT @layer utilities
+   ---------------------------------------------
+   Tailwind emits components BEFORE utilities, so a real utility in the markup
+   still wins. That matters — these tokens never appear alone:
+
+     • `font-headline-lg font-bold`  (dashboard/transactions <h1>)
+     • `font-headline-md font-bold`  (every section <h2> + modal title)
+     • `font-label-caps … text-xs`   (all four KPI labels)
+
+   In the components layer, `font-bold` (700) keeps overriding the 600/500
+   fontWeight below, and `text-xs` keeps overriding the 12px on label-caps
+   (identical value, so no visual change). Putting these in @layer utilities
+   would silently DEFEAT `font-bold` on every heading in the app.
+   The fontWeight values below are therefore a sane default for future markup
+   that omits `font-bold`, not an override of existing markup.
+
+   RESPONSIVE SCALE
+   ----------------
+   Mobile-first: the base rule is the small-screen size, stepping up at the
+   config's own sm (640px) / md (768px) breakpoints via screen(), so the
+   breakpoints stay in sync with tailwind.config.js.
+
+   Only the two HEADLINE tokens scale — body-md and label-caps hold their token
+   values at every width. Stepping body text below 14px hurts legibility and
+   trips iOS's sub-16px input auto-zoom, and label-caps is already at 12px.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@layer components {
+
+  /* Page title — dashboard/transactions <h1>.
+     24px base is the config's own `headline-lg-mobile` token; 32px at md is the
+     `headline-lg` token. 28px at sm bridges the two. */
+  .font-headline-lg {
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* Section heading — "Temporal Insights", "Active Subscriptions", modal title.
+     18px base steps to the 20px `headline-md` token at sm. */
+  .font-headline-md {
+    font-size: 18px;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+
+  /* Uppercase KPI labels — `label-caps` token, fixed at all widths.
+     Tracking matches the `tracking-wider` (0.05em) the markup already applies. */
+  .font-label-caps {
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  /* Body copy + the <body> default on the three Tailwind pages.
+     `body-md` token, fixed at all widths. */
+  .font-body-md {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  /* ── sm: ≥640px ── */
+  @media screen(sm) {
+    .font-headline-lg {
+      font-size: 28px;
+      letter-spacing: -0.015em;
+    }
+    .font-headline-md {
+      font-size: 20px;
+      line-height: 1.4;
+    }
+  }
+
+  /* ── md: ≥768px — full desktop `headline-lg` token ── */
+  @media screen(md) {
+    .font-headline-lg {
+      font-size: 32px;
+      letter-spacing: -0.02em;
+    }
+  }
+}

@@ -76,6 +76,62 @@ a { text-decoration: none; color: inherit; }
 .l-nav-brand span { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
 .l-nav-right { display: flex; align-items: center; gap: 12px; }
 
+/* ── Mobile navigation ──────────────────────────────────────────────────────
+   .l-nav is a fixed-height, no-wrap flex row, so below ~440px the brand +
+   Login + Get Started + theme toggle overflow it. Rather than duplicate the
+   cluster into a separate menu — which would clone the theme toggle's element
+   ids (#theme-toggle / #theme-circle / #theme-icon) and break _syncToggleUI —
+   the SAME .l-nav-right becomes an absolutely-positioned dropdown panel below
+   768px, revealed by the hamburger. At ≥768px none of this applies and the row
+   renders exactly as before. 767.98px matches the breakpoint used by the
+   dashboard pages' mobile nav. */
+.l-nav-toggle {
+  display: none;                   /* ≥768px: the inline row handles nav */
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: border-color 0.2s, color 0.2s;
+}
+.l-nav-toggle:hover { border-color: var(--accent-text); color: var(--accent-text); }
+
+@media (max-width: 767.98px) {
+  .l-nav-toggle { display: inline-flex; }
+  .l-nav-right {
+    display: none;
+    position: absolute;            /* .l-nav is position:fixed → containing block */
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px 32px 18px;       /* 32px matches .l-nav's horizontal padding */
+    background: var(--navbar);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .l-nav-right.open { display: flex; }
+  /* Full-width tap targets inside the panel; the theme toggle keeps its pill
+     size rather than stretching across the panel. */
+  .l-nav-right .btn-outline,
+  .l-nav-right .btn-filled {
+    justify-content: center;
+    text-align: center;
+    padding: 10px 16px;
+  }
+  .l-nav-right .theme-toggle { align-self: flex-start; }
+}
+
 .btn-outline {
   padding: 6px 16px;
   border: 1px solid var(--border);
@@ -361,7 +417,14 @@ html.light-mode .theme-toggle-circle { transform: translateX(24px); }
     <script>(function(){var l=document.getElementById('nav-logo');if(l&&document.documentElement.classList.contains('light-mode'))l.src=l.dataset.logoLight;})();</script>
   </a>
 
-  <div class="l-nav-right">
+  <!-- Mobile nav trigger — visible only below 768px (see .l-nav-toggle) -->
+  <button class="l-nav-toggle" id="l-nav-toggle" type="button"
+          onclick="toggleNavMenu()"
+          aria-label="Open navigation menu" aria-expanded="false" aria-controls="l-nav-right">
+    <span class="material-symbols-outlined" id="l-nav-toggle-icon" style="font-size:20px">menu</span>
+  </button>
+
+  <div class="l-nav-right" id="l-nav-right">
     {% if current_user.is_authenticated %}
       <a href="{{ url_for('main.dashboard') }}" class="btn-outline">Dashboard</a>
     {% else %}
@@ -553,6 +616,40 @@ function _syncToggleUI(isLight) {
   if (logo) logo.src = isLight ? logo.dataset.logoLight : logo.dataset.logoDark;
   // circle slides via CSS (html.light-mode .theme-toggle-circle { transform: translateX(24px) })
 }
+
+// ── Mobile navigation (hamburger dropdown) ──
+// Toggles .open on the EXISTING .l-nav-right cluster, which the max-width:767.98px
+// block turns into a dropdown panel. No markup is duplicated, so the theme
+// toggle keeps its single set of element ids.
+function toggleNavMenu() {
+  const panel = document.getElementById('l-nav-right');
+  if (!panel) return;
+  _setNavMenu(!panel.classList.contains('open'));
+}
+function _setNavMenu(open) {
+  const panel = document.getElementById('l-nav-right');
+  const btn   = document.getElementById('l-nav-toggle');
+  const icon  = document.getElementById('l-nav-toggle-icon');
+  if (!panel) return;
+  panel.classList.toggle('open', open);
+  if (btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (icon) icon.textContent = open ? 'close' : 'menu';
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('l-nav-right');
+  const btn   = document.getElementById('l-nav-toggle');
+  if (!panel || !panel.classList.contains('open')) return;
+  if (panel.contains(e.target) || (btn && btn.contains(e.target))) return;
+  _setNavMenu(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') _setNavMenu(false);
+});
+// Above the breakpoint .open is inert (the base .l-nav-right rule takes over),
+// but reset the button state so the icon and aria-expanded don't go stale.
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) _setNavMenu(false);
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   _syncToggleUI(document.documentElement.classList.contains('light-mode'));

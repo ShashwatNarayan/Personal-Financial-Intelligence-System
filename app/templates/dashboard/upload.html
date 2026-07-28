@@ -72,6 +72,77 @@
   }
   html.light-mode .theme-toggle-pill-circle { transform: translateX(24px); }
 
+  /* ── Mobile navigation (hamburger + dropdown panel) ────────────────────────
+     The desktop link row is `hidden md:flex`, so below 768px it disappears and
+     the Dashboard/Transactions links become unreachable. These rules add them
+     back as a dropdown under the navbar.
+
+     Breakpoint is a real media query, NOT Tailwind `md:` variants: the
+     stylesheet is a pre-compiled static bundle, so a class like `md:hidden`
+     that isn't already in the bundle would silently do nothing until a
+     recompile — and a missed recompile would leak the hamburger onto desktop.
+     767.98px is the exact complement of Tailwind's `md` (min-width:768px), so
+     the two never overlap or gap.
+
+     This block is duplicated verbatim in newDashboard.html, transactions.html
+     and upload.html — keep the three in sync. */
+  .nav-mobile-toggle {
+    display: none;                  /* ≥768px: the desktop link row handles nav */
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .nav-mobile-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+  .nav-mobile-panel {
+    display: none;
+    position: absolute;             /* <nav> is position:fixed → containing block */
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 24px 12px;         /* 24px matches the navbar's px-6 */
+    background: var(--navbar);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-mobile-panel.open { display: flex; }
+  .nav-mobile-link {
+    display: block;
+    padding: 10px 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-mobile-link:hover { color: var(--text-primary); }
+  .nav-mobile-link.active {
+    color: var(--text-primary);
+    border-left: 2px solid var(--accent);
+    padding-left: 10px;
+  }
+  @media (max-width: 767.98px) {
+    .nav-mobile-toggle { display: inline-flex; }
+  }
+  /* Never let an open panel survive a resize/rotate onto desktop. */
+  @media (min-width: 768px) {
+    .nav-mobile-panel.open { display: none; }
+  }
+
   body {
     background: var(--bg);
     background-attachment: fixed;   /* full-page gradient stays put on scroll */
@@ -226,6 +297,12 @@
        href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
   <div class="flex items-center gap-4">
+    <!-- Mobile nav trigger — visible only below 768px (see .nav-mobile-toggle) -->
+    <button class="nav-mobile-toggle" id="nav-mobile-btn" type="button"
+            onclick="toggleMobileNav()"
+            aria-label="Open navigation menu" aria-expanded="false" aria-controls="nav-mobile-panel">
+      <span class="material-symbols-outlined" id="nav-mobile-icon" style="font-size:20px">menu</span>
+    </button>
     <!-- Theme toggle -->
     <button class="theme-toggle-pill" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
       <div class="theme-toggle-pill-circle" id="theme-circle">
@@ -260,6 +337,14 @@
         </form>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile nav panel — mirrors the `hidden md:flex` desktop link row above.
+       Rendered at all widths but only displayed below 768px (.nav-mobile-panel).
+       Neither link is `active`: /upload is not part of the nav row. -->
+  <div class="nav-mobile-panel" id="nav-mobile-panel">
+    <a class="nav-mobile-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a class="nav-mobile-link" href="{{ url_for('main.transactions') }}">Transactions</a>
   </div>
 </nav>
 
@@ -417,6 +502,41 @@ function _syncThemeUI(isLight) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   _syncThemeUI(document.documentElement.classList.contains('light-mode'));
+});
+
+// ── Mobile navigation (hamburger dropdown) ──
+// Identical helper in newDashboard.html / transactions.html / upload.html.
+// Deliberately does NOT stopPropagation: letting the click reach document keeps
+// the existing profile-dropdown close-on-outside-click working, and the listener
+// below ignores clicks originating inside the button or the panel.
+function toggleMobileNav() {
+  const panel = document.getElementById('nav-mobile-panel');
+  if (!panel) return;
+  _setMobileNav(panel.classList.contains('open') ? false : true);
+}
+function _setMobileNav(open) {
+  const panel = document.getElementById('nav-mobile-panel');
+  const btn   = document.getElementById('nav-mobile-btn');
+  const icon  = document.getElementById('nav-mobile-icon');
+  if (!panel) return;
+  panel.classList.toggle('open', open);
+  if (btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (icon) icon.textContent = open ? 'close' : 'menu';
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('nav-mobile-panel');
+  const btn   = document.getElementById('nav-mobile-btn');
+  if (!panel || !panel.classList.contains('open')) return;
+  if (panel.contains(e.target) || (btn && btn.contains(e.target))) return;
+  _setMobileNav(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') _setMobileNav(false);
+});
+// Resizing past the md breakpoint hides the panel via CSS; reset the button
+// state too so the icon and aria-expanded don't go stale.
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768) _setMobileNav(false);
 });
 
 // ── Profile dropdown (matches dashboard / transactions) ──

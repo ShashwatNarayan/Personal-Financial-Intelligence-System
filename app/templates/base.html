@@ -19,9 +19,20 @@
         {% else %}
         <a class="navbar-brand fw-semibold" href="{{ url_for('main.index') }}">Arthalens</a>
         {% endif %}
-        <div class="ms-auto d-flex align-items-center gap-3">
+        <!-- navbar-expand-lg was previously inert: there was no toggler and no
+             .collapse.navbar-collapse for it to act on, so the cluster below
+             stayed a single un-wrapping row at every width. -->
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <!-- Stacks vertically inside the collapsed panel below lg, and keeps
+                 the original single-row layout at lg and above. -->
+            <div class="ms-auto d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-2 gap-lg-3 py-2 py-lg-0">
             {% if current_user.is_authenticated %}
-                <span class="text-light small opacity-75">{{ current_user.email }}</span>
+                <span class="text-light small opacity-75 text-truncate d-none d-sm-inline-block" style="max-width: 220px;">{{ current_user.email }}</span>
                 <a href="{{ url_for('main.upload') }}" class="btn btn-outline-light btn-sm">Upload</a>
                 <form method="POST" action="{{ url_for('auth.logout') }}" class="d-inline m-0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -31,6 +42,7 @@
                 <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-sm">Login</a>
                 <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Register</a>
             {% endif %}
+            </div>
         </div>
     </div>
 </nav>
