@@ -7,3 +7,5 @@ temp_upload.xlsx
 *.pyc
 mockdata/
 node_modules/
+
+mockdata/
