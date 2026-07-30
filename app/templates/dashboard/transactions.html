@@ -108,19 +108,32 @@
     border-color: var(--accent);
     color: var(--accent-text);
   }
+  /* Mobile nav dropdown. MUST be fully opaque: it overlays live page content
+     (page heading, KPI cards), so any alpha leaves that text readable through it.
+     Deliberately NOT glass-morphism — unlike .card and the navbar itself, this
+     panel carries no backdrop-filter, no opacity and no blend mode. --navbar is
+     unusable here: it resolves to rgba(23,24,75,0.66) dark / rgba(240,238,233,
+     0.72) light, so the solid Chintz surfaces are hard-coded instead. */
   .nav-mobile-panel {
     display: none;
     position: absolute;             /* <nav> is position:fixed → containing block */
     top: 100%;
     left: 0;
     right: 0;
+    z-index: 60;                    /* clears the navbar's own children (auto/0)
+                                       and all page content (tops out at 20) */
     flex-direction: column;
     gap: 2px;
     padding: 8px 24px 12px;         /* 24px matches the navbar's px-6 */
-    background: var(--navbar);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: #17184B;            /* solid Tetsu-Kon Blue — same value as --panel-bg (dark) */
+    opacity: 1;
+    background-blend-mode: normal;
     border-bottom: 1px solid var(--border);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);  /* reads as a layer above the page */
+  }
+  html.light-mode .nav-mobile-panel {
+    background: #F0EEE9;            /* solid Cloud Dancer — same value as --panel-bg (light) */
+    box-shadow: 0 12px 28px rgba(23, 24, 75, 0.22);
   }
   .nav-mobile-panel.open { display: flex; }
   .nav-mobile-link {

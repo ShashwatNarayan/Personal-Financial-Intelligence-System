@@ -155,19 +155,32 @@
     border-color: var(--accent);
     color: var(--accent-text);
   }
+  /* Mobile nav dropdown. MUST be fully opaque: it overlays live page content
+     (page heading, KPI cards), so any alpha leaves that text readable through it.
+     Deliberately NOT glass-morphism — unlike .card and the navbar itself, this
+     panel carries no backdrop-filter, no opacity and no blend mode. --navbar is
+     unusable here: it resolves to rgba(23,24,75,0.66) dark / rgba(240,238,233,
+     0.72) light, so the solid Chintz surfaces are hard-coded instead. */
   .nav-mobile-panel {
     display: none;
     position: absolute;             /* <nav> is position:fixed → containing block */
     top: 100%;
     left: 0;
     right: 0;
+    z-index: 60;                    /* clears the navbar's own children (auto/0)
+                                       and all page content (tops out at 20) */
     flex-direction: column;
     gap: 2px;
     padding: 8px 24px 12px;         /* 24px matches the navbar's px-6 */
-    background: var(--navbar);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: #17184B;            /* solid Tetsu-Kon Blue — same value as --panel-bg (dark) */
+    opacity: 1;
+    background-blend-mode: normal;
     border-bottom: 1px solid var(--border);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);  /* reads as a layer above the page */
+  }
+  html.light-mode .nav-mobile-panel {
+    background: #F0EEE9;            /* solid Cloud Dancer — same value as --panel-bg (light) */
+    box-shadow: 0 12px 28px rgba(23, 24, 75, 0.22);
   }
   .nav-mobile-panel.open { display: flex; }
   .nav-mobile-link {
@@ -191,6 +204,81 @@
   /* Never let an open panel survive a resize/rotate onto desktop. */
   @media (min-width: 768px) {
     .nav-mobile-panel.open { display: none; }
+  }
+
+  /* ── Mobile layout helpers ───────────────────────────────────────────────
+     Written as real CSS rather than Tailwind variants wherever a variant is
+     either (a) absent from the PRE-COMPILED bundle (see the note above <main>
+     — `sm:inline`, `sm:hidden` and `min-h-28` are all absent today) or (b)
+     outgunned locally: `.card { padding: 16px }` below is declared AFTER
+     tailwind.output.css, so it beats any `.p-3` utility on source order.
+     Everything here applies regardless of when the bundle was last built. */
+
+  /* KPI figures: BOTH formats sit in the DOM at all times and CSS picks one.
+     No JS resize listener — the markup never changes, only its visibility. */
+  .amt-short { display: none; }
+  @media (max-width: 767.98px) {
+    .amt-full  { display: none; }
+    .amt-short { display: inline; }
+  }
+
+  /* KPI cards: grow past the baseline instead of clipping, and tighten the
+     interior on the 2-up mobile grid. min-height mirrors the `min-h-28` class
+     so the row keeps its rhythm even on a bundle built before that class. */
+  .kpi-grid > .card { min-height: 7rem; }
+  @media (max-width: 639.98px) {
+    .kpi-grid > .card { padding: 12px; }   /* ≈ p-3 */
+  }
+
+  /* Header compaction below the sm breakpoint (640px). */
+  .sm-up-only   { display: none; }
+  .sm-down-only { display: inline; }
+  @media (min-width: 640px) {
+    .sm-up-only   { display: inline; }
+    .sm-down-only { display: none; }
+  }
+  /* The "Bank Statement" label is hidden below sm, which would leave this
+     divider dangling at the pill's left edge — drop it with the label. */
+  .date-range-val { padding-left: 8px; border-left: 1px solid var(--border); }
+  @media (max-width: 639.98px) {
+    .date-range-val { padding-left: 0; border-left: none; }
+  }
+
+  /* Chart card heights live here rather than in `h-[300px]` / inline styles:
+     an arbitrary-value utility would need the bundle rebuilt, and an inline
+     height would outrank any class rule. Desktop values are unchanged.
+     Below 768px the donut card grows so its horizontal legend — which wraps to
+     ~4 rows at 375px with 11 categories — is no longer cut off. The card and
+     its inner chart div move together so the plot can never outgrow the card:
+     368 = 300 (chart) + 36 (h3 + mb-3) + 32 (card padding). The matching
+     Plotly margins are in _isNarrowViewport() / renderCategoryDonut(). */
+  .chart-card        { height: 300px; }
+  #categoryDonut     { height: 230px; }
+  #monthlyTrendChart { height: 210px; }
+  @media (max-width: 767.98px) {
+    .chart-card-donut { height: 368px; }
+    #categoryDonut    { height: 300px; }
+  }
+
+  /* Fastest Growing banner stats: a side rail at sm+, a stacked strip below. */
+  .fg-stats {
+    flex-shrink: 0;
+    padding-left: 16px;
+    margin-left: 16px;
+    border-left: 1px solid var(--accent-border);
+    color: var(--text-secondary);
+  }
+  @media (max-width: 639.98px) {
+    .fg-stats {
+      width: 100%;
+      flex-wrap: wrap;
+      padding-left: 0;
+      margin-left: 0;
+      border-left: none;
+      padding-top: 10px;
+      margin-top: 10px;
+      border-top: 1px solid var(--accent-border);
+    }
   }
 
   body {
@@ -351,33 +439,43 @@
   <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
     <div>
       <h1 class="font-headline-lg font-bold text-white mb-1">Spending Dashboard</h1>
-      <p class="font-body-md" style="color:var(--text-secondary)">Comprehensive analysis of your recent outflows and categorized expenses.</p>
+      <!-- Subtitle is decorative context; hidden below sm to free the ~327px
+           header row at 375px (see .sm-up-only / .sm-down-only in <style>). -->
+      <p class="font-body-md hidden sm:block" style="color:var(--text-secondary)">Comprehensive analysis of your recent outflows and categorized expenses.</p>
     </div>
     <div class="flex items-center gap-3">
       <div class="flex items-center rounded-full px-3 py-1.5 text-sm" style="background:var(--card);border:1px solid var(--border)">
         <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-        <span class="mr-2" style="color:var(--text-primary)">Bank Statement</span>
-        <span class="pl-2" style="color:var(--text-secondary);border-left:1px solid var(--border)" id="date-range-text">All Time</span>
+        <span class="sm-up-only mr-2" style="color:var(--text-primary)">Bank Statement</span>
+        <!-- border-left moved out of the inline style into .date-range-val so a
+             media query can drop it along with the label above. -->
+        <span class="date-range-val" style="color:var(--text-secondary)" id="date-range-text">All Time</span>
       </div>
       <!-- CLAUDE CODE: Upload button wired to Flask upload route -->
       <a href="{{ url_for('main.upload') }}" class="bg-accent font-medium px-4 py-2 rounded-full transition-colors flex items-center gap-2 no-underline">
-        <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
+        <span class="material-symbols-outlined text-[18px]">upload</span>
+        <span class="sm-up-only">Upload Statement</span>
+        <span class="sm-down-only">Upload</span>
       </a>
     </div>
   </header>
 
   <!-- Zone 1: KPIs -->
   <!-- CLAUDE CODE: KPI values derived client-side from /api/transactions/classified + /api/subscriptions/audit -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <section class="kpi-grid grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Avg Monthly Spend -->
-    <div class="card flex flex-col justify-between h-28 relative overflow-hidden group">
+    <div class="card flex flex-col justify-between min-h-28 relative group">
       <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Avg Monthly Spend</div>
       <div class="font-data-mono text-2xl text-white mt-2" id="kpi-avg-monthly">
         <div class="shimmer h-8 w-32 rounded"></div>
       </div>
       <!-- CLAUDE CODE: reconciliation note — internal (SWEEP) transfers excluded from spend -->
       <div class="text-secondary text-[10px] mt-1 leading-tight relative z-10" id="kpi-internal-excl"></div>
-      <div class="absolute bottom-0 left-0 w-full h-12 opacity-30 group-hover:opacity-50 transition-opacity">
+      <!-- overflow-hidden was removed from the card (it clipped the note above);
+           the rounding it used to provide for this decorative sparkline is
+           re-applied here so the card's bottom corners look identical. -->
+      <div class="absolute bottom-0 left-0 w-full h-12 opacity-30 group-hover:opacity-50 transition-opacity"
+           style="overflow:hidden;border-bottom-left-radius:8px;border-bottom-right-radius:8px">
         <svg class="w-full h-full text-accent stroke-current fill-none" preserveAspectRatio="none" stroke-width="2" viewBox="0 0 100 30">
           <path d="M0,20 L20,25 L40,15 L60,20 L80,5 L100,10"></path>
           <path class="fill-accent opacity-10 stroke-none" d="M0,20 L20,25 L40,15 L60,20 L80,5 L100,10 L100,30 L0,30 Z"></path>
@@ -385,7 +483,7 @@
       </div>
     </div>
     <!-- Top Category -->
-    <div class="card flex flex-col justify-between h-28">
+    <div class="card flex flex-col justify-between min-h-28">
       <div class="flex justify-between items-start">
         <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Top Category</div>
         <span class="material-symbols-outlined text-secondary text-[18px]">swap_horiz</span>
@@ -400,7 +498,7 @@
       </div>
     </div>
     <!-- Active Subscriptions -->
-    <div class="card flex flex-col justify-between h-28 cursor-pointer" onclick="openModal()">
+    <div class="card flex flex-col justify-between min-h-28 cursor-pointer" onclick="openModal()">
       <div class="flex justify-between items-start">
         <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Active Subscriptions</div>
         <span class="material-symbols-outlined text-secondary text-[18px]">calendar_month</span>
@@ -418,7 +516,7 @@
       </div>
     </div>
     <!-- Highest Growth -->
-    <div class="card flex flex-col justify-between h-28">
+    <div class="card flex flex-col justify-between min-h-28">
       <div class="text-secondary font-label-caps uppercase tracking-wider text-xs">Highest Growth</div>
       <div>
         <div class="flex items-center gap-2 mb-1">
@@ -462,18 +560,19 @@
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Left: Donut Chart -->
     <!-- CLAUDE CODE: Category donut chart rendered by Plotly into #categoryDonut -->
-    <div class="card h-[300px] flex flex-col relative">
+    <div class="card chart-card chart-card-donut flex flex-col relative">
       <div class="flex justify-between items-start mb-3">
         <h3 class="text-white font-medium text-base">Spending by Category</h3>
         <span class="text-[10px] text-secondary">Powered by Plotly</span>
       </div>
       <div class="flex-1 flex flex-col" style="min-height:0">
-        <div id="categoryDonut" style="width:100%;height:230px;"></div>
+        <!-- height in CSS (.chart-card / #categoryDonut) so it can grow below 768px -->
+        <div id="categoryDonut" style="width:100%"></div>
       </div>
     </div>
     <!-- Right: Monthly Trend Chart -->
     <!-- CLAUDE CODE: Monthly trend chart rendered by Plotly into #monthlyTrendChart from /api/insights/temporal -->
-    <div class="card h-[300px] flex flex-col">
+    <div class="card chart-card flex flex-col">
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-white font-medium text-base">Monthly Spending Trend</h3>
         <!-- Change 4: 6M/1Y/All trend toggle, wired to Plotly.react() -->
@@ -484,7 +583,8 @@
         </div>
       </div>
       <div class="flex-1" style="min-height:0">
-        <div id="monthlyTrendChart" style="width:100%;height:210px;"></div>
+        <!-- height in CSS (.chart-card / #monthlyTrendChart) -->
+        <div id="monthlyTrendChart" style="width:100%"></div>
       </div>
     </div>
   </section>
@@ -572,7 +672,8 @@
         <div class="card min-w-[240px]"><div class="shimmer h-16 rounded"></div></div>
       </div>
       <!-- CLAUDE CODE: Fastest growing banner, populated from insights.fastest_growing -->
-      <div class="rounded-lg px-4 py-3 flex items-center justify-between gap-4 mt-6" id="fastest-growing-banner" style="background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--accent-border)">
+      <!-- Stacks vertically below sm (see .fg-stats in <style>); side-by-side at sm+. -->
+      <div class="rounded-lg px-4 py-3 flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 mt-6" id="fastest-growing-banner" style="background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--accent-border)">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
             <span class="material-symbols-outlined">trending_up</span>
@@ -700,10 +801,43 @@ function escHtml(s) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ---- Currency formatting -------------------------------------------------
+// fmtAmt      full Indian grouping, always 2dp   → "₹1,62,710.64"
+// fmtAmtShort Indian abbreviation, ≤2dp          → "₹1.63L"
+// fmtAmtDual  BOTH, wrapped so *CSS* picks one   → use in narrow columns
+//
+// fmtAmtDual is the responsive one: it emits two spans and lets the
+// `@media (max-width: 767.98px)` block in <style> show `.amt-short` and hide
+// `.amt-full`. There is deliberately no resize listener and no server-side
+// branch — the DOM is identical at every viewport width, so the value survives
+// rotation and window-drag for free. Reuse it anywhere a rupee figure has to
+// fit a narrow cell (transactions table, MoM cards, modals).
 function fmtAmt(n) {
   return '₹' + parseFloat(n || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2, maximumFractionDigits: 2
   });
+}
+
+// Indian numbering: k (1,000) → L (1,00,000) → Cr (1,00,00,000).
+// Two decimals, trailing zeros stripped: 16900 → "₹16.9k", 2940 → "₹2.94k".
+function fmtAmtShort(n) {
+  const v = parseFloat(n || 0);
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  const units = [[1, ''], [1e3, 'k'], [1e5, 'L'], [1e7, 'Cr']];
+  let i = 0;
+  while (i + 1 < units.length && abs >= units[i + 1][0]) i++;
+  // Rounding to 2dp can push a figure up into the next unit (99,999 would
+  // otherwise render "₹100k"); step up so it reads "₹1L" instead.
+  while (i + 1 < units.length &&
+         parseFloat((abs / units[i][0]).toFixed(2)) >= units[i + 1][0] / units[i][0]) i++;
+  const num = (abs / units[i][0]).toFixed(2).replace(/\.?0+$/, '');
+  return sign + '₹' + num + units[i][1];
+}
+
+function fmtAmtDual(n) {
+  return `<span class="amt-full">${fmtAmt(n)}</span>` +
+         `<span class="amt-short">${fmtAmtShort(n)}</span>`;
 }
 
 function fmtDate(s) {
@@ -771,7 +905,7 @@ function renderKpis(txns) {
   const avgMonthly = total / (months.length || 1);
 
   const avgEl = document.getElementById('kpi-avg-monthly');
-  if (avgEl) avgEl.textContent = fmtAmt(avgMonthly);
+  if (avgEl) avgEl.innerHTML = fmtAmtDual(avgMonthly);   // innerHTML: dual spans
 
   // Top category
   const byCat = {};
@@ -782,7 +916,7 @@ function renderKpis(txns) {
     const nameEl = document.getElementById('kpi-top-cat-name');
     const amtEl = document.getElementById('kpi-top-cat-amount');
     if (nameEl) nameEl.textContent = topCat;
-    if (amtEl) amtEl.innerHTML = `${fmtAmt(topAmt)} <span class="text-xs ml-1">total</span>`;
+    if (amtEl) amtEl.innerHTML = `${fmtAmtDual(topAmt)} <span class="text-xs ml-1">total</span>`;
   }
 
   // Highest growth (current vs previous month)
@@ -811,7 +945,7 @@ function renderKpis(txns) {
       const amtEl = document.getElementById('kpi-growth-amount');
       if (catEl) catEl.textContent = bestCat;
       if (pctEl) pctEl.textContent = `+${Math.round(bestPct)}%`;
-      if (amtEl) amtEl.innerHTML = `${fmtAmt(bestAmt)} <span class="text-xs ml-1">vs last mo</span>`;
+      if (amtEl) amtEl.innerHTML = `${fmtAmtDual(bestAmt)} <span class="text-xs ml-1">vs last mo</span>`;
     }
   }
 }
@@ -831,6 +965,17 @@ function updateDateRange(txns) {
   const end   = fmtMonthYear(sorted[sorted.length - 1]);
   el.textContent = start === end ? start : `${start} – ${end}`;
   el.style.color = '';
+}
+
+// ---- Responsive Plotly geometry ----
+// Plotly layout lives in JS, so the CSS media queries above can't reach margins
+// or legend placement — both charts have to ask for the breakpoint themselves.
+// Same 767.98px cut-off as the .chart-card rules, so heights and margins always
+// switch together. Read at chart-init time (no resize listener): crossing 768px
+// by dragging a desktop window needs a reload to re-pick margins; a phone
+// rotating 375↔667 stays on the narrow side either way.
+function _isNarrowViewport() {
+  return window.matchMedia('(max-width: 767.98px)').matches;
 }
 
 // ---- Change 3: Plotly dynamic theme helper ----
@@ -870,6 +1015,7 @@ function renderCategoryDonut(txns) {
   const total = sorted.reduce((s, [, v]) => s + v, 0);
 
   const th = getPlotlyTheme();
+  const narrow = _isNarrowViewport();
   Plotly.newPlot(el, [{
     type: 'pie',
     hole: 0.6,
@@ -886,13 +1032,27 @@ function renderCategoryDonut(txns) {
   }], {
     plot_bgcolor:  th.plot_bgcolor,
     paper_bgcolor: th.paper_bgcolor,
-    margin: { t: 10, b: 60, l: 10, r: 10 },
+    // Narrow: the horizontal legend wraps to ~4 rows at 375px (275px of legend
+    // width, ~3 items per row, 11-12 categories). Kept horizontal rather than
+    // switched to vertical — vertical would be 11-12 rows (~180px) against ~64px
+    // here, for the same information. Budgeted at 5 rows so an extra category
+    // (e.g. Investment) can't clip it again. yanchor:'top' makes the gap below
+    // the donut explicit, so the whole b:96 budget is usable; the default
+    // 'auto' anchoring silently ate ~24px of it.
+    margin: narrow ? { t: 10, b: 96, l: 10, r: 10 }
+                   : { t: 10, b: 60, l: 10, r: 10 },
     showlegend: true,
-    legend: {
-      font: { color: th.font_color, size: 10 },
-      orientation: 'h',
-      y: -0.15, x: 0.5, xanchor: 'center'
-    },
+    legend: narrow
+      ? {
+          font: { color: th.font_color, size: 10 },
+          orientation: 'h',
+          y: -0.08, yanchor: 'top', x: 0.5, xanchor: 'center'
+        }
+      : {
+          font: { color: th.font_color, size: 10 },
+          orientation: 'h',
+          y: -0.15, x: 0.5, xanchor: 'center'
+        },
     font: { color: th.font_color },
     annotations: [{
       font: { size: 16, color: th.font_color_primary, family: 'JetBrains Mono' },
@@ -934,7 +1094,15 @@ function _getTrendLayout() {
   return {
     plot_bgcolor:  th.plot_bgcolor,
     paper_bgcolor: th.paper_bgcolor,
-    margin: { t: 10, b: 40, l: 65, r: 10 },
+    // Narrow: l:65 is far more than the "₹200k" y-ticks need (~26px of text +
+    // 8px standoff), while r:10 slices the final "%b %Y" tick — Plotly centres
+    // tick labels, so "Jul 2026" (~42px at size 10) needs ~21px of overhang
+    // past the last point. Trade the surplus left gutter for right margin.
+    // Applies to BOTH the newPlot and Plotly.react (6M/1Y/ALL) paths, since
+    // both call this function for their layout.
+    margin: _isNarrowViewport()
+      ? { t: 10, b: 40, l: 44, r: 30 }
+      : { t: 10, b: 40, l: 65, r: 10 },
     xaxis: {
       color: th.font_color, gridcolor: th.gridcolor, showgrid: false,
       tickfont: { size: 10, color: th.font_color },
@@ -1015,7 +1183,7 @@ function renderSubsKpi(report) {
   const countEl = document.getElementById('kpi-sub-count');
   const monthEl = document.getElementById('kpi-sub-monthly');
   if (countEl) countEl.textContent = `${count} Service${count !== 1 ? 's' : ''}`;
-  if (monthEl) monthEl.innerHTML = `${fmtAmt(monthly)} <span class="text-xs ml-1">avg/mo</span>`;
+  if (monthEl) monthEl.innerHTML = `${fmtAmtDual(monthly)} <span class="text-xs ml-1">avg/mo</span>`;
 }
 
 // ---- Zone: Subscriptions Intelligence Card ----
@@ -1262,7 +1430,7 @@ function renderTemporal(insights) {
         <p class="text-xs" style="color:var(--text-secondary)">${escHtml(fg.explanation)}</p>
       </div>
     </div>
-    <div class="flex-shrink-0 flex items-center gap-3 text-xs pl-4 ml-4" style="border-left:1px solid var(--accent-border);color:var(--text-secondary)">
+    <div class="fg-stats flex items-center gap-3 text-xs">
       ${monthRange ? `<span class="font-semibold whitespace-nowrap" style="color:var(--insight-highlight)">${escHtml(monthRange)}</span><span style="opacity:0.3">|</span>` : ''}
       <span class="whitespace-nowrap"><span style="color:var(--text-primary);font-weight:500">${fmtAmt(fg.previous_spend)}</span> → <span style="color:var(--text-primary);font-weight:500">${fmtAmt(fg.current_spend)}</span></span>
       ${txnCount != null ? `<span style="opacity:0.3">|</span><span class="whitespace-nowrap">${txnCount} transaction${txnCount === 1 ? '' : 's'}</span>` : ''}
@@ -1359,8 +1527,9 @@ async function loadDashboard() {
         .filter(t => t.entity_type === 'internal')
         .reduce((s, t) => s + parseFloat(t.amount || 0), 0);
       const exclEl = document.getElementById('kpi-internal-excl');
-      if (exclEl) exclEl.textContent = internalSum > 0
-        ? `Excl. ${fmtAmt(internalSum)} internal transfers` : '';
+      // Lives inside KPI card 1 at ~160px wide on mobile → dual-format too.
+      if (exclEl) exclEl.innerHTML = internalSum > 0
+        ? `Excl. ${fmtAmtDual(internalSum)} internal transfers` : '';
     } else {
       const tbody = document.getElementById('txn-tbody');
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8">${emptyState()}</td></tr>`;
