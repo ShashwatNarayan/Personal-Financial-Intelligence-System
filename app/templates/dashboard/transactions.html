@@ -8,6 +8,9 @@
 <meta name="color-scheme" content="dark">
 <!-- CSRF token for POST requests -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<!-- Integer user PK, for scoping client-side storage keys per user. Deliberately
+     the id and not the email — email is PII and must not land in storage keys. -->
+<meta name="user-id" content="{{ current_user.id }}">
 <title>ArthaLens — Transactions</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.output.css') }}">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -290,7 +293,12 @@
           {{ current_user.email }}
         </div>
         <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
-        <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;padding:0">
+        <!-- Drop all per-tab cached data before the POST navigates away. sessionStorage
+             only — localStorage holds `arthalens-theme`, and clearing it would flash the
+             login page in the wrong theme. try/catch so a storage-disabled browser can
+             still log out (a throw here would not block submit, but keep it explicit). -->
+        <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;padding:0"
+              onsubmit="try{sessionStorage.clear()}catch(e){}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit"
             style="width:100%;text-align:left;background:none;border:none;color:var(--text-primary);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-family:inherit"
@@ -426,6 +434,99 @@
 // ============================================================
 // Transactions page — self-contained
 // ============================================================
+
+// ── sessionStorage cache for the parameterless GET analytics endpoints ───────
+// Byte-identical in newDashboard.html, transactions.html and upload.html: these
+// templates are standalone (no shared JS bundle), so the block is duplicated
+// rather than imported. Keep the three copies in sync.
+//
+// Only the parameterless GET endpoints are cached. Every filter, sort, search,
+// pagination step and the 6M/1Y/ALL toggle runs client-side over the arrays that
+// are already in memory, so no request varies by user input and the URL alone
+// fully identifies a response. The POSTs (/api/transactions/correct,
+// /api/ai/query, /api/upload-excel) are never cached.
+const CACHE_PREFIX = 'arthalens-cache';
+const CACHE_TTL_MS = 15 * 60 * 1000;   // 15 minutes
+
+// Integer user PK from <meta name="user-id">. Every key is scoped by it so a
+// second account signing in through the same tab cannot read the first one's
+// data. Missing or empty tag returns null and the cache is bypassed entirely —
+// an unscoped key is never used as a fallback.
+function _cacheUserId() {
+  const el = document.querySelector('meta[name="user-id"]');
+  const id = el && el.content ? el.content.trim() : '';
+  return id || null;
+}
+
+function _cacheKey(userId, url) {
+  return CACHE_PREFIX + ':' + userId + ':' + url;
+}
+
+// Misses return null. A corrupt entry, an expired entry, or storage being
+// unavailable are all misses — nothing here may throw into the page-load path.
+function _cacheRead(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    if (!entry || typeof entry.timestamp !== 'number') return null;
+    if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+      try { sessionStorage.removeItem(key); } catch (_e) {}   // evict on expiry
+      return null;
+    }
+    return entry.data;
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Best-effort write. sessionStorage is ~5MB per origin and stores UTF-16, so a
+// large ledger can occupy well over a megabyte on its own; a QuotaExceededError
+// is swallowed and the page simply runs uncached rather than failing to load.
+function _cacheWrite(key, data) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ data: data, timestamp: Date.now() }));
+  } catch (_e) {
+    // Quota exhausted or storage disabled — degrade silently to no-cache.
+  }
+}
+
+// Drop every arthalens-cache entry in this tab. Invalidation is deliberately
+// total: a category correction relabels every row for that entity and so moves
+// six of the seven endpoints, and an upload moves all seven. Per-key patching
+// would have to replicate the server's aggregation to stay correct.
+function clearCache() {
+  try {
+    const doomed = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.indexOf(CACHE_PREFIX + ':') === 0) doomed.push(k);
+    }
+    doomed.forEach(function (k) { sessionStorage.removeItem(k); });
+  } catch (_e) {
+    // Storage unavailable — nothing was cached, so there is nothing to clear.
+  }
+}
+
+// Drop-in for `fetch(url, init).then(r => r.json())`: returns parsed JSON, from
+// cache when warm, otherwise from the network. `init` is passed through
+// untouched so each call site keeps its own request options. Only successful
+// payloads are stored — an error response is returned but never cached.
+async function cachedFetch(url, init) {
+  const userId = _cacheUserId();
+  const key = userId ? _cacheKey(userId, url) : null;
+
+  if (key) {
+    const hit = _cacheRead(key);
+    if (hit !== null) return hit;
+  }
+
+  const res = await fetch(url, init);
+  const data = await res.json();
+
+  if (key && res.ok && data && data.status === 'success') _cacheWrite(key, data);
+  return data;
+}
 
 const CATEGORIES = [
   'Food & Dining','Shopping','Transport','Utilities','Entertainment',
@@ -714,6 +815,10 @@ function openEdit(btn) {
       });
       const data = await res.json();
       if (data.status === 'success') {
+        // The correction relabels every row for this entity, which moves the
+        // category breakdown, MoM, anomaly and subscription aggregates too —
+        // drop the whole cache rather than patching individual keys.
+        clearCache();
         btn.dataset.category = newCat;
         catCell.innerHTML = catPill(newCat);
         // Update in-memory store so re-renders reflect the change
@@ -734,10 +839,11 @@ function openEdit(btn) {
 // ---- Main data fetch ----
 async function loadTransactions() {
   try {
-    const res = await fetch('/api/transactions/classified', {
+    // Request init carried through unchanged — this call sends X-CSRFToken where
+    // the dashboard's does not; cachedFetch passes `init` straight to fetch().
+    const data = await cachedFetch('/api/transactions/classified', {
       headers: { 'X-CSRFToken': CSRF }
     });
-    const data = await res.json();
     if (data.status !== 'success') throw new Error(data.message);
     _allTransactions = data.transactions;
     renderTransactions(_allTransactions);

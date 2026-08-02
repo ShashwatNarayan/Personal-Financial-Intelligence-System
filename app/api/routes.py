@@ -18,6 +18,25 @@ from app.models import Correction, EntityMemory, GlobalEntityMemory, Transaction
 
 logger = logging.getLogger(__name__)
 
+
+@api_bp.after_request
+def add_no_store_headers(response):
+    """Mark every /api/* response as uncacheable.
+
+    Nothing in the app set Cache-Control, which left these JSON payloads —
+    full transaction ledgers, spend aggregates — heuristically cacheable by
+    intermediaries and resident in the browser HTTP cache and bfcache with no
+    expiry. `private` keeps shared caches out; `no-store` stops the response
+    being written to disk at all.
+
+    Scoped to this blueprint. The AI blueprint is registered separately
+    (`ai_bp`, url_prefix '/api/ai') and is NOT covered by this hook despite
+    the shared URL prefix.
+    """
+    response.headers['Cache-Control'] = 'no-store, private'
+    return response
+
+
 def _owner_email():
     """Owner-seeded global memory gate. Only this account's corrections propagate
     to the shared GlobalEntityMemory store (cross-user). Read at request time so
