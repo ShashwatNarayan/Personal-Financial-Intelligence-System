@@ -10,3 +10,4 @@ node_modules/
 
 mockdata/
 scripts/backup_global_memory_*.json
+scripts/backfill_pos_*.json
