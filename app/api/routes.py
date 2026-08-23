@@ -599,11 +599,16 @@ def correct_transaction():
         )
         db.session.add(correction)
 
-        # Update ALL transactions for same entity + user
+        # Update ALL transactions for same entity + user.
+        # confidence_level is bumped to 'high' alongside the category: the row is
+        # now user-confirmed, so it must drop out of /transactions/needs-review
+        # (which filters on confidence_level == 'low'). 'high' is also what
+        # Stage 2 of categorize_transaction() assigns on a DB EntityMemory hit,
+        # so a re-upload of the same entity stays consistent with these rows.
         updated_count = Transaction.query.filter_by(
             user_id=current_user.id,
             entity_name=entity_name,
-        ).update({'category': new_category})
+        ).update({'category': new_category, 'confidence_level': 'high'})
 
         # Upsert EntityMemory row in DB
         # Note: EntityMemory is the SQLAlchemy model; JsonEntityMemory is the JSON-backed class
