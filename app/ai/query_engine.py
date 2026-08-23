@@ -22,6 +22,22 @@ FORBIDDEN_TABLES = {
     'users', 'entity_memory', 'corrections', 'uploads', 'uploads_log',
 }
 
+# The control. Every relation the generated SQL reads must be in this set.
+# An allowlist is used instead of relying on FORBIDDEN_TABLES because a
+# denylist cannot cover a table whose name merely *contains* a denied one:
+# re.search(r'\bentity_memory\b', 'global_entity_memory') is False, since the
+# underscore is a word character and no \b boundary exists at that position.
+# global_entity_memory was therefore reachable through the denylist.
+ALLOWED_TABLES = {'transactions'}
+
+# Words that can follow FROM/JOIN but are not table names — used so alias and
+# table extraction do not mistake a clause keyword for a relation.
+_NON_TABLE_TOKENS = {
+    'WHERE', 'GROUP', 'ORDER', 'HAVING', 'LIMIT', 'OFFSET', 'JOIN', 'INNER',
+    'LEFT', 'RIGHT', 'FULL', 'CROSS', 'ON', 'USING', 'AS', 'SELECT', 'UNION',
+    'EXCEPT', 'INTERSECT', 'FETCH', 'WINDOW',
+}
+
 SCHEMA_CONTEXT = """
 You are a SQL expert for a personal finance app. Generate a single PostgreSQL SELECT query.
 
@@ -264,12 +280,79 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     if hit:
         return False, f'Query contains forbidden operation: {", ".join(sorted(hit))}'
 
-    # Forbidden tables — word-boundary match to avoid false positives
+    # Second layer (kept): explicit denylist of sensitive tables.
     for table in FORBIDDEN_TABLES:
         if re.search(rf'\b{re.escape(table)}\b', sql, re.IGNORECASE):
             return False, f'Access to table "{table}" is not permitted'
 
+    # The control: table allowlist. Every relation named after FROM/JOIN must
+    # be in ALLOWED_TABLES, so anything the denylist structurally cannot see
+    # (global_entity_memory, alembic_version, future tables) is refused here.
+    for name in _referenced_tables(sql):
+        if name.lower() not in ALLOWED_TABLES:
+            return False, f'Access to table "{name}" is not permitted'
+
     return True, ''
+
+
+def _referenced_tables(sql: str) -> set[str]:
+    """Relation names appearing after FROM / JOIN.
+
+    Derived tables ("FROM (SELECT ...)") produce no name here — they are
+    rejected upstream by check_query_scope(), which forbids more than one
+    SELECT, so this never has to reason about nested scopes.
+    """
+    names = re.findall(
+        r'\b(?:FROM|JOIN)\s+([A-Za-z_][A-Za-z0-9_$]*)', sql, re.IGNORECASE
+    )
+    return {n for n in names if n.upper() not in _NON_TABLE_TOKENS}
+
+
+def check_query_scope(sql: str) -> tuple[bool, str]:
+    """Reject queries that inject_user_id() cannot safely scope.
+
+    inject_user_id() rewrites the FIRST lexical match of user_id=/WHERE/clause
+    keyword (count=1) with no awareness of query scope. On a query with more
+    than one SELECT, that predicate can land inside a subquery and leave the
+    outer scan unfiltered — returning every user's rows. Measured before this
+    guard: a correlated subquery in the SELECT list returned 14,916 rows across
+    10 distinct user_ids instead of the caller's 2,525.
+
+    Rather than make the lexical rewrite scope-aware (which needs a real SQL
+    parser), refuse the shapes it cannot handle. Runs after validate_sql() and
+    before inject_user_id().
+    """
+    if len(re.findall(r'\bSELECT\b', sql, re.IGNORECASE)) > 1:
+        return False, (
+            "That question needs a nested query, which isn't supported yet. "
+            "Try asking it more simply — for example one category or one time "
+            "period at a time."
+        )
+
+    if len(re.findall(r'\btransactions\b', sql, re.IGNORECASE)) > 1:
+        return False, (
+            "That question needs to compare your transactions against each "
+            "other, which isn't supported yet. Try asking for a single total, "
+            "average, or list instead."
+        )
+
+    return True, ''
+
+
+def _table_qualifier(sql: str) -> str:
+    """Alias bound to `transactions`, or the table name when unaliased.
+
+    Used to qualify the injected entity_type predicate. Unqualified, it raised
+    AmbiguousColumn on multi-reference queries — an error that looked like a
+    security control but was only an accident of name collision.
+    """
+    m = re.search(
+        r'\bFROM\s+transactions\b(?:\s+(?:AS\s+)?([A-Za-z_][A-Za-z0-9_$]*))?',
+        sql, re.IGNORECASE,
+    )
+    if m and m.group(1) and m.group(1).upper() not in _NON_TABLE_TOKENS:
+        return m.group(1)
+    return 'transactions'
 
 
 def inject_user_id(sql: str, user_id: int) -> str:
@@ -281,7 +364,10 @@ def inject_user_id(sql: str, user_id: int) -> str:
 
     # Injected alongside user_id so internal transfers (SWEEP, entity_type
     # 'internal') never enter AI spend results — same isolation point.
-    excl = "entity_type != 'internal'"
+    # Qualified with the table's alias: unqualified, this threw AmbiguousColumn
+    # whenever more than one relation exposed entity_type, which read like a
+    # control but was not one. check_query_scope() is the control.
+    excl = f"{_table_qualifier(sql)}.entity_type != 'internal'"
 
     # Replace an existing (possibly wrong) user_id filter
     if re.search(r'\buser_id\s*=\s*\S+', sql, re.IGNORECASE):
@@ -421,6 +507,12 @@ def run_query_pipeline(question: str, user_id: int) -> dict:
         is_valid, reason = validate_sql(raw_sql)
         if not is_valid:
             return {'status': 'error', 'message': reason}
+
+        # Must run after validate_sql and before inject_user_id: the lexical
+        # rewrite below cannot scope multi-SELECT / multi-reference queries.
+        in_scope, scope_reason = check_query_scope(raw_sql)
+        if not in_scope:
+            return {'status': 'error', 'message': scope_reason}
 
         try:
             safe_sql = inject_user_id(raw_sql, user_id)

@@ -9,3 +9,4 @@ mockdata/
 node_modules/
 
 mockdata/
+scripts/backup_global_memory_*.json
