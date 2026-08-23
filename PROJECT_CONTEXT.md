@@ -131,6 +131,22 @@
 > `fastest_growing` object under `/api/insights/temporal` is a **superset — no
 > breaking change**. `renderTemporal()` in `newDashboard.html` renders the block.
 > See **§11**.
+> Updated 2026-08-23: **Correction clears the review flag; AI query-scope guard;
+> P2P excluded from cross-user memory; global-memory cleanup.** (1)
+> `correct_transaction()` now writes `confidence_level='high'` alongside
+> `category` on the bulk update (`api/routes.py:611`), so a corrected row leaves
+> `/transactions/needs-review` — **forward-only**, see §4. (2) New
+> **`check_query_scope()`** (`query_engine.py:311`) runs between `validate_sql()`
+> and `inject_user_id()` and refuses multi-SELECT / multi-`transactions` queries;
+> **`ALLOWED_TABLES = {'transactions'}`** (`:31`) replaces the denylist as the
+> table control; the injected `entity_type` predicate is now alias-qualified via
+> **`_table_qualifier()`** (`:342`). See **§20** — the underlying first-match
+> regex defect is **open tech debt**, RLS is not yet done. (3) Stage 2b now
+> excludes `Transfer / P2P` from the global cache at load
+> (`GLOBAL_MEMORY_EXCLUDED_CATEGORY`, `categorization.py:8`), and the owner write
+> branch honours the same constant — see §7, §15. (4) `global_entity_memory` is
+> now **624 rows** after `scripts/cleanup_global_memory.py` removed 9 leaked
+> POS ref/timestamp rows and recategorized id 173 — see §3.
 
 ---
 
@@ -327,12 +343,34 @@ Audit trail of every manual category correction.
 | updated_at | DateTime | default `utcnow`, onupdate `utcnow` |
 
 Cross-user shared merchant→category store. **Only the owner account (gated by
-`OWNER_EMAIL`, set in `render.yaml` to `shashwatn2802@gmail.com`) writes to it**; every user reads it at
-Stage 2b of categorization. Added in migration `463ffe6f87a6`. Seeded once via the
-`flask backfill-global-memory` CLI command (614 rows from the owner's per-user
-`EntityMemory`). See §7, §15. **Privacy note:** because the owner's `EntityMemory`
-is ~70% `Transfer / P2P`, this table contains real person names that propagate to
-all users.
+`OWNER_EMAIL`, set in `render.yaml` to the owner address) writes to it**; every
+user reads it at Stage 2b of categorization. Added in migration `463ffe6f87a6`.
+Seeded once via the `flask backfill-global-memory` CLI command (614 rows from the
+owner's per-user `EntityMemory`). See §7, §15.
+
+**Current state (2026-08-23): 624 rows.** `scripts/cleanup_global_memory.py`
+removed **9** rows whose `entity_name` was a POS narration's ref number + date +
+`HH:MM:SS` + city that had leaked into the shared table (the pre-2026-07-01
+`_extract_pos_merchant` bug, §15), and recategorized **id 173** (`big basket`)
+from `Transfer / P2P` to `Food & Dining`.
+
+- **Selector was the timestamp regex** `entity_name ~ '\d{1,2}:\d{2}:\d{2}'`, not
+  `length(entity_name) > 40` (identical 9 rows, but the timestamp is what defines
+  the leak) and emphatically **not** `entity_name ~ '[0-9]'` — that matches 27
+  rows and would destroy 18 legitimate merchants (`kims c17`, `grill 9`,
+  `medkart 24`, `bits 01`). The script hard-asserts a match count of exactly 9
+  and rolls back otherwise.
+- **Nothing was deleted by category.** All `Transfer / P2P` rows remain in the
+  table; they are excluded at *read* time instead (§7).
+- **The backup JSON is gitignored and must never be committed.**
+  `scripts/backup_global_memory_*.json` (added to `.gitignore`) is a full
+  pre-cleanup dump — it contains ~400 real person names. Treat it as sensitive
+  data; it exists for restore only.
+
+**Privacy note:** the table still contains real person names (~64% of rows are
+`Transfer / P2P`). Since 2026-08-23 they are no longer *propagated* — Stage 2b
+filters them out at load and the owner write branch refuses to add more — but
+they remain stored. Purging them is a separate policy decision (§15 open items).
 
 ---
 
@@ -345,12 +383,27 @@ all users.
 | POST | `/api/upload-excel` | Full upload pipeline (parse→reimburse→categorize→anomaly→subscription→save) | multipart file `file` | `{status, message, upload_id, new_count, skipped_count, data:{metrics, category_breakdown, anomalies, action_items}}`; 409 on duplicate file; 400 if no debits |
 | GET | `/api/transactions/classified` | All user transactions for drill-down, with subscription flagging | — | `{status, transactions:[{txn_id,date,merchant,description,amount,net_amount,category,entity_type,confidence_level,transaction_type,is_reimbursed,reimbursed_amount,is_subscription,...}], count}` |
 | GET | `/api/transactions/needs-review` | Low-confidence transactions only | — | same row shape, `needs_review:true`; `count` |
-| POST | `/api/transactions/correct` | Recategorize an entity; **validates `new_category` against the 12-value `VALID_CATEGORIES` enum (400 if invalid)**; updates all matching txns + upserts per-user `EntityMemory` + logs `Correction`; **if corrector is the owner (`OWNER_EMAIL`), also upserts `GlobalEntityMemory`** | JSON `{transaction_id\|txn_id, new_category}` | `{status, message, updated_count, aggregates:{category_breakdown}}`; 400 invalid category |
+| POST | `/api/transactions/correct` | Recategorize an entity; **validates `new_category` against the 12-value `VALID_CATEGORIES` enum (400 if invalid)**; updates all matching txns (**`{'category': new_category, 'confidence_level': 'high'}`** — `routes.py:611`) + upserts per-user `EntityMemory` + logs `Correction`; **if corrector is the owner (`OWNER_EMAIL`) *and* `new_category != 'Transfer / P2P'`, also upserts `GlobalEntityMemory`** | JSON `{transaction_id\|txn_id, new_category}` | `{status, message, updated_count, aggregates:{category_breakdown}}`; 400 invalid category |
+
 | GET | `/api/insights/temporal` | MoM changes, fastest-growing, acceleration flags, monthly totals | — | `{status, insights:{data_quality, mom_changes, fastest_growing, acceleration_flags, monthly_totals}}` |
 | GET | `/api/reimbursements/report` | Reimbursement summary from stored data | — | `{status, report:{summary:{gross_spend,net_spend,total_reimbursed}, reimbursements:{...}, config, matched_pairs}}` |
 | GET | `/api/anomalies/report` | Rolling-window z-score category anomalies (every month vs prior-3-month baseline; `threshold=2.5` + ₹1000 min-abs-diff guard — see §16b) | — | `{status, report:{summary, anomalies, metadata}}` |
 | GET | `/api/subscriptions/audit` | Recurring subscription detection | — | `{status, report:{summary, subscriptions, metadata}}` |
 | GET | `/api/corrections/summary` | Feedback-loop proof: correction counts + recent | — | `{status, total_corrections, recent:[{entity_name,old_category,new_category,created_at}]}` |
+
+> **`confidence_level='high'` on correction (2026-08-23).** `/needs-review`
+> filters on `confidence_level == 'low'` (`routes.py:526`), and
+> `correct_transaction()` previously updated only `category` — so a corrected row
+> stayed `low` forever and reappeared in the review queue after every correction.
+> The `corrections` table shows the symptom directly: repeated rows with
+> `old_category == new_category` (the user re-confirming a category that was
+> already right). `'high'` matches what Stage 2 assigns on a per-user
+> `EntityMemory` hit, so a re-upload of the same entity stays consistent.
+> **Forward-only:** rows corrected *before* this change keep
+> `confidence_level='low'` until corrected once more. As of this session **8**
+> such rows exist for the owner account (low-confidence rows that already have a
+> `corrections` entry for the same `entity_name`). No backfill was run — see §15
+> open items.
 
 ### `app/ai/routes.py` (prefix `/api/ai`)
 
@@ -422,13 +475,51 @@ Step by step inside `upload_excel()` (`app/api/routes.py`):
 
 | Stage | Logic | Confidence assigned |
 |---|---|---|
-| **1. Entity resolution** | `EntityResolver.resolve(description, merchant)` → `(entity_name, entity_type)`. Parses UPI/POS/NEFT patterns, known platforms, human-name detection. `entity_type` ∈ {platform, person, merchant, unknown}. **Platform matching is whole-word** (`re.search(rf'\b{re.escape(platform)}\b', …)`) at all 3 sites in `entity_resolver.py` — fixed 2026-06-10 so short tokens like `'VI'` no longer match inside `'VIA'` (see §15). | (no category yet) |
+| **1. Entity resolution** | `EntityResolver.resolve(description, merchant)` → `(entity_name, entity_type)`. Parses UPI/POS/NEFT patterns, known platforms, human-name detection. `entity_type` ∈ {platform, person, merchant, unknown}. **Platform matching is whole-word** (`re.search(rf'\b{re.escape(platform)}\b', …)`) at **four** sites in `entity_resolver.py` — **`:109`** (payment-app sub-merchant), **`:129`** (UPI-extracted name), **`:157`** (full-text scan), **`:179`** (POS re-scan). Sites 1–3 date from the 2026-06-10 `'VI'`/`'VIA'` fix; site 4 was added by the 2026-07-01 POS fix (see §15). | (no category yet) |
 | **2. DB entity memory** | If `user_id` set, look up `entity_name` in per-user `EntityMemory` cache (loaded once at init). If found and `confidence >= 0.9` → return that category. | **high** |
-| **2b. Global entity memory** | `get_global_category(entity_name)` — case-insensitive lookup in the cross-user `GlobalEntityMemory` table, served from a **dict preloaded once per `SmartCategorizer`** (`.lower().strip()`-keyed; previously one DB query per row — see §19.1). Runs for **all** users (ungated). If a row exists → return that category. This is how the owner's corrections propagate to everyone. | **high** |
+| **2b. Global entity memory** | `get_global_category(entity_name)` — case-insensitive lookup in the cross-user `GlobalEntityMemory` table, served from a **dict preloaded once per `SmartCategorizer`** (`.lower().strip()`-keyed; previously one DB query per row — see §19.1). Runs for **all** users (ungated). **`Transfer / P2P` rows are excluded at load** (2026-08-23, see below). If a row exists → return that category. This is how the owner's corrections propagate to everyone. | **high** |
 | **3. JSON shared memory** | **H5-DISABLED** — `self.memory = None`; all `self.memory.*` calls commented out (the old *file-based* global JSON cache; superseded by the DB-backed Stage 2b above). | n/a |
 | **4. Entity-based category** | `EntityResolver.categorize_by_entity(entity_name, entity_type)`. Persons → `Transfer / P2P`; platforms mapped to category sets; merchants by keyword. | platform → **high**, else **medium** |
 | **5. Keyword matching** | Substring match of `"{merchant} {description}".lower()` against `category_keywords` dict (Food & Dining, Transport, Shopping, Utilities, Entertainment, Healthcare, Rent, Education, ATM / Cash). Substring matching is intentional for noisy bank strings; the one exception is the Utilities `vi` token, which was changed to `'vodafone vi'` + `' vi '` (space-padded) so it only matches standalone, not inside `'VIA'`/`'INVOICE'` (2026-06-10, see §15). | **medium** |
 | **Fallthrough** | No match. | `Other`, **low** |
+
+### Stage 2b — `Transfer / P2P` exclusion (2026-08-23)
+
+`GLOBAL_MEMORY_EXCLUDED_CATEGORY = 'Transfer / P2P'` is defined in
+**`app/analytics/categorization.py:8`** — that module owns it. It is enforced on
+**both** sides of the cross-user path:
+
+- **Read:** `_load_global_cache()` (`categorization.py:108`) filters the preload
+  with `GlobalEntityMemory.category != GLOBAL_MEMORY_EXCLUDED_CATEGORY`
+  (`:128-129`), so P2P entries never enter `self._global_cache`.
+- **Write:** `correct_transaction()` imports the same constant
+  (`api/routes.py:16`) and gates the owner branch on
+  `new_category != GLOBAL_MEMORY_EXCLUDED_CATEGORY` (`:648`). The gate sits on
+  the whole branch, so re-categorizing an *existing* global row **to** P2P is
+  refused as well, not just fresh inserts.
+
+`routes.py` importing the constant rather than re-declaring the string is
+deliberate: read and write rules cannot drift apart, and there is one place to
+change if the policy changes. (Contrast `VALID_CATEGORIES`, which *is*
+duplicated — §15.)
+
+**Rationale.** That category is almost entirely real person names lifted from
+UPI narrations, and this cache is the exact mechanism by which one account's
+entries reach every other account. A person name also carries no cross-user
+signal, so the exclusion costs nothing in accuracy.
+
+**Consequence — category unchanged, confidence lowered.** P2P narrations still
+resolve correctly, just one stage later: Stage 2b now misses, and **Stage 4's
+`person` branch** assigns `Transfer / P2P` on its own. The observable difference
+is `confidence_level` **`high` → `medium`**, which is the more honest value —
+those rows were never genuinely high-confidence cross-user knowledge. Verified
+end-to-end: SBI and HDFC UPI person narrations both still yield
+`Transfer / P2P (medium)`; platform rows (`Swiggy`, `Bigbasket`) are unaffected
+at `high`.
+
+**Cache size:** 624 → **226** entries (398 P2P entries dropped, 63.8% of the
+cache). **No DB rows were deleted** — this is a read-path filter; the table still
+holds all 624 rows including the 398 P2P ones.
 
 > **Quirk:** `categorize_by_entity` can return `'Investment'` (Groww/Zerodha/
 > Upstox/Angelone/Kite) — a category that is **not** in the dashboard's
@@ -694,6 +785,18 @@ services:
 - **SBI POS card-swipe merchant fix (2026-07-09)** — the sibling of the HDFC fix above, for SBI's *space-delimited* POS narrations. `sbi_parser.extract_merchant_name()` now **reuses** `EntityResolver._extract_pos_merchant()` (HH:MM:SS-anchored) after its slash regex fails and before the `words[0]` fallback, so the `merchant` column is no longer the literal `"Pos"`; and `entity_resolver.resolve()` now runs the POS block **before** the `local_keywords` loop so a POS name containing a keyword (`FILLING`/`STORE`/`CAFE`/…) is extracted rather than overwritten by the junk `merchant`. Unlike the HDFC bullet's "merchant column is inert" note, for SBI the parser column is now correct too. `categorization.py` and entity memory untouched — clearing stale `Pos` memory rows is a deliberately-separate follow-up. See §18.9.
 - **Temporal "Fastest Growing" card — dead "View Details" button removed (2026-07-09)** — the button had no `href`/`onclick`/listener (purely decorative). Removed and replaced with a compact horizontal stats row (month range, `₹prev → ₹current`, txn count) in `renderTemporal()` (`newDashboard.html`). `temporal_insights.get_fastest_growing_category()` now also returns `transaction_count`/`current_month`/`previous_month` (already computed upstream in `calculate_mom_changes()`); the `/api/insights/temporal` `fastest_growing` object is a superset — no breaking change. See §11.
 - **Latent items:** `get_user_transactions_df` uses `t.transaction_type or ''` (a NULL type would silently drop a row from detection); `/transactions/classified` and `/needs-review` hardcode `'transaction_type': 'debit'` in their serialized output. Credits receive no `entity_type` at detector time (v4 no longer relies on it). The `_owner_email()` gate writes nothing if `OWNER_EMAIL` is unset.
+- **`Transfer / P2P` excluded from cross-user memory (2026-08-23)** — `GLOBAL_MEMORY_EXCLUDED_CATEGORY` (`categorization.py:8`) is enforced on the Stage 2b read path and the owner write branch (`routes.py:648`, importing the constant so the two cannot drift). This **partially reverses** the 2026-06-10 "accepted privacy tradeoff" above: person names are no longer *propagated* cross-user, though existing rows are still *stored*. Cache 624 → 226 entries. Category output is unchanged (Stage 4 handles persons); confidence drops `high` → `medium`. See §7.
+
+### Open items (as of 2026-08-23)
+
+- **[HIGH] RLS on `transactions` is not implemented.** `inject_user_id` uses first-match regex substitution to enforce a scope-sensitive isolation invariant. `check_query_scope()` mitigates by refusing multi-SELECT / multi-reference queries, but that rejects legitimate questions and is explicitly a stopgap. **Full detail, the RLS DDL, and the caveats are in §20.5.**
+- **[MED] 8 low-confidence rows await re-correction.** `correct_transaction()` now sets `confidence_level='high'`, but the fix is forward-only. As of this session **8** transactions on the owner account are still `confidence_level='low'` *and* already have a `corrections` row for the same `entity_name` — i.e. previously corrected but never cleared from `/needs-review`. They stay in the review queue until corrected once more. No backfill was run; a one-off `UPDATE` scoped to that exact predicate would clear them.
+- **[MED] `app/cli.py:186` defaults `OWNER_EMAIL` to a placeholder instead of aborting.**
+  ```python
+  owner_email = os.environ.get('OWNER_EMAIL', 'snn@example.com').strip().lower()
+  ```
+  When `OWNER_EMAIL` is unset the backfill silently seeds `GlobalEntityMemory` from whichever account happens to match the placeholder rather than failing loudly. This already happened: **612 of the 633 pre-cleanup rows** were contributed by the placeholder account, not the real owner — the backfill ran before `render.yaml` was corrected. Note the request-time gate `_owner_email()` (`routes.py:45`) does the right thing and returns `''` (no writes) when unset; only the CLI has the unsafe default. **It should abort when `OWNER_EMAIL` is missing**, matching the route's fail-safe behaviour.
+- **[LOW] `Transfer / P2P` rows remain stored in `global_entity_memory`** (~64% of 624 rows, real person names). No longer propagated (§7), but purging them is a separate policy call — see §3.
 
 ---
 
@@ -1095,6 +1198,139 @@ from inserting a mixed-case key that the preloaded dict would then fail to match
 - **Deploy:** rides the normal path — `render.yaml`'s `buildCommand` already runs
   `flask db upgrade` on deploy (§14), so it applies automatically on the next
   deploy with no manual step.
+
+---
+
+## 20. AI Query Engine — Isolation Model (`app/ai/query_engine.py`, 2026-08-23)
+
+The SQL path (`run_query_pipeline`, intent `sql`) is the only place where
+model-authored text reaches the database. Four layers now stand between Gemini's
+output and `execute_query()`, in this order.
+
+### 20.1 Pipeline order
+
+```
+generate_sql()  →  validate_sql()  →  check_query_scope()  →  inject_user_id()  →  execute_query()
+                   :246                :311                   :358
+```
+
+`check_query_scope()` is called at **`query_engine.py:513`**, deliberately
+*after* `validate_sql` and *before* `inject_user_id`. It returns
+`(bool, reason)`; on failure `run_query_pipeline` returns the ordinary
+`{'status': 'error', 'message': reason}` shape, which `ai/routes.py:58-59` maps
+to **HTTP 400** — not a 500, and not an exception.
+
+### 20.2 `check_query_scope()` — the two rules
+
+| Rule | Why it exists |
+|---|---|
+| **>1 `SELECT` → reject** | `inject_user_id` rewrites the **first** lexical match with `count=1` and no notion of scope. When a subquery appears in the SELECT list, *its* `WHERE` is the first one in the string, so the predicate lands inside the parentheses and the **outer scan is left unfiltered**. Measured before the guard: a correlated subquery returned **14,916 rows spanning 10 distinct `user_id`s** where the caller was entitled to 2,525. A scalar-subquery variant (`WHERE amount > (SELECT AVG(amount) FROM transactions)`) leaks in the other direction — the outer query is filtered but the inner aggregate is computed over every user's data. |
+| **>1 `transactions` → reject** | Self-joins put a second, unconstrained reference to the table in scope. The injected predicate can only bind to one of them. These shapes happened to fail with `AmbiguousColumn` before the guard, which looked like protection but was only a name collision — it disappears the moment the model qualifies its predicates. |
+
+Both rules return a plain-language message ("that question needs a nested
+query…") rather than a generic refusal, since the user did nothing wrong.
+
+**This is a stopgap, not the fix.** See §20.5.
+
+### 20.3 `ALLOWED_TABLES` — allowlist is the control
+
+```python
+ALLOWED_TABLES = {'transactions'}          # query_engine.py:31
+```
+
+`validate_sql` extracts every relation named after `FROM`/`JOIN` via
+`_referenced_tables()` (`:298`) and rejects anything outside the set (`:292`).
+`FORBIDDEN_TABLES` is **retained as a second layer** above it, but the allowlist
+is what actually holds. `_NON_TABLE_TOKENS` (`:35`) prevents clause keywords
+being mistaken for relation names.
+
+### 20.4 Why the denylist missed `global_entity_memory` — a recurring bug class
+
+`FORBIDDEN_TABLES` contains `entity_memory`, and the check is
+`re.search(rf'\b{re.escape(table)}\b', sql, re.IGNORECASE)`. That does **not**
+match inside `global_entity_memory`:
+
+```python
+re.search(r'\bentity_memory\b', 'global_entity_memory')  # → None
+```
+
+`_` is a word character, so there is no `\b` boundary between `global_` and
+`entity_memory`. A denylist entry can never cover a table whose name merely
+*contains* it. `global_entity_memory`, and `alembic_version`, were both
+reachable through the denylist.
+
+> **This is the same root cause as the `WWWBIGBASKETCOM` match failure (§15).**
+> There, `\bBIGBASKET\b` failed to match inside `WWWBIGBASKETCOM` because every
+> character is a word character, so the platform scan missed a brand that was
+> plainly present. Here, `\bentity_memory\b` failed to match inside
+> `global_entity_memory` for exactly the same reason, and a security control
+> silently did nothing. **Word-boundary matching against concatenated
+> identifiers is a recurring bug class in this codebase.** Both incidents share
+> the shape "`\b` assumed a boundary that the underscore/concatenation removed."
+> When adding any `\b`-based check, ask first whether the target can appear glued
+> to other word characters — and prefer an allowlist over a denylist wherever the
+> set of valid values is small and known.
+
+### 20.5 OPEN TECH DEBT — `inject_user_id` enforces a scope-sensitive invariant with first-match regex
+
+**Status: open. RLS is NOT implemented.**
+
+The defect is structural, not a bug in any one branch.
+`inject_user_id` (`:358`) has four branches — existing `user_id=` / existing
+`WHERE` / clause-keyword insertion / append-at-end — and **every one uses
+first-match (`count=1`) substitution on an unparsed string**. The invariant it is
+being asked to guarantee is *"every relation named `transactions` in this query
+is constrained by `user_id = {uid}`"*, which is scope-sensitive. A lexical
+substitution cannot express that, and no additional regex makes a regex
+scope-aware — each patch only moves the first-match boundary.
+
+`check_query_scope()` closes the hole by **refusing the shapes the rewrite cannot
+handle**. That is a real mitigation (verified: the leak query now returns 2,525
+rows, and every leak shape from the audit is blocked) but it has a cost — it
+rejects legitimate questions. *"Which of my transactions are above my average
+spend?"* is a reasonable ask, is emitted by Gemini as a scalar subquery, and now
+returns the nested-query message instead of an answer.
+
+**The durable fix is row-level security on `transactions`:**
+
+```sql
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY txn_isolation ON transactions
+  USING (user_id = current_setting('app.user_id')::int);
+```
+
+with `execute_query()` issuing `SET LOCAL app.user_id = …` on the same connection
+inside a transaction. Then an unfiltered outer scan physically returns only that
+user's rows, `inject_user_id` degrades from a security control to a query
+optimization, and the shape restriction in §20.2 can be relaxed. **Caveats to
+handle when doing it:** the AI role must not hold `BYPASSRLS` and must not be the
+table owner (owners bypass RLS unless `FORCE ROW LEVEL SECURITY` is set), and
+`SET LOCAL` must be scoped correctly against the connection pool.
+
+*Alternative if RLS proves impractical:* parse with `sqlglot` and inject per
+scope. Genuinely scope-aware, but must fail **closed** on `ParseError`, and it
+keeps enforcement in the same process that already got it wrong once.
+
+### 20.6 `_table_qualifier()` — alias-qualified exclusion predicate
+
+`inject_user_id` appends `entity_type != 'internal'` alongside the `user_id`
+filter (§18.8). Unqualified, that threw `AmbiguousColumn` whenever more than one
+relation exposed `entity_type` — an error that **read like a security control but
+was not one**, since it depended purely on a name collision. `_table_qualifier()`
+(`:342`) reads the alias bound to `transactions` (falling back to the bare table
+name) so the predicate is now emitted as `t.entity_type != 'internal'` /
+`transactions.entity_type != 'internal'` (`:370`). Accidental errors no longer
+masquerade as protection; `check_query_scope()` is the control.
+
+### 20.7 Defence in depth — the DB grant
+
+The AI connects as **`arthalens_ai_reader`** via `AI_DB_URL`. `SELECT` is granted
+on **`transactions` only**; `global_entity_memory`, `entity_memory`,
+`corrections`, `users`, `uploads_log`, and `alembic_version` all return
+`InsufficientPrivilege`. Worth internalising: **during the audit this grant was
+the only layer that actually held** when the application-level denylist failed
+(§20.4). Keep app-level checks and DB grants in agreement, and treat the grant as
+the backstop rather than the app code.
 
 ---
 
