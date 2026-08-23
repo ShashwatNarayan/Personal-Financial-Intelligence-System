@@ -1,6 +1,12 @@
 from app.analytics.entity_resolver import EntityResolver
 from app.analytics.entity_memory import EntityMemory
 
+# Never shared cross-user through GlobalEntityMemory: this category holds real
+# person names extracted from UPI narrations. Enforced on both sides — the
+# Stage 2b read path (_load_global_cache below) and the owner write path in
+# app/api/routes.py correct_transaction().
+GLOBAL_MEMORY_EXCLUDED_CATEGORY = 'Transfer / P2P'
+
 
 class SmartCategorizer:
     """Enhanced categorizer with persistent memory and per-user DB corrections."""
@@ -103,14 +109,25 @@ class SmartCategorizer:
         """Pre-load the ENTIRE GlobalEntityMemory table — one query, avoids the
         per-row N+1 in categorize_dataframe (was ~1 query/row, ~52ms each).
 
-        This table is cross-user, so the load is unfiltered (no user scoping,
-        no limit, no pagination). Keys are normalized with .lower().strip() to
-        match the case-insensitive lookup that get_global_category performs —
-        stored names are already lowercase, but the resolver hands in
-        Title-cased names, so both sides must be normalized identically.
+        This table is cross-user, so the load is unfiltered by user (no user
+        scoping, no limit, no pagination). Keys are normalized with
+        .lower().strip() to match the case-insensitive lookup that
+        get_global_category performs — stored names are already lowercase, but
+        the resolver hands in Title-cased names, so both sides must be
+        normalized identically.
+
+        'Transfer / P2P' rows are excluded. That category is almost entirely
+        real person names from UPI narrations, and this cache is the mechanism
+        by which one account's entries reach every other account — so those
+        names must never enter it. The exclusion also costs nothing in accuracy:
+        a person name carries no cross-user signal, and Stage 4 already routes
+        entity_type 'person' to 'Transfer / P2P' on its own. Rows are left in
+        the table; this filters the read path only.
         """
         from app.models import GlobalEntityMemory
-        rows = GlobalEntityMemory.query.all()
+        rows = GlobalEntityMemory.query.filter(
+            GlobalEntityMemory.category != GLOBAL_MEMORY_EXCLUDED_CATEGORY
+        ).all()
         self._global_cache = {
             r.entity_name.lower().strip(): r.category for r in rows
         }

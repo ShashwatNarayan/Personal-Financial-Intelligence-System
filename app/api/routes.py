@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 from app import db
 from app.api import api_bp
 from app.analytics.bank_detector import detect_bank, get_parser
-from app.analytics.categorization import SmartCategorizer
+from app.analytics.categorization import GLOBAL_MEMORY_EXCLUDED_CATEGORY, SmartCategorizer
 from app.models import Correction, EntityMemory, GlobalEntityMemory, Transaction, UploadLog
 
 logger = logging.getLogger(__name__)
@@ -634,9 +634,20 @@ def correct_transaction():
 
         # Owner-seeded global memory: only the base account's corrections are
         # written to the cross-user GlobalEntityMemory store (upsert).
+        #
+        # 'Transfer / P2P' is never written. That category is almost entirely
+        # real person names from UPI narrations, and this store propagates to
+        # every account. The gate covers the update path as well as the insert,
+        # so re-categorizing an existing global row TO P2P is also refused.
+        # Mirrors the read-side exclusion in _load_global_cache().
         owner_email = _owner_email()
         norm_name = (entity_name or '').lower().strip()
-        if owner_email and norm_name and (current_user.email or '').strip().lower() == owner_email:
+        if (
+            owner_email
+            and norm_name
+            and new_category != GLOBAL_MEMORY_EXCLUDED_CATEGORY
+            and (current_user.email or '').strip().lower() == owner_email
+        ):
             global_record = GlobalEntityMemory.query.filter(
                 db.func.lower(GlobalEntityMemory.entity_name) == norm_name
             ).first()
