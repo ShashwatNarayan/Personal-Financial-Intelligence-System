@@ -31,6 +31,10 @@
     --accent-soft: rgba(214, 180, 252, 0.14);   /* accent tint fill */
     --accent-border: rgba(214, 180, 252, 0.32); /* accent tint border */
     --row-hover: rgba(214, 180, 252, 0.10);     /* subtle violet tint */
+    --panel-bg: #17184B;                        /* AI popup: solid, opaque (no glass/gradient) */
+    --panel-input-bg: #22245E;                  /* AI popup input: flat solid, slight offset */
+    --ai-fab-bg: #273287;                       /* AI FAB circle — darker than accent in dark mode */
+    --ai-fab-fg: #F0EEE9;                       /* AI FAB glyph on the darker circle */
   }
   html.light-mode {
     /* Light mode = left strip: vertical wash, Cloud Dancer → Nordic Breeze → Light Violet */
@@ -46,6 +50,10 @@
     --accent-soft: rgba(216, 230, 60, 0.18);
     --accent-border: rgba(216, 230, 60, 0.38);
     --row-hover: rgba(216, 230, 60, 0.14);       /* subtle yellow tint */
+    --panel-bg: #F0EEE9;                         /* AI popup: solid, opaque */
+    --panel-input-bg: #E4E1DA;                   /* AI popup input: flat solid, slight offset */
+    --ai-fab-bg: #D8E63C;                        /* AI FAB circle — accent yellow (light mode unchanged) */
+    --ai-fab-fg: #17184B;
   }
   /* Light-mode overrides (only what CSS variables can't express — matches dashboard) */
   html.light-mode .text-white { color: var(--text-primary) !important; }
@@ -924,6 +932,218 @@ document.addEventListener('click', () => {
 initTheme();
 initFromURLParams();
 loadTransactions();
+</script>
+
+<!-- ── AI Chat Widget (ArthaLens AI) ────────────────────────────────────────
+     Per-page copy, ported verbatim from newDashboard.html. Same duplication
+     convention as _setMobileNav / initTheme: these dashboard templates are
+     standalone documents with no shared partial. Keep the two copies in sync. -->
+<style>
+  .ai-msg-user {
+    align-self: flex-end;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+    color: var(--text-primary);
+    border-radius: 12px 12px 2px 12px;
+    padding: 8px 12px; max-width: 80%; font-size: 13px; line-height: 1.45;
+  }
+  .ai-msg-bot {
+    align-self: flex-start;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 12px 12px 12px 2px;
+    padding: 8px 12px; max-width: 80%; font-size: 13px; line-height: 1.45;
+  }
+  .ai-msg-loading { color: var(--text-secondary); font-style: italic; }
+  .ai-msg-error { border-color: rgba(255,68,68,0.40) !important; color: #ff6b6b !important; }
+
+  /* Shell geometry lives here, NOT in inline styles: the mobile block below has
+     to override bottom/right/width/height, and an inline style would force an
+     !important on every one of those declarations. */
+  #aiChatFab {
+    position: fixed;
+    bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+    right: 28px;
+    /* 40 = above page content (tops out at 20, see .nav-mobile-panel) but below
+       the navbar's stacking context (z-50, opened by its backdrop-filter — the
+       profile dropdown and mobile nav ride inside it). Matches the dashboard,
+       where the same value also keeps the FAB under #subs-modal (z-100). */
+    z-index: 40;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--ai-fab-bg);
+    color: var(--ai-fab-fg);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.30);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: transform 0.2s;
+  }
+  #aiChatFab:hover { transform: scale(1.08); }
+  /* The panel expands onto the FAB's own anchor, so the FAB is removed from the
+     layout outright rather than covered — otherwise it shows through the
+     panel's rounded corners. */
+  #aiChatFab.ai-hidden { display: none; }
+
+  #aiChatPanel {
+    position: fixed;
+    bottom: calc(28px + env(safe-area-inset-bottom, 0px));  /* same anchor as the FAB */
+    right: 28px;
+    z-index: 40;
+    width: 360px;
+    height: 480px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    display: none;
+    overflow: hidden;               /* keeps the composer's corners inside the radius */
+  }
+  #aiChatPanel.open { display: flex; flex-direction: column; animation: aiSlideUp 0.2s ease; }
+  @keyframes aiSlideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+  /* Single source of truth for the scroll area's height: it takes whatever the
+     header, subtitle and composer leave over. min-height:0 is what lets a flex
+     child actually scroll. */
+  #aiChatHistory { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+  /* Below md the fixed 360x480 box overflows a 375px viewport (360 + 28 right
+     margin = 388). Same 767.98px cut-off as the nav rules above. */
+  @media (max-width: 767.98px) {
+    #aiChatFab {
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+    }
+    #aiChatPanel {
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+      left: 20px;                   /* both edges pinned → width follows the viewport */
+      width: auto;
+      height: min(70vh, 480px);     /* never taller than the phone, never bigger than desktop */
+    }
+  }
+</style>
+
+<button id="aiChatFab" onclick="toggleAiChat()" aria-label="Open ArthaLens AI" aria-expanded="false"
+  aria-controls="aiChatPanel">
+  ✦
+</button>
+
+<div id="aiChatPanel">
+
+  <div style="flex-shrink:0;padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="color:var(--accent-text);font-size:18px;">✦</span>
+      <span style="font-weight:700;color:var(--text-primary);font-size:15px;">ArthaLens AI</span>
+      <span style="font-size:10px;padding:2px 6px;background:var(--accent-soft);color:var(--accent-text);border-radius:4px;border:1px solid var(--accent-border);">Beta</span>
+    </div>
+    <button onclick="toggleAiChat()" aria-label="Close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;line-height:1;padding:0;">✕</button>
+  </div>
+
+  <div style="flex-shrink:0;padding:8px 16px 10px;color:var(--text-secondary);font-size:12px;">Ask anything about your spending</div>
+
+  <div id="aiChatHistory"
+    style="display:flex;flex-direction:column;gap:8px;padding:12px 16px;">
+    <div class="ai-msg-bot">Hi! Try asking: <em>How much did I spend on food last month?</em> or <em>Who did I pay the most?</em></div>
+  </div>
+
+  <div style="flex-shrink:0;padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;box-sizing:border-box;background:var(--panel-bg);">
+    <input id="aiQuestionInput" type="text" placeholder="Ask about your spending..." maxlength="500"
+      style="flex:1;background:var(--panel-input-bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;outline:none;"
+      onkeydown="if(event.key==='Enter') submitAiQuery()">
+    <button id="aiSendBtn" onclick="submitAiQuery()"
+      style="background:var(--accent);color:var(--on-accent);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;">
+      Send
+    </button>
+  </div>
+</div>
+
+<script>
+function aiEsc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Open/close ----
+// Mirrors the mobile-nav helper (toggleMobileNav/_setMobileNav above): one
+// `.open` class, aria state synced on the trigger, a document click listener
+// that bails early when closed and ignores clicks inside the panel or on the
+// FAB, and a paired Escape handler.
+// Deliberately does NOT stopPropagation, for the same reason spelled out at the
+// mobile-nav helper: the profile dropdown's own document listener has to keep
+// seeing these clicks or it stops closing on outside click.
+function toggleAiChat() {
+  const panel = document.getElementById('aiChatPanel');
+  if (!panel) return;
+  _setAiChat(!panel.classList.contains('open'));
+}
+function _setAiChat(open) {
+  const panel = document.getElementById('aiChatPanel');
+  const fab   = document.getElementById('aiChatFab');
+  if (!panel) return;
+  panel.classList.toggle('open', open);
+  if (fab) {
+    // Hidden, not covered — the panel now occupies the FAB's exact anchor.
+    fab.classList.toggle('ai-hidden', open);
+    fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+    fab.setAttribute('aria-label', open ? 'Close ArthaLens AI' : 'Open ArthaLens AI');
+  }
+  if (open) setTimeout(() => document.getElementById('aiQuestionInput')?.focus(), 50);
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('aiChatPanel');
+  const fab   = document.getElementById('aiChatFab');
+  if (!panel || !panel.classList.contains('open')) return;
+  if (panel.contains(e.target) || (fab && fab.contains(e.target))) return;
+  _setAiChat(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') _setAiChat(false);
+});
+
+async function submitAiQuery() {
+  const input = document.getElementById('aiQuestionInput');
+  const question = input.value.trim();
+  if (!question) return;
+
+  const history = document.getElementById('aiChatHistory');
+  const btn = document.getElementById('aiSendBtn');
+
+  history.innerHTML += `<div class="ai-msg-user">${aiEsc(question)}</div>`;
+  input.value = '';
+  btn.disabled = true;
+
+  const loadId = 'ai-load-' + Date.now();
+  history.innerHTML += `<div class="ai-msg-bot ai-msg-loading" id="${loadId}">✦ Thinking…</div>`;
+  history.scrollTop = history.scrollHeight;
+
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const res = await fetch('/api/ai/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify({ question })
+    });
+    const data = await res.json();
+    document.getElementById(loadId)?.remove();
+    // Route returns { status:'success', answer } or { status:'error', message }
+    if (data.status === 'success') {
+      history.innerHTML += `<div class="ai-msg-bot">✦ ${aiEsc(data.answer)}</div>`;
+    } else {
+      history.innerHTML += `<div class="ai-msg-bot ai-msg-error">⚠ ${aiEsc(data.message || 'Something went wrong.')}</div>`;
+    }
+  } catch (e) {
+    document.getElementById(loadId)?.remove();
+    history.innerHTML += `<div class="ai-msg-bot ai-msg-error">⚠ Connection error. Try again.</div>`;
+  } finally {
+    btn.disabled = false;
+    history.scrollTop = history.scrollHeight;
+  }
+}
 </script>
 </body>
 </html>
