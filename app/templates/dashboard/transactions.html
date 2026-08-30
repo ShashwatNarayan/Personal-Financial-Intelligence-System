@@ -232,6 +232,185 @@
     color: var(--text-secondary);
     flex-shrink: 0;
   }
+
+  /* ==========================================================================
+     MOBILE (<768px) — everything below this comment is inside a
+     `@media (max-width: 767.98px)` block, matching the two existing uses of
+     that breakpoint in this file (.nav-mobile-toggle above, #aiChatPanel in the
+     second <style> block). Nothing here changes rendering at 768px and up.
+
+     Written as page-local CSS rather than utilities on purpose:
+     tailwind.output.css is a committed artifact and render.yaml's buildCommand
+     runs `pip install` + `flask db upgrade` only — there is no CSS build step
+     in the deploy path, so a class that is not already in the bundle fails
+     silently in production. `truncate`, `tabular-nums` and `min-w-0` are all
+     absent from it, so they are written out longhand below.
+     ========================================================================== */
+
+  /* Compact currency: BOTH formats sit in the DOM at all times and CSS picks
+     one. No JS resize listener — the markup never changes, only its visibility.
+     This base rule is necessarily OUTSIDE the media query, or both spans would
+     render on desktop. It only ever matches markup introduced by fmtAmtDual,
+     and its desktop effect is to leave exactly today's rendering: the full
+     `₹1,63,240.00` figure, alone. */
+  .amt-short { display: none; }
+  @media (max-width: 767.98px) {
+    .amt-full  { display: none; }
+    .amt-short { display: inline; }
+  }
+
+  @media (max-width: 767.98px) {
+    /* ---- Transactions table → stacked cards -------------------------------
+       The <table>/<tbody>/<tr>/<td> elements all survive; only their `display`
+       changes. openEdit() does btn.closest('tr') and row.querySelector(
+       '.cat-cell'), and four states hardcode colspan="5" — a CSS-only
+       relayout keeps every one of those working untouched.
+
+           Merchant Name                    ₹2.5k
+           [icon] 30 Aug, 2026                  ✏️
+    */
+    .txn-table       { display: block; }
+    .txn-table thead { display: none; }
+    #txn-tbody       { display: block; }
+
+    #txn-tbody tr {
+      display: grid;
+      /* col 1 sizes to the category icon, col 2 absorbs the slack, col 3 sizes
+         to the wider of the amount and the edit button. */
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "merchant merchant amount"
+        "cat      date     edit";
+      align-items: center;
+      column-gap: 8px;
+      row-gap: 2px;
+      /* px-6 py-4 is neutralised on the cells below, so the breathing room has
+         to come back on the row. The :64 border-bottom still divides them. */
+      padding: 12px 16px;
+    }
+
+    #txn-tbody td { display: block; padding: 0; }
+
+    /* Assign each existing cell to a slot by position, so the JS row template
+       literal needs no change at all. */
+    #txn-tbody td:nth-child(1) { grid-area: date; }
+    #txn-tbody td:nth-child(2) { grid-area: merchant; }
+    #txn-tbody td:nth-child(3) { grid-area: cat; }
+    #txn-tbody td:nth-child(4) { grid-area: amount; }
+    #txn-tbody td:nth-child(5) { grid-area: edit; }
+
+    /* The empty / no-match / all-shown / fetch-error rows are a single
+       colspan="5" cell. They must span the whole card, not land in a slot.
+       Higher specificity than the :nth-child rules above, so this wins. */
+    #txn-tbody tr > td:only-child {
+      grid-column: 1 / -1;
+      grid-row: 1 / -1;
+      padding: 12px 16px;
+    }
+
+    /* Merchant — primary line. `truncate` is not in the bundle, so the three
+       properties are written out; min-width:0 is what actually lets the grid
+       track shrink below the text's min-content width. */
+    #txn-tbody td:nth-child(2) {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Date — secondary line, smaller. It already carries an inline
+       var(--text-secondary), so it is muted without an override. */
+    #txn-tbody td:nth-child(1) {
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* Amount — top-right, bold. `tabular-nums` is not in the bundle. */
+    #txn-tbody td:nth-child(4) {
+      text-align: right;
+      font-weight: 700;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Edit button — bottom-right, under the amount. The <button> and its
+       data-txn-id / data-category are untouched. */
+    #txn-tbody td:nth-child(5) { text-align: right; }
+
+    /* ---- Category: icon only --------------------------------------------
+       catPill() renders the icon and the text badge as two sibling spans, so
+       the label hides independently. The wrapper's inline gap:6px collapses on
+       its own once the second flex item is display:none — no !important.
+       Does not match the inline editor, which replaces .cat-cell's contents
+       with a <div>, not a <span>. */
+    .cat-cell > span > span:last-child { display: none; }
+
+    /* ---- Header: one row, title left / upload icon button right ----------
+       The header is `flex flex-col md:flex-row`, so below 768px it stacks and
+       the button drops onto its own line. Overriding the direction here rather
+       than adding an `sm:` variant, which would not be in the bundle. */
+    .txn-header {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      /* gap-4 was separating stacked rows; with space-between and two items it
+         now only ever binds if the title grows into the button. 12px is a
+         floor, not spacing — the two are pushed apart anyway. */
+      gap: 12px;
+    }
+
+    /* min-width:0 is what lets the title column give way instead of shoving the
+       button off-screen. The utility is absent from the bundle, so: longhand. */
+    .txn-header-titles { min-width: 0; }
+
+    /* mb-1 sat between the h1 and the subtitle. With the subtitle hidden it is
+       4px of dead space below the heading, which pulls the h1 off the button's
+       centre line. Mobile only — the desktop margin is untouched. */
+    .txn-header-titles h1 { margin-bottom: 0; }
+
+    /* #page-subtitle stays in the DOM: initFromURLParams() and clearAllFilters()
+       both write to it via getElementById with no null guard. Hidden, not
+       removed. Nothing is lost: the subtitle only ever reads "Filtered: …" in
+       the two branches of initFromURLParams() that also set the active-filter
+       banner to display:flex, and that banner names both the month AND the
+       category where the subtitle shows only the last one written. */
+    #page-subtitle { display: none; }
+
+    .upload-btn-label { display: none; }
+    .upload-btn {
+      padding: 0;
+      /* Explicit width also stops the column-flex header from stretching it;
+         flex-shrink:0 keeps the 44x44 tap target when the title column is wide. */
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      gap: 0;
+      justify-content: center;
+    }
+
+    /* ---- Filter panel on one line ----------------------------------------
+       w-48 (192px) on the search box forces the two selects to wrap at 360px.
+       Overridden by descendant selector rather than a new w-[…] class, which
+       would not be in the bundle. All three shrink proportionally from a zero
+       basis, so the row fits any width without wrapping. */
+    .txn-controls { flex-wrap: nowrap; gap: 6px; width: 100%; }
+    .txn-controls > .relative { flex: 1 1 0; min-width: 0; }
+    .txn-controls > .relative:first-child { flex: 1.4 1 0; }
+
+    /* #txn-search stays in the DOM — clearAllFilters() writes to it with no
+       null guard — and keeps its inline oninput="filterTransactions()". */
+    #txn-search {
+      width: 100%;
+      padding: 8px 8px 8px 28px;
+    }
+
+    /* Both stay native <select>s so the OS picker handles the tap. */
+    #cat-filter, #sort-select {
+      width: 100%;
+      font-size: 12px;
+      padding: 8px 20px 8px 8px;
+    }
+  }
 </style>
 </head>
 <body class="font-body-md min-h-screen overflow-x-hidden">
@@ -336,14 +515,14 @@
     <!-- Page header — matches dashboard "Spending Dashboard" header styling.
          Upload Statement button moved here (was in the navbar) to sit parallel
          with the title, exactly like the dashboard header. -->
-    <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div>
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-4 txn-header">
+      <div class="txn-header-titles">
         <h1 class="font-headline-lg font-bold text-white mb-1">Transactions</h1>
         <p class="font-body-md" style="color:var(--text-secondary)" id="page-subtitle">All your transactions</p>
       </div>
       <!-- Upload button — same pill/rounded shape + accent colour as the dashboard version -->
-      <a href="{{ url_for('main.upload') }}" class="bg-accent font-medium px-4 py-2 rounded-full transition-colors flex items-center gap-2 no-underline">
-        <span class="material-symbols-outlined text-[18px]">upload</span> Upload Statement
+      <a href="{{ url_for('main.upload') }}" class="bg-accent font-medium px-4 py-2 rounded-full transition-colors flex items-center gap-2 no-underline upload-btn">
+        <span class="material-symbols-outlined text-[18px]">upload</span> <span class="upload-btn-label">Upload Statement</span>
       </a>
     </header>
 
@@ -360,7 +539,7 @@
     <!-- Filter / search bar — wrapped in a glass-card container (item 1) -->
     <div class="glass-card flex flex-col sm:flex-row sm:items-center justify-between gap-4" style="padding:12px 16px;border-radius:8px">
       <div id="txn-count-label" class="text-sm" style="color:var(--text-secondary)">Loading...</div>
-      <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap txn-controls">
         <!-- Search -->
         <div class="relative">
           <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style="font-size:16px;color:var(--text-secondary)">search</span>
@@ -409,7 +588,7 @@
     <!-- Transactions table card (glass via .card) -->
     <div class="card overflow-hidden flex flex-col" style="padding:0">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+        <table class="w-full text-left border-collapse txn-table">
           <thead>
             <tr style="background:var(--navbar);border-bottom:1px solid var(--border)">
               <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest w-[100px]" style="color:var(--text-secondary)">Date</th>
@@ -579,7 +758,10 @@ const CAT_ICON_NAMES = {
 function catIcon(cat) {
   const name = CAT_ICON_NAMES[cat] || CAT_ICON_NAMES['Other'];
   const c = CAT_COLORS[cat] || CAT_COLORS['Other'];
-  return `<span class="material-symbols-outlined" style="font-size:18px;line-height:1;color:${c.text};flex-shrink:0;vertical-align:middle">${name}</span>`;
+  // role="img" + aria-label give the glyph a real accessible name. Without it a
+  // screen reader announces the raw ligature ("restaurant"), and below 768px —
+  // where the text label beside it is hidden — the category would be unreadable.
+  return `<span class="material-symbols-outlined" role="img" aria-label="${escHtml(cat)}" style="font-size:18px;line-height:1;color:${c.text};flex-shrink:0;vertical-align:middle">${name}</span>`;
 }
 
 let _allTransactions = [];
@@ -603,6 +785,33 @@ function fmtAmt(n) {
   return '₹' + parseFloat(n || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2, maximumFractionDigits: 2
   });
+}
+
+// Indian numbering: k (1,000) → L (1,00,000) → Cr (1,00,00,000).
+// Two decimals, trailing zeros stripped: 16900 → "₹16.9k", 2940 → "₹2.94k".
+// Copied verbatim from newDashboard.html, matching fmtAmt above — these page
+// templates are standalone documents with no partials anywhere in the project.
+function fmtAmtShort(n) {
+  const v = parseFloat(n || 0);
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  const units = [[1, ''], [1e3, 'k'], [1e5, 'L'], [1e7, 'Cr']];
+  let i = 0;
+  while (i + 1 < units.length && abs >= units[i + 1][0]) i++;
+  // Rounding to 2dp can push a figure up into the next unit (99,999 would
+  // otherwise render "₹100k"); step up so it reads "₹1L" instead.
+  while (i + 1 < units.length &&
+         parseFloat((abs / units[i][0]).toFixed(2)) >= units[i + 1][0] / units[i][0]) i++;
+  const num = (abs / units[i][0]).toFixed(2).replace(/\.?0+$/, '');
+  return sign + '₹' + num + units[i][1];
+}
+
+// fmtAmtDual emits BOTH formats and lets the `@media (max-width: 767.98px)`
+// block in <style> pick one. No resize listener — the DOM is identical at every
+// viewport width, so the value survives rotation and window-drag for free.
+function fmtAmtDual(n) {
+  return `<span class="amt-full">${fmtAmt(n)}</span>` +
+         `<span class="amt-short">${fmtAmtShort(n)}</span>`;
 }
 
 function fmtDate(s) {
@@ -746,7 +955,7 @@ function renderTransactions(txns) {
       <td class="px-6 py-4 text-sm" style="color:var(--text-secondary)">${fmtDate(t.date)}</td>
       <td class="px-6 py-4 text-sm text-white">${escHtml(t.merchant)}${t.is_subscription ? '<svg class="sub-icon" role="img" aria-label="Recurring subscription"><title>Recurring subscription</title><use href="#ico-subscription"></use></svg>' : ''}</td>
       <td class="px-6 py-4"><span class="cat-cell">${catPill(t.category)}</span></td>
-      <td class="px-6 py-4 text-sm font-data-mono text-white text-right">${fmtAmt(t.amount)}</td>
+      <td class="px-6 py-4 text-sm font-data-mono text-white text-right">${fmtAmtDual(t.amount)}</td>
       <td class="px-6 py-4 text-right">
         <button class="p-2 edit-btn cursor-pointer transition-colors"
           style="color:var(--text-secondary)"
