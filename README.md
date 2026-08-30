@@ -88,7 +88,9 @@ hundreds of rows in a spreadsheet.
   subscription questions are answered directly from the auditor with **no model
   call**, opinion questions use a single call over aggregate statistics only, and
   data questions go through a validated, sandboxed SQL path. Two of the three
-  routes never touch the model quota.
+  routes never touch the model quota. Reachable from both the dashboard and the
+  transactions page via a floating widget that expands in place — click outside
+  or press Escape to dismiss it.
 
 - **Interactive dashboard.** Clickable category donut and monthly trend chart,
   drilling through to a dedicated transactions page with search, filtering,
@@ -332,6 +334,30 @@ fixes a truncated entity once and every future upload inherits it. Card-swipe
 variable-length prefix of card number, reference, date, time, and city — anchored
 during extraction on the timestamp token, which is the one reliably-formatted
 field in that prefix.
+
+**Duplicating the query widget instead of extracting a component.** The
+natural-language query box appears on two pages, and it is a verbatim copy on
+each rather than a shared include. That looks like the wrong call until you look
+at what surrounds it: these page templates are standalone HTML documents by
+design — no layout inheritance, no partials anywhere in the project — and the
+theme initializer, the mobile navigation handler and the profile dropdown are
+already per-page copies for the same reason. Introducing the project's first
+partial for one widget would also have meant relocating the CSS custom
+properties it depends on, which live in each page's own token block. The honest
+tradeoff is that two copies must now be kept in sync, and the point to revisit
+it is when a third page needs the widget. Consistency with an existing
+convention beat a locally-nicer abstraction.
+
+**Layering is a contract, not a guess.** The query widget originally sat at
+`z-index: 1000`, which quietly put it above the modal backdrop — open a modal and
+the button floated over the dimmed overlay. The fix was not to pick a smaller
+number but to write the stack down: page content tops out at 20, the navigation
+bar opens its own stacking context at 50 (so its dropdowns resolve there
+regardless of their own values), modals sit at 100, transient toasts above
+everything. The widget belongs at 40 — clear of content, under both the
+navigation and any modal. Values chosen against a documented stack stay correct
+when the next component is added; values chosen to win an argument with whatever
+was on screen at the time do not.
 
 ---
 

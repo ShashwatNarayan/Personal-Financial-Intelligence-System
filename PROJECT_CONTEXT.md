@@ -147,6 +147,32 @@
 > branch honours the same constant — see §7, §15. (4) `global_entity_memory` is
 > now **624 rows** after `scripts/cleanup_global_memory.py` removed 9 leaked
 > POS ref/timestamp rows and recategorized id 173 — see §3.
+> Updated 2026-08-25: **ArthaLens AI widget redesign — frontend only, no
+> backend/API change.** The floating AI chat widget (`#aiChatFab` +
+> `#aiChatPanel`) was reworked in `dashboard/newDashboard.html` and **added to
+> `dashboard/transactions.html`**, which previously had no AI entry point at all.
+> (1) **In-place expand:** the panel now opens onto the FAB's own anchor
+> (`bottom:28px; right:28px`, was `bottom:96px`) and the FAB is hidden outright
+> via `.ai-hidden { display:none }` rather than being covered. (2)
+> **Click-outside + Escape to close** — previously the panel could only be closed
+> by the header ✕. `toggleAiChat()` was split into `toggleAiChat()` +
+> `_setAiChat(open)`, reusing the mobile-nav listener pattern verbatim
+> (`.contains()` on both panel and trigger, early bail when closed, **no
+> `stopPropagation`**, paired Escape handler, `aria-expanded`/`aria-label`
+> synced). (3) **z-index `1000`/`999` → `40`** on FAB/panel — the FAB used to
+> float over the subscriptions modal's dimmed backdrop (`z-100`); `40` sits above
+> page content (tops out at 20) and below the navbar's stacking context (`z-50`).
+> (4) **Mobile:** a `max-width: 767.98px` block pins the panel `left:20px;
+> right:20px; width:auto; height:min(70vh,480px)` — the fixed `360×480` box
+> overflowed a 375px viewport; bottom offsets use
+> `calc(Npx + env(safe-area-inset-bottom, 0px))`. `#aiChatHistory` switched from
+> a hardcoded `height:calc(480px - 180px)` to `flex:1 1 auto; min-height:0`, so
+> panel height is no longer duplicated in two places (this required the composer
+> to stop being `position:absolute`). (5) Shell geometry moved out of inline
+> `style=""` into the `<style>` block so the media query can override it without
+> an `!important` on every declaration. Per-page duplication, matching
+> `_setMobileNav`/`initTheme` — **there are no Jinja partials anywhere in this
+> project**. See **§11**, and the two new open items in **§15**.
 
 ---
 
@@ -660,7 +686,8 @@ stripped from response unless `current_app.debug`.
 | `auth/register.html` | `/auth/register` | Same styling as login; required Terms/Privacy consent checkbox; reCAPTCHA disabled. |
 | `auth/reset_password_request.html` | `/auth/reset_password` | Email entry form, matches auth styling. |
 | `auth/reset_password.html` | `/auth/reset_password/<token>` | New-password + confirm form. |
-| `dashboard/newDashboard.html` | `/dashboard` (live) | The real dashboard. Tailwind CDN + Plotly + custom dark CSS. KPIs derived client-side from `/api/transactions/classified` + `/api/subscriptions/audit`. Plotly donut (category) + trend charts. Transaction table built in JS: `catPill()` renders a category pill **with a lime SVG icon** (flex, nowrap); subscription rows show a **red pill `.sub-badge`** (`#dc2626`, fully rounded). Inline category edit → `POST /api/transactions/correct`. Subscriptions modal. Review/needs-review flow reuses `catPill()`. **Recent-Transactions controls (2026-06-15):** category filter (`cat-filter`), search (`txn-search`), and a **Sort By** dropdown (`sort-select`: `date_desc`/`date_asc`/`amount_desc`/`amount_asc`) — all flow through `applyFilter()`. Clicking a **trend-chart** point sets `_activeMonthFilter` (`YYYY-MM`), shows a dismissible 📅 pill (`#month-filter-pill`, cleared by `clearMonthFilter()`), and `applyFilter()` adds `t.date.startsWith(_activeMonthFilter)`. Donut-slice click still drives `cat-filter`. **Temporal Insights — Fastest Growing card (2026-07-09):** `renderTemporal()` renders the `#fastest-growing-banner`; its old non-functional "View Details" button was removed for a compact horizontal stats row (month range `May → Jun`, `₹prev → ₹current` spend, this-month txn count) driven by the new `transaction_count`/`current_month`/`previous_month` fields on `/api/insights/temporal`'s `fastest_growing`. |
+| `dashboard/newDashboard.html` | `/dashboard` (live) | The real dashboard. Tailwind CDN + Plotly + custom dark CSS. KPIs derived client-side from `/api/transactions/classified` + `/api/subscriptions/audit`. Plotly donut (category) + trend charts. Transaction table built in JS: `catPill()` renders a category pill **with a lime SVG icon** (flex, nowrap); subscription rows show a **red pill `.sub-badge`** (`#dc2626`, fully rounded). Inline category edit → `POST /api/transactions/correct`. Subscriptions modal. Review/needs-review flow reuses `catPill()`. **Recent-Transactions controls (2026-06-15):** category filter (`cat-filter`), search (`txn-search`), and a **Sort By** dropdown (`sort-select`: `date_desc`/`date_asc`/`amount_desc`/`amount_asc`) — all flow through `applyFilter()`. Clicking a **trend-chart** point sets `_activeMonthFilter` (`YYYY-MM`), shows a dismissible 📅 pill (`#month-filter-pill`, cleared by `clearMonthFilter()`), and `applyFilter()` adds `t.date.startsWith(_activeMonthFilter)`. Donut-slice click still drives `cat-filter`. **Temporal Insights — Fastest Growing card (2026-07-09):** `renderTemporal()` renders the `#fastest-growing-banner`; its old non-functional "View Details" button was removed for a compact horizontal stats row (month range `May → Jun`, `₹prev → ₹current` spend, this-month txn count) driven by the new `transaction_count`/`current_month`/`previous_month` fields on `/api/insights/temporal`'s `fastest_growing`. **ArthaLens AI widget (2026-08-25):** see §11a. |
+| `dashboard/transactions.html` | `/transactions` (live) | Dedicated transactions page split out of the dashboard (2026-06-15). Standalone template with its own CSS vars / theme init / navbar / JS. Search, category filter, Sort By, Load-More paging, inline category edit (`POST /api/transactions/correct`); pre-filters from `?month=YYYY-MM` / `?category=...` with a dismissible banner + `clearAllFilters()`. **Carries its own copy of the ArthaLens AI widget since 2026-08-25** — see §11a. |
 | `dashboard/upload.html` | `/upload` | Drag-drop upload UI → `POST /api/upload-excel`. |
 | `dashboard/index.html`, `newDashboard.html` (top-level), `dashboard.html` | legacy | Older dashboards not wired to the live route. |
 | `base.html` | shared shell | Bootstrap 5 CDN + Plotly CDN; used by legal/about pages. |
@@ -670,6 +697,117 @@ stripped from response unless `current_app.debug`.
 Dashboard JS hits: `/api/transactions/classified`, `/api/transactions/needs-review`,
 `/api/transactions/correct`, `/api/subscriptions/audit`, `/api/insights/temporal`,
 `/api/reimbursements/report`, `/api/anomalies/report`.
+
+---
+
+## 11a. ArthaLens AI Widget (`#aiChatFab` / `#aiChatPanel`, redesigned 2026-08-25)
+
+The floating natural-language query box — the only UI surface that calls
+`POST /api/ai/query` (§8). Lives at the very bottom of the template, just before
+`</body>`, as a self-contained `<style>` + markup + `<script>` block.
+
+**Present on two pages, as two independent copies:**
+
+| Template | Block |
+|---|---|
+| `dashboard/newDashboard.html` | ~`1813`–`2021` |
+| `dashboard/transactions.html` | ~`937`–`1147` (added 2026-08-25) |
+
+> **Why duplicated.** This project has **no Jinja partials at all** — no
+> `{% include %}` appears in any of the 15 templates, and there is no
+> `templates/partials/` directory. The dashboard templates are standalone full
+> HTML documents. `_setMobileNav` / `toggleProfileDropdown` / `initTheme` are
+> already per-page copies for the same reason, and the widget follows that
+> existing convention rather than introducing the project's first partial.
+> **The two copies must be kept in sync** — they currently differ only in
+> comment text (the transactions copy omits references to `#subs-modal` and
+> `.chart-card`, which don't exist on that page).
+
+### Structure
+
+- **`#aiChatFab`** — 56×56 circle, `position:fixed`, anchored
+  `bottom: calc(28px + env(safe-area-inset-bottom, 0px)); right: 28px`.
+  Content is the text glyph `✦` (not an SVG). Themed by `--ai-fab-bg` /
+  `--ai-fab-fg`.
+- **`#aiChatPanel`** — 360×480, `display:none` until `.open` makes it a flex
+  column: header (title + Beta pill + ✕) → subtitle → `#aiChatHistory`
+  (`flex:1 1 auto; min-height:0; overflow-y:auto`) → composer
+  (`#aiQuestionInput` + `#aiSendBtn`). Themed by `--panel-bg` /
+  `--panel-input-bg`.
+- **Four CSS vars required** — `--panel-bg`, `--panel-input-bg`, `--ai-fab-bg`,
+  `--ai-fab-fg`, defined in **both** the `:root` and `html.light-mode` blocks of
+  each template. `transactions.html` was missing all four before 2026-08-25
+  (its var block was ported from the dashboard but stopped short), which would
+  have rendered the FAB transparent-on-transparent.
+
+### In-place expand (2026-08-25)
+
+The panel opens onto **the FAB's own anchor** rather than floating above it —
+`bottom:96px` → `bottom:28px`, matching the FAB exactly. The FAB is then removed
+from layout via `#aiChatFab.ai-hidden { display: none }`, not merely covered:
+leaving it in the stack showed it through the panel's rounded corners.
+
+### Open/close (2026-08-25)
+
+Before this pass the only close affordance was the header ✕, and
+`toggleAiChat()` was a bare `classList.toggle('open')`. It is now split:
+
+```js
+toggleAiChat()      // reads current state, delegates
+_setAiChat(open)    // toggles .open + .ai-hidden, syncs aria-expanded/aria-label,
+                    // focuses the input on open
+```
+
+plus a `document` click listener and a `keydown`/Escape listener — **the same
+shape as the mobile-nav listener** (`newDashboard.html:1777`): early bail when
+the panel is closed, `.contains()` guards on both the panel and the FAB.
+
+> **Do not add `stopPropagation()` to the FAB handler.** The profile dropdown
+> closes via its own bare `document` click listener; swallowing the event breaks
+> it. This is the same constraint documented at the mobile-nav helper.
+
+### Layering
+
+Widget sits at **`z-index: 40`** (was `1000` on the FAB / `999` on the panel).
+The full stack on both pages:
+
+| Layer | z-index |
+|---|---|
+| Page content | ≤ 20 |
+| **AI FAB + panel** | **40** |
+| `<nav>` — opens a stacking context via `backdrop-filter`, so its children (profile dropdown `z-200`, `.nav-mobile-panel` `z-60`) all resolve here | 50 |
+| `#subs-modal` (dashboard only) | 100 |
+| Toast helper | 9999 |
+
+`40` was chosen so the FAB clears page content but stays **under** both the
+navbar's dropdowns and the subscriptions modal backdrop — at its old `1000` the
+FAB floated on top of the dimmed modal overlay.
+
+### Mobile
+
+A `@media (max-width: 767.98px)` block (the project-wide breakpoint — exact
+complement of Tailwind's `md`, same cut-off as the nav and `.chart-card` rules)
+pins the panel `left:20px; right:20px; width:auto; height:min(70vh, 480px)` and
+tightens the FAB to 20px insets. The previous fixed `360px` width plus a 28px
+right margin needed 388px and overflowed a 375px viewport.
+
+Bottom offsets are `calc(Npx + env(safe-area-inset-bottom, 0px))` on both the
+FAB and the panel — the `0px` fallback degrades correctly where `env()` is
+unsupported.
+
+> **Geometry is in the `<style>` block, not inline `style=""`.** This is
+> deliberate and load-bearing: the media query has to override
+> `bottom`/`right`/`width`/`height`, and inline styles would force an
+> `!important` on every one of those declarations. (The pre-2026-08-25 code
+> already had a symptom of this — `#aiChatPanel.open` needed
+> `display: flex !important` purely to beat an inline `display:none`.) Inner
+> elements keep their inline styles; only the two shells moved.
+
+> `#aiChatHistory` has **one** height source: `flex:1 1 auto; min-height:0`. It
+> previously used `height: calc(480px - 180px)`, which silently coupled it to the
+> panel's own `480px`. Switching to `flex:1` required the composer to stop being
+> `position:absolute; bottom:0` and become a normal flex item — otherwise the
+> history would extend underneath it.
 
 ---
 
@@ -786,8 +924,10 @@ services:
 - **Temporal "Fastest Growing" card — dead "View Details" button removed (2026-07-09)** — the button had no `href`/`onclick`/listener (purely decorative). Removed and replaced with a compact horizontal stats row (month range, `₹prev → ₹current`, txn count) in `renderTemporal()` (`newDashboard.html`). `temporal_insights.get_fastest_growing_category()` now also returns `transaction_count`/`current_month`/`previous_month` (already computed upstream in `calculate_mom_changes()`); the `/api/insights/temporal` `fastest_growing` object is a superset — no breaking change. See §11.
 - **Latent items:** `get_user_transactions_df` uses `t.transaction_type or ''` (a NULL type would silently drop a row from detection); `/transactions/classified` and `/needs-review` hardcode `'transaction_type': 'debit'` in their serialized output. Credits receive no `entity_type` at detector time (v4 no longer relies on it). The `_owner_email()` gate writes nothing if `OWNER_EMAIL` is unset.
 - **`Transfer / P2P` excluded from cross-user memory (2026-08-23)** — `GLOBAL_MEMORY_EXCLUDED_CATEGORY` (`categorization.py:8`) is enforced on the Stage 2b read path and the owner write branch (`routes.py:648`, importing the constant so the two cannot drift). This **partially reverses** the 2026-06-10 "accepted privacy tradeoff" above: person names are no longer *propagated* cross-user, though existing rows are still *stored*. Cache 624 → 226 entries. Category output is unchanged (Stage 4 handles persons); confidence drops `high` → `medium`. See §7.
+- **AI widget duplicated per page rather than extracted to a partial (2026-08-25)** — the redesigned `#aiChatFab`/`#aiChatPanel` block was copied into `dashboard/transactions.html` verbatim instead of being factored into a shared `{% include %}`. Deliberate: **this project has no Jinja partials anywhere** (zero `{% include %}` across all 15 templates), the dashboard templates are standalone full HTML documents, and `_setMobileNav`/`toggleProfileDropdown`/`initTheme` are already per-page copies. Introducing the first partial for this one widget would also have meant relocating the four `--panel-*`/`--ai-fab-*` CSS vars, which live in each template's own `:root`/`html.light-mode` blocks. **Cost: two copies to keep in sync** — they currently differ only in comment text. If a third page ever needs the widget, that is the point to reconsider. See §11a.
+- **AI widget shell geometry moved from inline styles to the `<style>` block (2026-08-25)** — `position`/`bottom`/`right`/`width`/`height`/`z-index`/`display` for both shells now live in CSS rules. Required by the mobile media query: inline styles win over class rules, so a responsive override would have needed `!important` on every declaration. The old code already showed the symptom — `#aiChatPanel.open` carried `display: flex !important` solely to beat an inline `display:none`. Inner elements keep their inline styles. See §11a.
 
-### Open items (as of 2026-08-23)
+### Open items (as of 2026-08-25)
 
 - **[HIGH] RLS on `transactions` is not implemented.** `inject_user_id` uses first-match regex substitution to enforce a scope-sensitive isolation invariant. `check_query_scope()` mitigates by refusing multi-SELECT / multi-reference queries, but that rejects legitimate questions and is explicitly a stopgap. **Full detail, the RLS DDL, and the caveats are in §20.5.**
 - **[MED] 8 low-confidence rows await re-correction.** `correct_transaction()` now sets `confidence_level='high'`, but the fix is forward-only. As of this session **8** transactions on the owner account are still `confidence_level='low'` *and* already have a `corrections` row for the same `entity_name` — i.e. previously corrected but never cleared from `/needs-review`. They stay in the review queue until corrected once more. No backfill was run; a one-off `UPDATE` scoped to that exact predicate would clear them.
@@ -797,6 +937,8 @@ services:
   ```
   When `OWNER_EMAIL` is unset the backfill silently seeds `GlobalEntityMemory` from whichever account happens to match the placeholder rather than failing loudly. This already happened: **612 of the 633 pre-cleanup rows** were contributed by the placeholder account, not the real owner — the backfill ran before `render.yaml` was corrected. Note the request-time gate `_owner_email()` (`routes.py:45`) does the right thing and returns `''` (no writes) when unset; only the CLI has the unsafe default. **It should abort when `OWNER_EMAIL` is missing**, matching the route's fail-safe behaviour.
 - **[LOW] `Transfer / P2P` rows remain stored in `global_entity_memory`** (~64% of 624 rows, real person names). No longer propagated (§7), but purging them is a separate policy call — see §3.
+- **[LOW] Toast notifications visually overlap the AI FAB.** The toast helper (`newDashboard.html:965`, `transactions.html:629`) renders at `position:fixed; bottom:24px; right:24px; z-index:9999`; the FAB sits at `bottom:28px; right:28px` and is 56×56. The toast therefore lands directly on top of it. **Pre-existing on the dashboard**, and now inherited by the transactions page as well since the widget was added there (2026-08-25). Surfaced during the widget redesign but left unfixed — it was out of that pass's scope. Fix is a one-line offset on the toast (e.g. `right: 96px`, or `bottom: 96px` to stack above the FAB), applied to **both** copies. See §11a.
+- **[LOW] Escape closes the mobile nav and the AI panel simultaneously.** Each feature registers its own independent `document` `keydown` listener — `_setMobileNav(false)` (`newDashboard.html:1784`, `transactions.html:910`) and `_setAiChat(false)` (added 2026-08-25) — with no scoping or precedence between them. If both panels happen to be open, one Escape dismisses both. This mirrors how the two independent `click` listeners already coexist, so it is consistent rather than anomalous, and the overlap is unlikely in practice (the mobile nav is a top-anchored dropdown, the AI panel bottom-anchored). Left as-is; a proper fix means a small shared "topmost open layer" registry that Escape pops one entry from. See §11a.
 
 ---
 
