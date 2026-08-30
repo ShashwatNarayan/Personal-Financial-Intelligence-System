@@ -284,6 +284,80 @@
     }
   }
 
+  /* ── Mobile density pass (three independent changes) ─────────────────────
+     All three are page-local @media rules rather than Tailwind variants: the
+     bundle is pre-compiled with no build step in the deploy path, so a new
+     `md:`/`sm:` variant or arbitrary-value utility would fail silently. These
+     rules are declared AFTER tailwind.output.css, so they beat equal-specificity
+     utilities on source order; the #id descendant selectors below outrank them
+     outright. */
+
+  /* 1. Page heading: visually hidden below md, but kept in the a11y tree.
+        The <h1> is the page's ONLY h1 — display:none would drop it from the
+        document outline and from screen-reader heading navigation, so this is
+        the clip-rect pattern instead. */
+  @media (max-width: 767.98px) {
+    .page-title {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+  /* Below sm the subtitle <p> is already `hidden`, so with the h1 clipped out
+     of flow the header's first child is an empty zero-height box — but the
+     header is `flex flex-col gap-4`, so its 16px gap still renders as dead
+     space above the Upload row. Collapse it. Deliberately 639.98px and NOT
+     767.98px: between 640px and md the subtitle is visible, and there the
+     gap is doing real work. */
+  @media (max-width: 639.98px) {
+    .dash-header { gap: 0; }
+  }
+
+  /* 2. Intelligence Alerts: below md the "Intelligence Alerts" label and its
+        divider consume ~156px + 32px of gap out of a ~286px strip, leaving the
+        alert text ~13 legible characters. Drop both and keep the bulb icon as
+        the affordance. .alert-label's own gap-2 disappears with the text node,
+        since display:none removes it as a flex item. */
+  @media (max-width: 767.98px) {
+    .alert-label-text { display: none; }
+    .alert-divider    { display: none; }
+  }
+
+  /* 3. Temporal Insights MoM cards: 240px cards let only ~1.3 cards into a
+        360px viewport, so the row didn't read as swipeable. 158px + 10px gap
+        shows two full cards plus a sliver of the third. */
+  @media (max-width: 767.98px) {
+    #mom-cards-container { gap: 10px; }
+    /* min-w-[240px] is a bundle utility; overriding it with another
+       arbitrary-value class (min-w-[160px]) would fail silently, so the
+       override is done here by descendant selector. */
+    #mom-cards-container > .card { min-width: 158px; padding: 10px; }
+
+    /* 3c. Category label ellipsises instead of forcing the card wider. The
+           parent row is `flex justify-between`, so the label needs min-width:0
+           to shrink below its min-content size. The % badge gets nowrap +
+           flex-shrink:0 so the shrink lands on the label and the badge cannot
+           wrap at its internal space ("↑ 45%" → "↑" / "45%"). */
+    #mom-cards-container > .card > .justify-between > span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #mom-cards-container > .card > .justify-between > span:last-child {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* 3d. Amount down from text-lg (18px) to 14px. Targeted by descendant
+           selector rather than by swapping the class in the JS template. */
+    #mom-cards-container > .card > .font-data-mono { font-size: 14px; }
+  }
+
   body {
     background: var(--bg);
     background-attachment: fixed;   /* full-page gradient stays put on scroll */
@@ -444,9 +518,9 @@
 <main class="pb-8 px-6 flex flex-col gap-3" style="padding-top:64px;max-width:1400px !important;margin-left:auto !important;margin-right:auto !important;width:100%">
 
   <!-- Header -->
-  <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+  <header class="dash-header flex flex-col md:flex-row md:items-end justify-between gap-4">
     <div>
-      <h1 class="font-headline-lg font-bold text-white mb-1">Spending Dashboard</h1>
+      <h1 class="page-title font-headline-lg font-bold text-white mb-1">Spending Dashboard</h1>
       <!-- Subtitle is decorative context; hidden below sm to free the ~327px
            header row at 375px (see .sm-up-only / .sm-down-only in <style>). -->
       <p class="font-body-md hidden sm:block" style="color:var(--text-secondary)">Comprehensive analysis of your recent outflows and categorized expenses.</p>
@@ -550,7 +624,7 @@
   <section class="alerts-strip flex items-center gap-4 rounded-lg" style="padding:12px">
     <div class="alert-label flex items-center gap-2 font-medium whitespace-nowrap shrink-0" style="color:var(--text-primary)">
       <span class="material-symbols-outlined text-accent text-[20px]">lightbulb</span>
-      Intelligence Alerts
+      <span class="alert-label-text">Intelligence Alerts</span>
     </div>
     <div class="w-px h-6 shrink-0 alert-divider"></div>
     <!-- Single-line, horizontally scrollable; a right-edge fade mask makes overflow
@@ -1497,7 +1571,7 @@ function renderTemporal(insights) {
               <span class="text-xs font-medium uppercase tracking-wider" style="color:var(--text-secondary)">${escHtml(c.category)}</span>
               <span class="text-[10px] font-bold" style="color:${pctColor}">${arrow} ${Math.abs(c.change_percent).toFixed(0)}%</span>
             </div>
-            <div class="text-lg font-data-mono" style="color:var(--text-primary)">${fmtAmt(c.current_spend)} <span class="text-xs font-normal" style="color:var(--text-secondary)">MoM</span></div>
+            <div class="text-lg font-data-mono" style="color:var(--text-primary)">${fmtAmtDual(c.current_spend)} <span class="text-xs font-normal" style="color:var(--text-secondary)">MoM</span></div>
           </div>
         `;
       }).join('');
