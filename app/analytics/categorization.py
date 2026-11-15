@@ -33,7 +33,8 @@ class SmartCategorizer:
                 'mithai', 'lassi', 'icecream', 'ice cream', 'tiffin', 'mess',
                 'canteen', 'eatery', 'snack', 'dine', 'grill', 'kitchen',
                 'dabba', 'paratha', 'rolls', 'shawarma', 'sushi', 'noodles',
-                'chinese', 'fast food', 'cloud kitchen' ,'Cinnabon'
+                'chinese', 'fast food', 'cloud kitchen' ,'Cinnabon',
+                'momo', 'waffle', 'coffee'
             ],
             'Transport': [
                 'uber', 'ola', 'rapido', 'cab', 'taxi', 'petrol', 'fuel',
@@ -50,7 +51,7 @@ class SmartCategorizer:
                 'hypermarket', 'nykaa', 'meesho', 'wholesale', 'general',
                 'kirana', 'bazaar', 'bazar', 'emporium', 'outlet', 'showroom',
                 'depot', 'suppliers', 'distributors', 'agencies', 'works',
-                'brothers', 'sons', 'co ', 'pvt', 'ltd','Medkart'
+                'brothers', 'sons', 'co ', 'pvt', 'ltd','Medkart', 'supermkt'
             ],
             'Utilities': [
                 'electricity', 'water', 'gas', 'lpg', 'airtel', 'jio',

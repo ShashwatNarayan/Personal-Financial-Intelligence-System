@@ -53,6 +53,21 @@ class EntityResolver:
         # Human name indicators
         self.name_pattern = re.compile(r'^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$')
 
+    # Whole words that mark a UPI payee name as a business, not a person.
+    MERCHANT_NAME_WORDS = (
+        'KAFE', 'CAFE', 'COFFEE', 'FOOD', 'FOODS', 'KITCHEN', 'RESTAURANT', 'HOTEL',
+        'BAKERY', 'BAKERS', 'BIRYANI', 'MOMO', 'PIZZA', 'WAFFLE', 'CHAI', 'JUICE',
+        'ICE', 'CREAM', 'CREAMS', 'SWEETS', 'DHABA', 'CANTEEN', 'MESS', 'COURT',
+        'STORE', 'STORES', 'MART', 'MARKET', 'SUPERMARKET', 'SUPERMKT', 'SHOP',
+        'VARIETY', 'GENERAL', 'TRADERS', 'TRADING', 'ENTERPRISE', 'ENTERPRISES',
+        'AGENCY', 'AGENCIES', 'STATIONERY', 'LAUNDRY', 'SALON', 'MEDICAL',
+        'MEDICALS', 'PHARMACY', 'HOSPITAL', 'CLINIC', 'METRO', 'CENTRE', 'CENTER',
+        'SERVICES', 'PVT', 'PRIVATE', 'LIMITED', 'LTD',
+    )
+    merchant_word_pattern = re.compile(
+        r'\b(?:' + '|'.join(MERCHANT_NAME_WORDS) + r')\b'
+    )
+
     def resolve(self, description, merchant=None, vpa=None):
         """
         Extract canonical entity name from transaction description
@@ -144,6 +159,14 @@ class EntityResolver:
                 if self._classify_vpa(vpa) == 'merchant':
                     return self.normalize_name(name), 'merchant'
                 return self.normalize_name(name), 'person'
+
+            # Business words in the payee name outrank the "2-3 capitalised
+            # words = person" heuristic below. Without this, HDFC payees such as
+            # KIIT FOOD COURT, CAFE COFFEE DAY or AGARWAL SUPER MARKET were
+            # classed as people and their spend landed in Transfer / P2P.
+            # Whole-word match only, so real names are not caught by substrings.
+            if self.merchant_word_pattern.search(name_upper):
+                return self.normalize_name(name), 'merchant'
 
             # Check if it's a human name
             if self.is_human_name(name):
